@@ -23,6 +23,7 @@ PUSHNIL,/*		-		nil  */
 PUSH0,/*		-		0.0  */
 PUSH1,/*		-		1.0  */
 PUSH2,/*		-		2.0  */
+DUP,/*                  x               x x */
 PUSHBYTE,/*	b	-		(float)b  */
 PUSHWORD,/*	w	-		(float)w  */
 PUSHFLOAT,/*	f	-		f  */
@@ -63,6 +64,7 @@ STORERECORD,/*	n
 ADJUST0,/*		-		-		TOP=BASE  */
 ADJUST,/*	b	-		-		TOP=BASE+b  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
+GLOBMATCHOP,/*		y x		globMatch(x,y)? 1 : nil  */
 EQOP,/*			y x		(x==y)? 1 : nil  */
 LTOP,/*			y x		(x<y)? 1 : nil  */
 LEOP,/*			y x		(x<y)? 1 : nil  */

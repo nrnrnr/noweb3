@@ -36,6 +36,7 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case PUSH0:
 	case PUSH1:
 	case PUSH2:
+	case DUP:
 	case PUSHLOCAL0:
 	case PUSHLOCAL1:
 	case PUSHLOCAL2:
@@ -59,6 +60,7 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case STORELOCAL9:
 	case STOREINDEXED0:
 	case ADJUST0:
+	case GLOBMATCHOP:
 	case EQOP:
 	case LTOP:
 	case LEOP:

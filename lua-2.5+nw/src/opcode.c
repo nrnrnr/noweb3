@@ -497,6 +497,7 @@ static int do_protectedmain (void)
   if (setjmp(myErrorJmp) == 0)
   {
     lua_parse(&tf);
+    tf.fileName = lua_parsedfile;  /* if from preprocessor, get correct name */
     status = luaI_dorun(&tf);
   }
   else
@@ -950,6 +951,9 @@ static StkId lua_execute (Byte *pc, StkId base)
      incr_top;
      break;
 
+   case DUP:
+     *top = *(top-1); incr_top; break;
+
    case PUSHBYTE: 
      tag(top) = LUA_T_NUMBER; nvalue(top) = *pc++; incr_top; break;
 
@@ -1132,7 +1136,23 @@ static StkId lua_execute (Byte *pc, StkId base)
    }
    break;
 
-    case LTOP:
+   case GLOBMATCHOP:
+   {
+    Object *l = top-2;
+    Object *r = top-1;
+    extern int globmatch(char *string, char *pattern);
+    int res;
+    if (tostring(l) || tostring(r))
+      res = 0;
+    else 
+      res = globmatch(svalue(l), svalue(r));
+    --top;
+    tag(top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
+    nvalue(top-1) = 1;
+   }
+   break;
+
+   case LTOP:
       comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, "lt");
       break;
 
