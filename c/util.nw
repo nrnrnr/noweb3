@@ -1,0 +1,100 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\section {Utilities}
+
+\subsection{Loading noweb script files}
+
+To find configuration files and command files by name (as opposed to a
+relative or absolute pathname), we look for a file of
+the proper name in these places:
+\begin{enumerate}
+\item
+On the [[NWPATH]], or
+If the [[NWPATH]] environment variable is not set,  in the default
+system directory.
+As with {\TeX}, an empty directory name in this path stands for the
+default system directory.
+%%  \item
+%%  In the current directory.
+\item
+Among precompiled scripts, if any.
+\end{enumerate}
+
+\subsection{Others}
+
+We also split paths.
+
+<<header>>=
+#include <list.h>
+
+extern int load_nwfile(const char *filename);
+extern List_T pathsplit(const char *path);
+@ 
+<<*>>=
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <list.h>
+#include <atom.h>
+#include <fmt.h>
+#include <mem.h>
+
+#include <lua.h>
+
+#include "precompiled.h"
+#include "sys.h"
+#include "util.h"
+
+<<*>>=
+static List_T searchpath;
+static void replace_empty(void **, void*);
+
+int load_nwfile(const char *filename) {
+  FILE *fp;
+  List_T p;
+  char *fname;
+  int rc;
+  <<if [[searchpath]] is null, set it>>
+
+  for (p = searchpath; p; p = p->rest) {
+    fname = Fmt_string("%s%s%s", p->first, Sys_dirsep, filename);
+    if ((fp = fopen(fname, "r"))) {
+      fclose(fp);
+      /* verbose("Opening file %s", fname); */
+      rc = lua_dofile(fname);
+      FREE(fname);
+      return rc;
+    } else
+      FREE(fname);
+  }
+
+  /* nothing precompiled yet */
+  return 2;
+}
+@ 
+<<*>>=
+List_T pathsplit(const char *path) {
+  List_T l = List_list(NULL);
+  const char *s, *t;
+  for (s = t = path; *s; s = t) {
+    while (*t && *t != Sys_pathsep) t++;
+    l = List_push(l, (void *)Atom_new(s, t-s));
+    if (*t) t++;
+  }
+  return List_reverse(l);
+}
+@ 
+<<if [[searchpath]] is null, set it>>=
+#ifndef NWDEFAULTDIR
+#define NWDEFAULTDIR "."
+#endif
+if (!searchpath) {
+  char *p = getenv("NWPATH");
+  searchpath = pathsplit(p ? p : NWDEFAULTDIR);
+  List_map(searchpath, replace_empty, NULL);
+}
+<<*>>=
+static void replace_empty(void **item, void*arg) {
+  char **sp = (char **)item;
+  if (!**sp) *sp = NWDEFAULTDIR;
+}
