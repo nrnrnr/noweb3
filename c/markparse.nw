@@ -136,7 +136,7 @@ or code chunk, the first chunk is assumed to be a documentation chunk.
 We implement this by just looping through the document, looking for the
 beginnings of chunks.
 We use [[state]] to keep track of what's ending.
-We add a little extra markup for file name and module names
+We add a little extra markup for file name and module names.
 Starting code and starting documentation are notably different: 
 code is started by a module definition, which must appear on a line by itself.
 Documentation is started by a character sequence, 

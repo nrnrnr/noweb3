@@ -17,7 +17,7 @@
 \title{{\tt noweb} Source Code\thanks{{\tt noweb} is copyright 1989--97 by Norman Ramsey.
 Although it is freely available, it is not in the public domain.}}
 \author{Norman Ramsey\thanks{Section~\ref{preston} is the 
-generous contribution of Preston Briggs}\\{\tt nr@cs.virginia.edu}}
+generous contribution of Preston Briggs}\\{\tt nr@eecs.harvard.edu}}
 \begin{document}
 \maketitle
 \section*{Preface}

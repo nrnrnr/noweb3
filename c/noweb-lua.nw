@@ -38,6 +38,6 @@ void noweb_open(void) {
 }
 <<hackers: entries for miscellaneous functions>>=
 do\_nwfile&
-Takes the name of a file, look for it in the directories named by
+Takes the name of a file, looks for it in the directories named by
 \texttt{NWPATH}, and runs it through the Lua interpreter, returning the
-status. \\
+status.\\

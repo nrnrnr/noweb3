@@ -25,7 +25,7 @@ static char rcsname[] = "$Name$";
 \subsubsection{The sink \texttt{Stages.nt}}
 
 The \texttt{Stages.nt} sink (back end) implements tangling.
-By  all
+By expanding all
 uses to their definitions, 
 it extracts the program defined by one or more chunks named in
 arguments,
