@@ -1,3 +1,31 @@
+Things to read to learn about the internal pipeline and the Hackers' Guide
+
+  The nwbuffer.nw and nwbuffer-lua.nw modules.  The implementation of
+  nwbuffer.nw is not too important, but the interface is.
+
+  The ipipe.nw and ipipe-lua.nw interfaces.
+
+  In my current doc.nw these are sections 5, 6, 8, 9, and 12.
+
+  Possibly the xpipe.nw and mpipe.nw interfaces.  Sections 15, 21,
+  22.1, 23.1, 24.1, 25.1.  The function MPipe_open in chunk 139b.
+
+  lua/stripconds.nw
+
+  lua/xchunks.nw
+
+  This should probably be enough lua, but if you have appetite for
+  more, try function Stages.elideuse in lua/elide.nw
+
+  It may also be worth looking at one of the back ends, e.g.,
+    notangle lua/tohtml.nw | less
+  not for the details but to see the overall structure (case statement
+  inside loop).
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Guide to the ultimate structure of the noweb 3 distribution
 
 Outputs directories with defaults:
