@@ -9,7 +9,7 @@ generated shell script.
 \subsubsection{The sink \texttt{Stages.totex}}
 
 {\tt Stages.totex} implements both the plain {\TeX} and {\LaTeX} back ends,
-using \kw{header tex} and \kw{header latex} to distinguish them.
+using \nkw{HEADER} \texttt{tex} and \nkw{HEADER} \texttt{latex} to distinguish them.
 When using a {\LaTeX} header, {\tt Stages.totex} places the optional text
 following the header inside a \verb+\noweboptions+ command.
 

@@ -10,20 +10,19 @@ generated shell script.
 I thought it would be nice to put all the built-in stuff in a table.
 <<renaming of builtins>>=
 P = MPipe
-@ 
+@
 I'm assuming we defined a [[concat]] fallback that works on lists.
 <<*>>=
 <<copyright notice>>
 <<renaming of builtins>>
-<<utilities>>
 <<initialization>>
 <<scan options and arguments>>
 if nil and verbose then -- no longer interesting
   local oldoutput = writetox(stderr)
   write("backopts = "); show(backopts); write("\n")
-  write("noindex = ") show(noindex) write("\n")
-  write("delay = ") show(delay) write("\n")
-  write("shortxref = ") show(shortxref) write("\n")
+  write("noindex = "); show(noindex); write("\n")
+  write("delay = "); show(delay); write("\n")
+  write("shortxref = "); show(shortxref); write("\n")
   writetox(oldoutput)
 end
 ---- function foo (a, b)
@@ -44,8 +43,7 @@ if System.getenv("PATH") then
   System.putenv("PATH="..LIB..":"..System.getenv("PATH"))
 end
 exit(P.run(pipeline))
-@ 
-<<utilities>>=
+@
 <<initialization>>=
 markup = libFile("markup")  -- could be internal
 backend = libFile("totex")  -- could be internal
@@ -63,13 +61,13 @@ backopts = List.new {}
 wrapper = nil
 delay = List.new {}
 args = List.new {}
-markopts = List.new {} 
+markopts = List.new {}
 noweboptions = nil
 autodefs = nil
 verbose = false
 shortxref = false
-noquote= List.new {"-noquote"}
-noquote = List.new { }  -- with hyperref, uses in quoted code are helpful
+-- noquote = List.new {"-noquote"}
+noquote = List.new {}  -- with hyperref, uses in quoted code are helpful
 docanchor= List.new {}
 indexdatabase = List.new {}
 noindex="-noindex"
@@ -92,6 +90,19 @@ while i <= List.length(argv) do
   end
   i = i + 1
 end
+@ \iffalse
+<<noweave man page option table>>=
+.TP
+.B \-internaldefaults
+Use internal filters wherever possible, instead of external ones.
+.TP
+.BI \-e " string"
+Treat
+.I string
+as Lua source code and evaluate it.
+Possibly dangerous.
+@ \fi
+<<scan options and arguments>>=
 <<insist first-pass options are self-consistent>>
 if wrapper == nil then wrapper = "latex" end
 i = 1
@@ -101,52 +112,46 @@ while i <= List.length(argv) do
   end
   i = i + 1
 end
-<<add [[$newopt]] to [[noweboptions]]>>=
-if noweboptions then 
-  noweboptions = noweboptions .. "," .. newopt
-else 
-  noweboptions = newopt
-end
 <<first pass {\tt noweave} options>>=
 | "-latex" =>      if wrapper ~= "none" then wrapper = "latex" end
 | "-tex" =>        wrapper="tex"
 | "-html" =>       if wrapper ~= "none" then wrapper = "html"  end
-	           backend = Defaults.tohtml
                    backopts = List.new { "-localindex" }
-	           noquote = List.new {}
-                   docanchor = List.new {"-docanchor", "10"}
+		   <<common HTML settings>>
 | "-latex+html" =>  if wrapper ~= "none" then wrapper = "latex" end
-                   backend = Defaults.tohtml
                    backopts = List.new { "-localindex", "-raw" }
-	           noquote = List.new {}
-                   docanchor = List.new {"-docanchor", "10"}
+		   <<common HTML settings>>
 | "-ascii" =>      wrapper= "none"; backend = libFile("toascii")
 | "-troff" =>      wrapper="mm";    backend = libFile("toroff")
 | "-n" =>          wrapper="none"
 | "-backend" =>    backend=argv[i+1]; i = i+1
 | "-markup" =>     markup =argv[i+1]; i = i+1
+
+<<common HTML settings>>=
+backend = Defaults.tohtml
+noquote = List.new {}
+docanchor = List.new {"-docanchor", "10"}
 @
-Note some versions of echo break on [[echo "-n..."]], echoing nothing 
-at all.  The leading space is claimed to prevent this problem.
 <<option printout for usage>>=
 errormsg("-latex		Emit LaTeX with headers and trailers (default).")
-errormsg("-tex		Emit plain TeX with headers and trailers.")
-errormsg("-html		Emit HTML with headers and trailers.")
-errormsg("-latex+html	Assume LaTeX in documentation, but use HTML in code.")
--- errormsg("-ascii            Emit ASCII.")
-errormsg("-troff            Emit troff (unsupported).")
-errormsg(" -n		Don't use any header or trailer.")
-errormsg("-markup frontend  Parse input with frontend (e.g., numarkup).")
+errormsg("-tex			Emit plain TeX with headers and trailers.")
+errormsg("-html			Emit HTML with headers and trailers.")
+errormsg("-latex+html		Assume LaTeX in documentation, but use HTML in code.")
+-- errormsg("-ascii		Emit ASCII.")
+errormsg("-troff		Emit troff (unsupported).")
+errormsg("-n			Don't use any header or trailer.")
+errormsg("-markup frontend	Parse input with frontend (e.g., numarkup).")
+errormsg("-backend program	Generate final output with backend (e.g., tohtml).")
 @ \iffalse
 <<noweave man page option table>>=
 .TP
 .B \-latex
-Emit LaTeX, including wrapper in 
+Emit LaTeX, including wrapper in
 .B article
 style with the
 .B noweb
 package and page style. (Default)
-.TP 
+.TP
 .B \-tex
 Emit plain TeX, including wrapper with
 .B nwmac
@@ -154,52 +159,72 @@ macros.
 .TP
 .B \-html
 Emit HTML, using HTML wrapper.
-The output is uninteresting without \fB-index\fP or \fB-x\fP.
-The tags \fB<nowebchunks>\fP and \fB<nowebindex>\fP, on lines by themselves,
+The output is uninteresting without
+.B \-index
+or
+.BR \-x .
+The tags
+.B <nowebchunks>
+and
+.B <nowebindex> ,
+on lines by themselves,
 produce a list of chunks and an index of identifiers, respectively.
 If these tags are not present, the list and index are placed at the end of the file.
 .TP
 .B \-latex+html
 Assume documentation chunks are LaTeX, but generate HTML for code chunks,
-suitably marked so conversion with 
-.I latex2html(1)
+suitably marked so conversion with
+.IR latex2html (1)
 yields reasonable output.
-A LaTeX wrapper is implied, but can be turned off with \fB-n\fP.
-.I Use of this option is 
-.B deprecated; 
+A LaTeX wrapper is implied, but can be turned off with
+.B \-n .
+.I "Use of this option is"
+.BR deprecated ;
 use
 .B \-html
-with 
+with
 .B "\-filter l2h"
 instead.
-<<noweave man page option table>>=
 .TP
 .B \-troff
-Emit 
-.I troff(1)
+Emit
+.IR troff (1)
 markup (with no wrapper).
-The result should be processed with 
-.I noroff(1).
-Bug reports for 
+The result should be processed with
+.IR noroff (1).
+Bug reports for
 .B \-troff
 to Phil Bewig
-.B <pbewig@netcom.com>.
+.BR <pbewig@netcom.com> .
 <<bogus noweave man page option table>>=
 .TP
 .B \-ascii
 Emit ASCII (with no wrapper).
-Bug reports for 
+Bug reports for
 .B \-ascii
 to Phil Bewig
-.B <pbewig@netcom.com>.
+.BR <pbewig@netcom.com> .
 <<noweave man page option table>>=
 .TP
 .B \-n
 Don't use any wrapper (header or trailer).
-This option is useful when \fInoweave\fP's output will be
-a part of a larger document.
-See also 
-.B \-delay.
+This option is useful when
+.I noweave 's
+output will be a part of a larger document.
+See also
+.BR \-delay .
+.TP
+.BI \-markup " frontend"
+Parse input with
+.I frontend
+(e.g.,
+.IR  numarkup ).
+.TP
+.BI \-backend " program"
+Generate final output with
+.I backend
+(e.g.,
+.IR tohtml ).
 @ \fi
 A common bug seems to be using both [[-x]] and [[-index]] on the same
 command line, so I complain about it.
@@ -210,24 +235,24 @@ if using_xref and using_index then
 end
 <<initialization>>=
 using_index=nil; using_xref=nil
-@ 
+@
 <<first pass {\tt noweave} options>>=
 | "-filter", "-ifilter"  => i = i+1
-| "-x" =>                           using_xref=1 
+| "-x" =>                           using_xref=1
 | "-index" =>            noindex=nil ; using_index=1
 | "-indexfrom" => i=i+1; noindex=nil ; using_index=1
 | "-indexdb" =>   i = i + 1; indexdatabase = indexdatabase .. List.fromstring(argv[i])
 <<second pass {\tt noweave} options>>=
-| "-filter" => 
+| "-filter" =>
     filters = filters .. MD.stringFilter(argv[i+1])
     i = i + 1
 | "-ifilter" =>
-    dostring("if 1 then local f, arg = " .. argv[i+1] .. 
+    dostring("if 1 then local f, arg = " .. argv[i+1] ..
              "; filters = filters .. MPipe.filter(f, arg) end")
     i = i + 1
-| "-x" => 
+| "-x" =>
     filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
-| "-index" =>  
+| "-index" =>
   filters = filters .. P.filter(Defaults.finduses, noquote)
   filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
 | "-indexfrom" =>
@@ -235,35 +260,36 @@ using_index=nil; using_xref=nil
   filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
   i = i + 1
 <<option printout for usage>>=
-errormsg("-x		Use the default cross-referencer (needs LaTeX or HTML).")
+errormsg("-x			Use the default cross-referencer (needs LaTeX or HTML).")
 errormsg("-index		Create index using identifiers defined in input files.")
 errormsg("-indexfrom defs	Create index of identifers listed in file defs.")
-errormsg("-filter cmd	Filter through 'cmd' before weaving; cmd could prettyprint")
+errormsg("-indexdb database	Add 'database' to list of files searched to find chunk definitions.")
+errormsg("-filter cmd		Filter through 'cmd' before weaving; cmd could prettyprint")
 errormsg("			or perform other functions.")
+errormsg("-ifilter filt		Filter through internal filter 'filt' before weaving.")
 @ \iffalse
 <<noweave man page indexing options>>=
 .TP
 .B \-x
-For 
-.I LaTeX,
+For
+.IR LaTeX ,
 add a page number to each chunk name identifying the location of that
 chunk's definition, and emit cross-reference information relating definitions and uses.
-For 
-.I HTML,
+For
+.IR HTML ,
 create hypertext links between uses and definitions of chunks.
 When
-.B noweave -x
+.B "noweave \-x"
 is used with
 .I LaTeX,
 the control sequence
-.B "\\\\nowebchunks"
+.B "\enowebchunks"
 expands to a sorted list of all code chunks.
 .TP
 .B \-index
 Build cross-reference information (or hypertext links) for identifiers defined by
 .br
-.B "@ %def" 
-.I identifiers
+.BI "@ %def" " identifiers"
 .br
 Definitions are those found in input files.
 Requires
@@ -272,65 +298,81 @@ or
 .I HTML.
 .B \-index
 implies
-.B \-x;
+.BR \-x ;
 including both will generate strange-looking output.
 .I noweave
 does not generate
 cross-references to identifiers that appear in quoted code (\fB@[[\fP...\fB@]]\fP),
 but it does generate hypertext links.
 When
-.B noweave -index
+.B "noweave \-index"
 is used with
-.I LaTeX, 
+.IR LaTeX ,
 the control sequence
-.B "\\\\nowebindex"
+.B "\enowebindex"
 expands to an index of identifiers.
 .TP
-.B \-indexfrom \fIindex\fP
-Like 
-.B \-index,
-but the identifiers to be indexed are taken from file \fIindex\fP.
+.BI \-indexfrom " index"
+Like
+.BR \-index ,
+but the identifiers to be indexed are taken from file
+.IR index .
 See
-.I noindex(1).
+.IR noindex (1).
+.TB
+.BR \-indexdb " database"
+Add
+.I database
+to the list of files searched to find chunk definitions.
+This facilitates keeping a single web in multiple source files.
 <<noweave man page option table>>=
 .TP
 .B \-filter \fIcmd\fP
-Filters the 
+Filters the
 .I noweb
-source through 
+source through
 .I cmd
 after converting it to tool form and before converting to
-.I TeX.
+.IR TeX .
 .I noweave
-looks for 
+looks for
 .I cmd
 first on the user's
-.B PATH,
+.BR PATH ,
 then in
-.B |LIBDIR|.
+.BR |LIBDIR| .
 Such filters
 can be used to add features to
-.I noweave;
+.IR noweave ;
 for an example, see
-.B |LIBDIR|/noxref.krom.
-.I Noweave
-supports up to four filters; one can get more by shell trickery, 
-for example, \fB-filter "icon.filter | noidx"\fP.
-The \fB-autodefs\fP,
-\fB-x\fP, \fB-index\fP, and \fB-indexfrom\fP options are implemented as filters.
+.BR |LIBDIR|/noxref.krom .
+.I noweave
+supports up to four filters; one can get more by shell trickery,
+for example, \fB\-filter "icon.filter | noidx"\fP.
+The
+.BR \-autodefs ,
+.BR \-x ,
+.BR \-index ,
+and
+.B \-indexfrom
+options are implemented as filters.
 Filters are executed with the shell's
 .B eval
 command, so
 .I cmd
 should be quoted accordingly.
+.TP
+.BI \-ifilter " filt"
+Filters the noweb file through the internal filter
+.I filt
+(presumably written in Lua)
+before converting it to
+.IR TeX .
+There is no limit on the number of internal filters that may be used.
 <<description of -markup option>>
-@ \fi 
-Note that it would be appropriate to look for autodefs
-using [[[ -x $newfilter ]]],
-but that stupid DEC Ultrix doesn't support [[test -x]], so the best I can
-do in a portable way is [[test -r]].
+@ \fi
 <<first pass {\tt noweave} options>>=
-| "-autodefs" => 
+| "-autodefs" =>
     f = libFile("autodefs." .. argv[i+1])
     if MD.isExecutable(f) then
       filters = filters .. P.filter(f, {})
@@ -342,25 +384,30 @@ do in a portable way is [[test -r]].
 | "-showautodefs" => <<print all legal [[-autodefs]] or complain>>; exit (1)
 <<option printout for usage>>=
 errormsg("-autodefs lang	Source is in language 'lang'; find definitions automatically.")
-errormsg("-showautodefs	List languages that can be used with -autodefs")
+errormsg("-showautodefs		List languages that can be used with -autodefs.")
 @ \iffalse
 <<noweave man page indexing options>>=
 .TP
-.B \-autodefs \fIlang\fP
+.BR \-autodefs " lang"
 Discover identifier definitions automatically.
-Code in chunks must be in language \fIlang\fP.
-Permissible \fIlang\fPs vary but may include
+Code in chunks must be in language
+.IR lang .
+Permissible
+.IR lang\^ s
+vary but may include
 .B tex
-or 
-.B icon.
+or
+.BR icon .
 Useless without
-.B \-index,
+.BR \-index ,
 which it must precede.
 .TP
 .B \-showautodefs
-Show values of \fIlang\fP usable with \fB-autodefs\fP.
-@ \fi 
-Same note as above regarding [[test -x]] vs [[test -r]].
+Show values of
+.I lang
+usable with
+.BR \-autodefs .
+@ \fi
 <<print all legal [[-autodefs]] or complain>>=
 foundautodefs = nil
 l = System.globFile(libFile("autodefs.*"))
@@ -376,7 +423,7 @@ if not foundautodefs then
   write("This noweave does not support -autodefs")
 end
 @
-Here's an embarrassing hack --- if we spot \verb+-option shortxref+ 
+Here's an embarrassing hack --- if we spot \verb+-option shortxref+
 or \verb+-option longxref+ on the
 command line, we pass something suitable to the back end, in case we're doing
 HTML.
@@ -384,26 +431,32 @@ HTML.
 | "-option" => newopt=argv[i+1]; i = i + 1
          if newopt == "shortxref" then shortxref = List.new {"-shortxref"} end
          if newopt == "longxref"  then shortxref = List.new {"-longxref"} end
-         <<add [[$newopt]] to [[noweboptions]]>>
+	 if noweboptions then
+	   noweboptions = noweboptions .. "," .. newopt
+	 else
+	   noweboptions = newopt
+	 end
 <<option printout for usage>>=
-errormsg("-option opt	Add \\noweboptions{opt} to header (latex only)")
+errormsg("-option opt		Add \\noweboptions{opt} to header (LaTeX only).")
 @ \iffalse
 <<noweave man page option table>>=
-.TP 
-.B \-option \fIopt\fP
-Adds \fB\enoweboptions{\fP\fIopt\fP\fB}\fP to the
+.TP
+.BI \-option " opt"
+Adds
+.BI \enoweboptions{ opt\^ }
+to the
 .I LaTeX
 header.
-See 
-.I nowebstyle(1) 
+See
+.IR nowebstyle (1)
 for values of
-.I opt.
+.IR opt .
 Normally useful only with the
 .B \-latex
-option, but 
+option, but
 .B "\-option longxref"
-works black magic with 
-.B \-html.
+works black magic with
+.BR \-html .
 @ \fi
 <<first pass {\tt noweave} options>>=
 | "-delay" =>   delay={"-delay"} ; wrapper="none"
@@ -413,43 +466,41 @@ errormsg("-delay		Delay markup until after first documentation chunk.")
 <<noweave man page option table>>=
 .TP
 .B \-delay
-By default, 
+By default,
 .I noweave
 puts file-name and other information into the output before the first chunk
 of the program.
 .B \-delay
 delays that information until after the first documentation chunk, making
-act a little bit like the 
+it act a little bit like the
 .I WEB
 ``limbo.''
 The option is typically used to enable a user to put a specialized
 .I LaTeX
-.B "\\\\documentclass"
+.B "\edocumentclass"
 command and other preamble material in the first documentation chunk.
 This option also forces trailing cross-referencing information to be emitted
 just before the final chunk, instead of at the end of the document;
 the final chunk is expected to contain
-.B "\\\\end{document}."
-The 
+.B "\eend{document}."
+The
 .B \-delay
 option implies the
-.B \-n 
+.B \-n
 option.
 @ \fi
-% .TP
-% .B \-nodelay
-% Don't delay, put file-name and other information right after header. (Default)
-% @ \fi
 <<first pass {\tt noweave} options>>=
 | "-t*" => List.put(markopts, argv[i])
 <<option printout for usage>>=
-errormsg("-tk		Expand tab stops every k columns")
-errormsg("-t		Copy tabs to the output")
+errormsg("-tk		Expand tab stops every k columns.")
+errormsg("-t		Copy tabs to the output.")
 @ \iffalse
 <<noweave man page option table>>=
 .TP
-.B \-t\fIk\fP
-Expand tabs with stops every \fIk\fP columns.
+.BI \-t k
+Expand tabs with stops every
+.I k
+columns.
 (Default is to expand every 8 columns.)
 .TP
 .B \-t
@@ -458,9 +509,9 @@ Copy tabs to the output.
 <<first pass {\tt noweave} options>>=
 | "-v" => errormsg("RCS version name $Name$")
     errormsg("RCS id $Id$")
-    verbose=1 
+    verbose=1
 <<option printout for usage>>=
-errormsg("-v		Print pipeline and RCS info on standard error")
+errormsg("-v		Print pipeline and RCS info on standard error.")
 @ \iffalse
 <<noweave man page option table>>=
 .TP
@@ -469,24 +520,32 @@ Print the pipeline and RCS info on standard error.
 @ \fi
 \iffalse
 <<man page: WEAVING section>>=
-Output from \fInoweave\fP can
-be used in \fITeX\fP documents that 
-.B "\\\\input nwmac,"
-in \fILaTeX\fP documents that  use the
-.B noweb
-package (see \fInowebstyle(1)\fP),
-and in \fIHTML\fP documents to be browsed with 
-.I netscape(1)
-or
-.I Internet Explorer.
-.I Noweave
-treats code chunks somewhat like
-.I LaTeX list environments.
-If the ``\fB@ \fP'' that terminates a code chunk is followed immediately by text,
-that text follows the code chunk without a paragraph break.
-If the rest of the line is blank, 
+Output from
 .I noweave
-puts 
+can
+be used in
+.I TeX
+documents that
+.BR "\einput nwmac" ,
+in
+.I LaTeX
+documents that use the
+.B noweb
+package (see
+.IR nowebstyle (1)),
+and in HTML documents to be browsed with
+.IR netscape (1)
+or
+Internet Explorer.
+.I noweave
+treats code chunks somewhat like
+.I LaTeX
+list environments.
+If the ``\fB@\ \fP'' that terminates a code chunk is followed immediately by text,
+that text follows the code chunk without a paragraph break.
+If the rest of the line is blank,
+.I noweave
+puts
 .I TeX
 into ``vertical mode,'' and later text starts a fresh, indented paragraph.
 .PP
@@ -495,19 +554,19 @@ an overfull vbox.
 The documentation chunk immediately preceding a code chunk appears on
 the same page as that code chunk unless doing so would violate the previous rule.
 .PP
-.I Noweave
-inserts no extra newlines in its \fITeX\fP output, so the line numbers given
+.I noweave
+inserts no extra newlines in its
+.I TeX
+output, so the line numbers given
 in
 .I TeX
 error messages are the same as those in the input file.
 .PP
 .I noweave
-has
-options that dictate choice of 
-formatter
+has options that dictate choice of formatter
 and that support different formatting idioms and tools.
 Basic options are described here; options related to index
-and cross-reference information are described in the 
+and cross-reference information are described in the
 INDEXING AND CROSS-REFERENCE section.
 <<noweave man page option table>>
 @
@@ -515,22 +574,22 @@ INDEXING AND CROSS-REFERENCE section.
 
 @ \fi
 <<show usage>>=
-errormsg("Usage: $0 [options] [files]")
+errormsg{"Usage: ", argv0, " [options] [files]"}
 errormsg("Options recognized are:")
 <<option printout for usage>>
 @
 With an internal source, it's easy to supply headers and trailers.
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>=
-function internal_src (buf, t) 
+function internal_src (buf, t)
   local rc
   case t.wrapper of
   | "latex" => NWB.put(buf, NW_HEADER, wrapper .. " " .. noweboptions)
-  | "none"  => 
+  | "none"  =>
   else => NWB.put(buf, NW_HEADER, wrapper .. " " .. List.tostring(args))
   end
   rc = t.fun(buf, t.arg)
   case t.wrapper of
-  | "none"  => 
+  | "none"  =>
   else => NWB.put(buf, NW_TRAILER, wrapper)
   end
   return rc
@@ -541,14 +600,15 @@ With an external source, much harder --- I need an explicit [[fromascii]].
 function external_src(t)
   case t.wrapper of
   | "latex" => write("@header ", wrapper .. " " .. noweboptions, '\n')
-  | "none"  => 
+  | "none"  =>
   else => write("@header ", wrapper .. " " .. List.tostring(args), '\n')
+     --- where is args coming from?
   end
   System.fflush()
   rc = XPipe.run(XPipe.stage(t.fun, t.arg))  -- probably wrong
   System.fflush()
-  case t.wrapper of 
-  | "none"  => 
+  case t.wrapper of
+  | "none"  =>
   else => write("@trailer ", wrapper, '\n')
   end
   return rc
@@ -557,13 +617,13 @@ end
 function external_src_wrap(t)
   case t.wrapper of
   | "latex" => NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. noweboptions)
-  | "none"  => 
+  | "none"  =>
   else => NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. List.tostring(args))
      --- where is args coming from?
   end
   local rc = Stages.fromascii(t.buf)
   case t.wrapper of
-  | "none"  => 
+  | "none"  =>
   else => NWB.put(t.buf, NW_TRAILER, t.wrapper)
   end
   return rc
@@ -573,13 +633,13 @@ end
 if type(markup) == "string" then
   s = P.xsource(external_src, {wrapper=wrapper, fun=markup, arg=markopts .. args},
                 "<external " .. markup .. ' ' .. List.tostring(markopts..args) .. ">")
-else 
+else
   s = P.source(internal_src, {wrapper=wrapper, fun=markup, arg=markopts .. args})
 end
 
 src = s
 -- src = P.source(Stages.markup, markopts .. args)
-@ 
+@
 <<initialization>>=
 if not Noweave then Noweave = { } end
 function Noweave.concatfallback (x, y)

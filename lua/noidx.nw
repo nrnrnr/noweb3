@@ -19,7 +19,7 @@ Noidx = { }
 \subsubsection{The filter \texttt{Stages.noidx}}
 
 \texttt{Stages.noidx} computes all the index and cross-reference information
-represented by the \kw{index} and \kw{xref} keywords.
+represented by the \nkw{INDEX} and \nkw{XREF} keys.
 Its arbitrary argument is a list of strings denoting options.
 
 The {\tt -delay}  option delays heading material until
@@ -43,7 +43,7 @@ put the anchor at the beginning of
 the code chunk, just as if {\tt -docanchor} had not been used.
 \end{enumerate}
 This option is used to create anchors suitable for the HTML back end.
-Its effect  is to jump the documentation preceding a code chunk 
+Its effect is to make hyperlinks jump to the documentation preceding a code chunk 
 rather than to the code chunk itself.
 
 The \texttt{-dbout \emph{file}} option causes the filter to emit, on

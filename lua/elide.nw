@@ -26,7 +26,7 @@ actually appears in a code chunk named
 To prepare internal documentation for the stages, we use
 \texttt{Stages.elide} with the argument \texttt{hackers:*}.
 
-Also undocumented \texttt{-eat} option.
+FIXME: Also undocumented \texttt{-eat} option.
 
 @
 \subsection{Eliding}

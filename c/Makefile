@@ -32,7 +32,8 @@ NOOBJS=xpipe.o xpipe-lua.o nwprocess.o lua-help.o nwbuffer.o ipipe.o \
 	getline.o columns.o stages.o lua-main.o cpif.o \
 	mpipe.o mpipe-lua.o fromascii.o notangle.o main.o modules.o modtrees.o \
 	util.o sys.o noweb-lua.o nwbuffer-lua.o misc-lua.o finduses.o recognize.o 
-EXTERNAL=finduses markup nt mnt
+NWMTIMEOBJS=nwmtime.o getline.o errors.o columns.o
+EXTERNAL=finduses markup nt mnt nwmtime
 
 FILES=markparse.nw markup.nw \
       main.nw notangle.nw match.nw mnt.nw modules.nw modtrees.nw \
@@ -40,7 +41,7 @@ FILES=markparse.nw markup.nw \
       getline.nw columns.nw errors.nw strsave.nw \
       nwbuffer.nw nwbuffer-lua.nw \
       ipipe.nw ipipe-lua.nw xpipe.nw xpipe-lua.nw mpipe.nw mpipe-lua.nw \
-      nwprocess.nw lua-main.nw
+      nwprocess.nw lua-main.nw nwmtime.nw
 
 # sources to build when distributing C code
 #   (add all generated .c and .h files to this list)
@@ -56,7 +57,8 @@ SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
   nwbuffer.h util.c util.h precompiled.h stages.c stages.h sys.c sys.h \
   toascii.c toascii.h xpipe-lua.c xpipe-lua.h xpipe.c xpipe.h \
   nwbuffer-lua.c nwprocess.h nwprocess.c \
-     fu-run.c misc-lua.c misc-lua.h   markup.ps
+     fu-run.c misc-lua.c misc-lua.h   markup.ps \
+     nwmtime.c
 NAME='name of RCS version'
 
 NOTANGLE=notangle
@@ -81,7 +83,7 @@ CPIF=>
 .dvi.ps: ;	dvips -o $*.ps $*.dvi
 
 
-all:	no
+all:	no nwmtime
 
 external: $(EXTERNAL)
 
@@ -97,6 +99,9 @@ markup:	$(MARKUPOBJS)
 mnt:	$(MNTOBJS)
 	$(CC) $(CFLAGS) -o mnt $(MNTOBJS)
 
+nwmtime:	$(NWMTIMEOBJS)
+	$(CC) $(CFLAGS) -o nwmtime $(NWMTIMEOBJS)
+
 nwbuffer-lua.c: nwbuffer.nw nwbuffer-lua.nw
 	(echo "<<key macros>>="; $(NOTANGLE) $(TANGLEOPTS) -R'key macros' nwbuffer.nw; echo "@") | $(NOTANGLE) $(TANGLEOPTS) -L nwbuffer-lua.nw - > $@
 
@@ -109,7 +114,7 @@ source:	$(SRCS)
 touch: $(SRCS)
 	touch $(SRCS)
 
-clean: ;	rm -f nt markup mnt finduses fakepretty no buildswitch
+clean: ;	rm -f nt markup mnt finduses fakepretty no buildswitch nwmtime
 		rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~ 
 		rm -f *.atac *.trace *.html *.icn
 

@@ -47,7 +47,7 @@ CIIMAXALIGN=4		# Linux x86
 POPEN=-DPOPEN
 
 # if your C library is not POSIX compliant, comment the following line:
-POSIX=-D_POSIX_SOURCE
+POSIX=-DPOSIX
 
 # if you don't have strerror() in your C library, uncomment the following line:
 #NOSTRERROR= -DNOSTRERROR

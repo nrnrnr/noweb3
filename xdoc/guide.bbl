@@ -38,5 +38,10 @@
 \newblock Literate programming simplified.
 \newblock {\em IEEE Software}, 11(5):97--105.
 
+\bibskip\bibitem[\protect\authoryear{Knuth}{1992}]{knuth:litprog}
+{\leavevmode\kern-2em}Knuth, Donald. 1992~(May).
+\newblock Literate Programming.
+\newblock C.S.L.I. Publications.
+
 \end{thebibliography}
 \endgroup

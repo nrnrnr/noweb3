@@ -208,7 +208,7 @@ A prior implementation used [[500]] pairs initially in a sequence
 (which perhaps also means growth by 500 each time),
 based on some measurements using the noweb source files.
 This implementation uses an arena size of 
-We use [[128]] because it is where the knee in the performance
+[[128]] because it is where the knee in the performance
 curve seems to be on the machine being used to develop this
 (a 233 MHz Pentium II running Plan 9 and compiling using the APE environment's malloc).
 The code works with [[1]] and [[2]], from which rsc concludes that it works for all values.

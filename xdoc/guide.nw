@@ -11,12 +11,12 @@
 \author{Norman Ramsey\thanks{Author's current address is Department of
   Electrical Engineering and Computer Science,
   Harvard University,
-  33 Oxford Street
+  33 Oxford Street,
   Cambridge, MA 02138, USA;
 send email to {\tt nr@eecs.harvard.edu}.}\\Department of Computer Science\\
 Princeton University}
 \date{September 1992\\(Revised August 1994, December 1997, June 1998,
-May 1999, December 2001)}
+May 1999, October 2002)}
 
 \setcounter{secnumdepth}{0}
 \setcounter{tocdepth}{3}
@@ -29,6 +29,13 @@ May 1999, December 2001)}
 \newcommand\ikws[2]{\ikw{#1}\hbox{\thinspace}\ldots~\ikw{#2}}
 \newcommand\xkw[1]{\kw{xref~#1}}
 \newcommand\xkws[2]{\xkw{#1}\hbox{\thinspace}\ldots~\xkw{#2}}
+
+\newcommand\nkw[1]{\texttt{NW\_#1}}
+\newcommand\nkws[2]{\nkw{#1}\hbox{\thinspace}\ldots~\nkw{#2}}
+\newcommand\nikw[1]{\nkw{INDEX\_#1}}
+\newcommand\nikws[2]{\nikw{#1}\hbox{\thinspace}\ldots~\nikw{#2}}
+\newcommand\nxkw[1]{\nkw{XREF\_#1}}
+\newcommand\nxkws[2]{\nxkw{#1}\hbox{\thinspace}\ldots~\nxkw{#2}}
 
 \newcommand\opencite[1]{{\let\hbox\relax\cite{#1}}}
 
@@ -94,82 +101,1425 @@ addressed to those who want to change or extend {\tt noweb}.
 
 \section{Introduction}
 
-\citeN{ramsey:simplified} describes {\tt {\tt noweb}} from a user's
-point of view, showing its simplicity and examples of its use.
-The {\tt {\tt noweb}} tools are implemented as {\em pipelines}.
-Each pipeline begins with the {\tt noweb}
-source file.  Successive stages of the pipeline implement simple
-transformations of the source, until the desired result emerges from
-the end of the pipeline.  Figures
-\ref{fig:pipe-notangle}~and~\ref{fig:pipe-noweave} on
-page~\pageref{fig:pipe-notangle} show pipelines for
-{\tt notangle} and {\tt noweave}.  
-Pipelines are responsible for {\tt {\tt noweb}}'s
-extensibility, which enables its users to create new literate-programming
-features without having to write their own tools.
-This document explains how to change or extend {\tt noweb} by
-inserting or removing pipeline stages.
-Readers should be familiar with the {\tt {\tt noweb}} man pages, which
-describe the structure of {\tt {\tt noweb}} source files.
+This document is the Noweb Hacker's Guide.  It's job is to explain how
+{\tt noweb} works internally, to make it possible for would-be hackers to
+understand the current parts of {\tt noweb} and/or to add new features to it.
 
-{\tt markup}, which is the first stage in
-every pipeline, converts {\tt noweb} source to a representation easily
-manipulated by common Unix tools like {\tt sed} and {\tt awk}, simplifying
-the construction of later pipeline stages.  Middle stages add
-information to the representation.  {\tt notangle}'s final stage converts to
-code; {\tt noweave}'s final stages convert to TeX, LaTeX or HTML.
-A final stage for GNU {\tt troff -mm} is supplied
-in the distribution, but is not supported.
-Middle stages are called {\em filters}, by analogy with Unix filters.
-Final stages are called {\em back ends}, by analogy with
-compilers---they don't transform {\tt {\tt noweb}}'s intermediate
-representation; they emit something else.
+You should already be familiar with the concepts of Literate Programming,
+as well as with the {\tt noweb} input format and how to use the {\tt no} program
+from the command line.  To this end, reading
+\citeN{knuth:litprog}
+and the
+\emph{no}(1),
+\emph{noweave}(1),
+and
+\emph{notangle}(1)
+man pages
+will be helpful, as well as perusing some previously-written
+{\tt noweb}
+literate programs.
 
-Version~2 used the Unix pipeline to implement the \texttt{noweb}
-pipeline, and it used Bourne shell scripts to specify pipelines.
-Version~3 is distinguished by having three implementations of
-pipelines:
+\section{The Big Picture}
+
+The {\tt noweb} program parses the {\tt noweb} input format and turns it into a
+stream of information.  At a high level, the stream is a sequence of
+\emph{chunks} (both code and documentation).
+
+Documentation chunks contain three things: text, newlines, and quoted
+code.  Code chunks contain three things as well: text, newlines and
+\emph{uses} of other chunks.
+
+This format is ripe for analysis and transformation.  For example, it
+is possible to insert cross-reference tags for references between chunks
+(familiar to the reader of most any {\tt noweb} document).  Or it is possible
+to insert information to support identifier cross-reference.  The entire
+stream may be converted to a stream of LaTeX or a stream of HTML or ....
+
+The stream format also makes it possible to play ``tricks,'' such as
+counting identifier usages, noting identifier definitions, and so on.
+Pretty-printing of code is possible simply by processing code chunks
+appropriately.
+% FIXME: WHAT OTHER TRICKS DID YOU HAVE IN MIND? I'M NOT FAMILIAR ENOUGH WITH THINGS
+
+The purpose of the Hacker's Guide is to enable you to play your own
+games with {\tt noweb}'s internals---and you never have to touch a line of
+{\tt noweb}'s official code.
+
+\section{{\tt noweb} Structure}
+
+This section introduces the {\tt noweb} archicteture, and
+describes the implemenation of {\tt noweb} 3.
+
+\subsection{Pipeline Structure}
+
+What makes {\tt noweb} interesting, flexible and unique among Literate
+Programming tools is its \emph{pipelined} architecture.  By analogy with
+Unix pipelines, each task is managed by a separate module.
+This is illustrated in the following figures:
+
+\begin{figure}[t]
+\noindent
+\begin{tabbing}
+XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\={}\kill
+\>\+{\tt markup}: Convert to pipeline representation\+\\
+{\tt nt:} Extract desired chunk to standard output
+\end{tabbing}
+\caption{Stages in pipeline for {\tt notangle}}
+\label{fig:pipe-notangle}
+
+\noindent
+\begin{tabbing}
+XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\={}\kill
+\>\+{\tt markup}: Convert to pipeline representation\+\\
+{\tt autodefs.c}: Find definitions in C code\+\\
+{\tt finduses -noquote}: Find uses of defined identifiers\+\\
+{\tt noidx}: Add index and cross-reference information\+\\
+{\tt totex}: Convert to {\LaTeX}
+\end{tabbing}
+\caption{Stages in pipeline for {\tt noweave -index -autodefs c}}
+\label{fig:pipe-noweave}
+\end{figure}
+
+\subsection{Original Implementation}
+
+For {\tt noweb} versions 1 and 2, the pipeline was actually implemented as a
+Unix shell pipeline, using separate commands.  The {\tt markup} program parsed
+the input file, generating the {\tt noweb} ASCII intermediate form
+(described in the section
+% FIXME: use a latex xref here
+\emph{The ASCII pipeline representation}, below).
+All subsequent stages of the pipeline (called
+\emph{filters}, by analogy with Unix pipelines) read, processed, and
+wrote the intermediate form.  The final stage generated the output \TeX{},
+\LaTeX{}, HTML or source code.
+
+This structure had a number of advantages:
+
+\begin{itemize}
+\item
+\emph{Learnability.}
+This architecture is easy for any programmer familiar with
+Unix to understand immediately.
+\item
+\emph{Comprehendability.}
+The parts of the {\tt noweb} system are small; each stage is easy to write.
+This is also due to the simple intermediate format, which is highly
+regular and easy for simple scripts written using Unix tools such as
+{\tt sed} or {\tt awk} (or Icon, {\tt perl}, Python ...) to manipulate.
+\item
+\emph{Extensability.}
+What you can do is limited largely by your imagination and your skill
+as a programmer; just write filters as needed.
+\item
+\emph{``Portability.''}
+Unix and its toolset are well known.  It is possible to write scripts
+and/or C programs that compile and run across a wide variety of
+commercial and free Unix systems.
+\end{itemize}
+
+While all of this sounds wonderful, in practice, this structure turned
+out to have some significant disadvantages as well:
+
+\begin{itemize}
+\item
+\emph{Performance.}
+The use of a shell pipeline and ASCII representation are slow;
+the data must be reparsed by every filter in the pipeline.
+This is particularly expensive if the filter leaves most of the
+data unmodified.
+The data is copied as it passes through each stage in the
+pipeline, increasing the total number of characters that the
+system has to move before the final output is produced.
+Also, having multiple processes ends up being
+slower than doing everything in a single process.
+\item
+{\tt awk} \emph{limitations.}
+Many of the tools distributed with {\tt noweb} were originally
+written in {\tt awk}.  Unfortunately, {\tt awk} versions vary in language details,
+and stock Unix versions of {\tt awk} often perform poorly.
+\item
+\emph{Non-standard tools.}
+To remedy the problems with {\tt awk}, a number of filters were
+rewritten using Icon.
+Icon is great for writing filters but requires the {\tt noweb}
+user to install a non-standard program; {\tt noweb} is no longer
+a stand-alone piece of software.
+In addition, Icon is not as popular as {\tt perl} or Python or
+some of the other currently in-vogue scripting languages,
+leading to a paucity of new filters, since the potential
+filter author has to learn Icon first.
+\item
+\emph{System differences.}
+The Unix shell and utilities vary across platforms more than
+any sane person would like to deal with.  Although this situation
+is improving, it is difficult for one person to be aware
+of all the differences, and to write 100\% portable, correct
+code.  (Although tools such as GNU Autoconf can help with this,
+they are complicated in their own right, and seemed to be overkill
+for a small tool such as {\tt noweb}.)
+\end{itemize}
+
+\subsection{Goals for the Rewrite}
+
+Because of all the disadvantages listed previously, I decided
+to rewrite {\tt noweb} to use a different structure.  The goals of
+the rewrite were:
+
+\begin{itemize}
+\item
+\emph{Maintain the pipeline concept, not implementation.}
+It should remain easy to add filters to manipulate the
+structure and content of a document before producing the final formatted
+document, or compilable source code.
+Ideally, adding filters should not require altering the
+{\tt noweb} binary.
+\item
+\emph{Backwards compatibility with existing tools / filters.}
+There exists a good-sized investment by myself and the user community
+in tools that understand the textual version of the intermediate
+format.  It should be possible (although at the risk of performance
+loss) to continue to use these existing tools with the new
+version of {\tt noweb}.
+\item
+\emph{Improve portability and ease of maintenance.}
+The adopted design uses a minimum amount of C code, pushing
+most of the work into pipeline stages written in a simple
+embedded programming language.  All that has to be ported is
+the mainline C code and the already highly-portable code for
+the embedded language, which decreases the amount of work
+and necessary knowledge about system variances.
+Furthermore, the embedded language is simple enough that
+I can maintain its interpreter with ``forever,'' with
+very little effort.
+\item
+\emph{Improve performance by using internal pipelines}
+The new version of {\tt noweb} passes all the data that represent
+a document in memory.  It is only necessary to parse the
+external format once, at the beginning.
+\item
+\emph{Make pipeline programming simple and learnable}
+The internal representation is straightforward for programs to read,
+modify, and write.  The embedded scripting language is easy to learn
+and use.  The {\tt no} binary handles the mechanics of setting up internal
+pipelines.  All that the author of a filter has to do is to actually
+write the filter.
+\end{itemize}
+
+
+\section{Implementation, High level view}
+
+The embedded language that {\tt noweb} uses is called `Lua 2.5+nw'
+(or just Lua).
+The primary pipeline stages, as well as the {\tt weave} and {\tt tangle}
+driver programs, have been rewritten in Lua.
+New filters should be written in Lua, and if anyone has the
+time to help, existing filters should be translated into Lua.
+
+Lua has the following advantages:
+
+\begin{itemize}
+\item
+\emph{The language implementation is small and maintainable.}
+Lua is a small language.  The embeddable interpreter is also
+small and easy to maintain.  This was important, since I expect
+to have to maintain the interpreter ``forever.''
+
+\item
+\emph{It is an easy language to program in.}
+Lua is easy to learn.  The control-flow constructs are very standard,
+as are the basic facilities for data management.
+
+\item
+\emph{Lua handles memory management automatically.}
+Low-level memory management is the bane of the C and C++ programmer.
+Having automatic garbage collection relieves the programmer's burden,
+and ensures that memory usage doesn't explode in an unseemly manner.
+It is particularly important for {\tt noweb}'s pipeline: data in the pipeline
+isn't duplicated as it moves from stage to stage if it doesn't have to be.
+
+\item
+\emph{Supports modern concepts (OO, etc).}
+Lua supports modern programming paradigms.  In particular, it is
+easy to write Object-Oriented programs as the need arises.
+
+\item
+\emph{Extensable as necessary.}
+The ``fallback'' mechanism for user-defined data types makes it
+possible (and easy) to extend the language as necessary.  The
+interpreter itself is also simple, making it possible to extend
+the language if need be. (Although I have already modestly extended the
+language, I don't foresee the need for additional language extensions.)
+
+\item
+\emph{Lua has Pattern matching and string manipulation.}
+Because a {\tt noweb} document is largely text, it helps to be able to
+work with regular expressions and do typical text manipulation
+activities (substring, split, join, text match and substitution).
+Lua supports all of these activities, so that the filter author
+doesn't have to give up facilities she is used to from {\tt awk} or Icon.
+\end{itemize}
+
+The documentation for Lua 2.5+nw may be found in the directory
+{\tt lua-2.5+nw/doc} in the {\tt noweb} distribution.  The file {\tt refman.ps} is the
+reference manual, which describes the modified Lua language. (The primary
+additions are the {\tt case} and {\tt globmatch} statements.)  You should now take
+a detour, and read the language documentation for maximal understanding
+of the rest of this guide, and before writing any filters.
+
+The {\tt noweb} 3 software suite is now a single executable binary, named {\tt no}.
+This program is written in C, and contains the embedded Lua interpreter.
+The {\tt weave} and {\tt tangle} programs are now high level scripts written in
+Lua that primarily parse command line arguments and set up the internal
+pipeline.  See the \emph{noweave}\/(1) and \emph{notangle}\/(1) man pages for invocation
+details.
+
+Components of a {\tt noweb} pipeline are represented internally by what is
+termed a \emph{stage}.
+At the Lua level, a stage is a function that takes three arguments:
+an input buffer, an output buffer, and an arbitrary third argument.
+This latter is usually a list of options.
+
+\begin{verbatim}
+-- define my own stage named `mystage'
+function Stages.mystage(inbuf, outbuf, args) 
+do
+	...
+end
+\end{verbatim}
+
+Buffers are described in detail in the next section.  For now, it's
+enough to know that they contain the internal representation of the
+original {\tt noweb} document.
+
+There are three kinds of stages:
+
+\begin{itemize}
+\item
+\emph{Sources}
+A source ignores its input buffer and writes information into
+its output buffer.  The {\tt markup} stage is the primary source; it
+parses the {\tt noweb} input text file and generates the internal
+representation used by the rest of the stages in the pipeline.
+% [ Q. ARE THERE ANY OTHER SOURCES?  I DON'T THINK SO. ]
+
+\item
+\emph{Sinks}
+A sink reads its input buffer and ignores its output buffer.
+The {\tt totex}, {\tt tohtml} and {\tt nt} stages are the primary sinks.  They
+generate \TeX{} or \LaTeX{}, HTML, and compilable source,
+respectively.
+
+\item
+\emph{Filters}
+A filter reads its input buffer, processes the data
+in some fashion, and writes the transformed data to its output buffer.
+\end{itemize}
+
+Within the {\tt no} binary, Lua functions exist to compose sources,
+sinks and filters into pipelines.  This is generally done by
+the {\tt weave} and {\tt tangle} scripts for you; all you have to do is tell
+{\tt weave} or {\tt tangle} which additional filter(s) to use for any
+particular invocation, and they handle building the pipeline.
+
+Internal filters are those written in Lua; they can read and write
+the in-memory representation of the {\tt noweb} document directly.
+External filters are those that work only on the ASCII intermediate
+representation used by {\tt noweb} 2.  To leverage the existing base of
+external filters, they may be included in what is termed a \emph{mixed}
+pipeline, where some stages are internal and some are external.
+
+The Lua filters {\tt Stages.toascii} and {\tt Stages.fromascii} convert the internal
+representation to the external ASCII intermediate form and back.
+Thus a mixed pipeline uses these stages to pass a document through an
+external filter and then back into internal ones:
+
+\begin{verbatim}
+file -> markup -+					 +-> totex -> .tex file
+		+-> toascii -> extern_filt -> fromascii -+
+\end{verbatim}
+
+Again, this is handled transparently for you by {\tt weave} and {\tt tangle}.
+
+To add your own filters invoke {\tt weave} or {\tt tangle} like so:
+
+[ FIXME: EXAMPLES NEEDED HERE ]
+
+\section{Implementation, Low level view}
+
+
+In the Introduction, we said that {\tt noweb} files contain code and
+documentation chunks, and described what each kind of chunk
+could contain: text, newlines, quoted code, and references to
+other chunks, as appropriate to the chunk type.
+
+Each chunk is represented internally as a (key, value) pair.
+The \emph{buffer} holds a sequence of these pairs, representing
+the structure and contents of the original input file.  Each stage in the
+{\tt noweb} pipeline manipulates this buffer, modifying it and passing
+it on to the next stage.
+
+\subsection{Keys}
+
+The values of the predefined keys for the (key, value) pairs are predefined in Lua, with the
+names given in Table~\ref{tab:lua-keys}.
+These values are userdata values, with tag~\texttt{NWKEY}.
+The Lua version accomadates non-predefined keys by using their string
+values.
+
+The \emph{structural keys}
+represent the {\tt noweb} source syntax directly.
+They must appear in particular orders that reflect the
+structure of the source.
+
+The \{emph{tagging keys} can be inserted
+essentially anywhere (within reason), and with some exceptions, they are not generated
+by {\tt markup}.
+
+The \emph{wrapper keys}
+mark the beginning and end of file,
+and they carry information about what formatters are supposed to do in
+the way of leading and trailing boilerplate.
+They are used by {\tt no weave} but not by {\tt no tangle}, and they are
+inserted directly by the {\tt no weave} Lua script, not by {\tt markup}.
+FIXME: IS THIS LAST STATEMENT STILL CORRECT?
+
+%FIXME: This table isn't formatting right, and it's beyond
+%my abilities to fix.  Please review/edit.
+\begin{table}[t]
+\noindent
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+% l2h macro ttitle 1 </td></tr><tr><td colspan=2 align=center><b>#1</b></td></tr><td>
+\ttitle{Structural keys}
+\hline
+NW\_BEGIN\_CODE $n$&Start a code chunk\\
+NW\_END\_CODE $n$&End a code chunk\\
+NW\_BEGIN\_DOCS  $n$&Start a documentation chunk\\
+NW\_END\_DOCS  $n$&End a documentation chunk\\
+NW\_TEXT {\rm\it string}&{\rm\it string} appeared in a chunk\\
+NW\_NL&A newline appeared in a chunk\\
+NW\_DEFN {\rm\it name}&The code chunk named {\rm\it name} is being defined\\
+NW\_USE {\rm\it name}&A reference to code chunk named {\rm\it name}\\
+NW\_QUOTE&Start of quoted code in a documentation chunk\\
+NW\_ENDQUOTE&End of quoted code in a documentation chunk\\
+\hline
+\ttitle{Tagging keys}
+\hline
+NW\_FILE {\rm\it filename}&Name of the file from which the chunks came\\
+NW\_LINE $n$&Next text line came from source line $n$ in current file\\
+NW\_LANGUAGE {\rm\it language}&Programming language in which code is written\\
+NW\_INDEX \ldots&Index information.\\
+\hline
+%FIXME: Norman, go through this part
+\ttitle{Cross reference keys}
+NW\_XREF\_LABEL&Cross reference to a label\\
+NW\_XREF\_REF&Cross reference to a FIXME: reference??\\
+NW\_XREF\_PREVDEF&Cross reference to the previous definition\\
+NW\_XREF\_NEXTDEF&Cross reference to the next definition\\
+NW\_XREF\_BEGINDEFS&Cross reference to the beginning of a definition\\
+NW\_XREF\_DEFITEM&Cross reference to an item's definition\\
+NW\_XREF\_ENDDEFS&Cross reference to the end of a definition\\
+NW\_XREF\_BEGINUSES&Cross reference to the beginning of an item's use\\
+NW\_XREF\_USEITEM&Cross reference to an item's use\\
+NW\_XREF\_ENDUSES&Cross reference to the end of an item's use\\
+NW\_XREF\_NOTUSED&Cross reference for an item that's not used\\
+NW\_XREF\_BEGINCHUNKS&Cross reference to the start of several chunks FIXME: ??\\
+NW\_XREF\_CHUNKBEGIN&Cross reference to the beginning of a chunk\\
+NW\_XREF\_CHUNKUSE&Cross reference to a chunk's use\\
+NW\_XREF\_CHUNKDEFN\&Cross reference to a chunk's definition\
+NW\_XREF\_CHUNKEND&Cross reference to the end of a chunk\\
+NW\_XREF\_ENDCHUNKS&Cross reference to the end of several chunks FIXME: ??\\
+NW\_XREF\_TAG&Cross reference to a FIXME: tag??\\
+\hline
+\end{tabularx}\\
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Wrapper keys}
+\hline
+NW\_HEADER {\rm\it formatter options}&
+      First line, identifying formatter and options\\
+NW\_TRAILER {\rm\it formatter}&Last line, identifying formatter.\\
+\hline
+%\end{tabularx}\\
+%\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Error key}
+\hline
+NW\_FATAL {\rm\it stagename} {\rm\it message}&
+      A fatal error has occurred.\\
+\hline
+%\end{tabularx}\\
+%\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Lying, cheating, stealing key}
+\hline
+NW\_LITERAL {\rm\it text}&
+      Copy {\it text} to output.\\
+\hline
+\end{tabularx}
+
+\caption{Keys used in {\tt noweb}'s Lua pipeline representation}
+\label{tab:lua-keys}
+
+\end{table}
+
+% FIXME: From here forward is basically a clone of the original description
+% for the noweb 2 representation, with edits made as appropriate.  Please
+% review for accuracy.
+
+\subsubsection{Structural keys}
+
+The structural keys represent the chunks in the {\tt noweb} source.
+Each chunk is bracketed by a
+\nkws{BEGIN\_xxx}{END\_xxx} pair.
+pair.  The use of \texttt{\_CODE} or \texttt{\_DOCS}
+in the tag indicates what kind of chunk it is.
+The \nkw{BEGIN} and \nkw{END} are numbered; within a single file,
+numbers must be monotonically increasing, but they need not be
+consecutive.
+Filters may change chunk numbers at will.
+
+Depending on its kind, a chunk may contain {\em documentation} or {\em
+code}. 
+Documentation may contain text and newlines, represented by \nkw{TEXT}
+and \nkw{NL}.
+It may also contain {\em quoted code} bracketed by
+\nkws{QUOTE}{ENDQUOTE}.
+Every \nkw{QUOTE} must be terminated by an \nkw{ENDQUOTE} within the
+same chunk.
+Quoted code corresponds to the \verb+[[+\ldots \verb+]]+ construct in
+the {\tt noweb} source.
+
+Code, whether it appears in quoted code or in a code chunk,
+may contain text and newlines, and also definitions and uses of
+code chunks, marked with \nkw{DEFN} and \nkw{USE}.
+The first structural key in any code chunk must be \nkw{DEFN}.
+\nkw{DEFN} may be preceded or followed by tagging keys, but the
+next structural key
+must be \nkw{NL}; 
+together, the \nkw{DEFN} and \nkw{NL}
+represent the initial \verb+@<<chunk name@>>=+
+that starts the chunk (including the terminating newline).
+
+A few facts follow from what's already stated above, but are probably
+worth noting explicitly:
 \begin{itemize}
 \item 
-The \emph{external pipeline} is equivalent to the Version~2 pipeline;
-it consists of separate programs that pass information using the ASCII
-pipeline representation documented in the first half of this Guide.
-Two implementations are included; one uses Unix pipes, and one uses
-temporary files.
-The temporary-file implementation may one day be generalized to
-support DOS, Windows, and Mac platforms.
+Quoted code may not appear in code, nor may it appear in
+\nkw{DEFN} or \nkw{USE}.
+{\tt no weave} back ends are encouraged to give \verb+[[+\ldots
+\verb+]]+ special treatment when it appears in \nkw{DEFN} or
+\nkw{USE}, so that the text contained therein is treated as if it
+were quoted code.
 \item
-The \emph{internal pipeline} is an abstract datatype used to build
-pipelines within a \emph{single} program.
-The stages in such pipelines are simple functions that read from one
-buffer and write to another.
-Internal pipelines are much more efficient than external pipelines,
-because they avoid the overhead of spawning processes and converting
-to and from ASCII.
-The catch is that many \texttt{noweb} pipeline stages are not yet available in
-internal form.
+The text in chunks may be distributed among as many \nkw{TEXT}
+keys as desirable.  Any number of empty \nkw{TEXT} keys are
+permitted.  In particular, it is not realistic to expect that a single
+line will be represented in a single \nkw{TEXT} (see the discussion of
+{\tt finduses} on page~\pageref{finduses}).
 \item
-The \emph{mixed pipeline} creates a pipeline in which stages may be
-internal functions or external programs.
-The implementation transparently introduces conversions to and from
-ASCII so that the Right Thing happens.
-The mixed pipeline supports backwards compatibility for old external
-stages, plus it supports new external stages that users or third
-parties might write.
+{\tt markup} sometimes emit \nkw{USE} within
+\nkws{QUOTE}{ENDQUOTE}, for example from a source like \verb+[[@<<chunk name@>>]]+.
+\item
+No two chunks have the same number.
+\item
+Because later filters can change chunk numbers, no filter should
+plant references to chunk numbers anywhere in the pipeline.
 \end{itemize}
-In Version~3, the shell scripts are replaced with scripts written in
-Lua$+$nw, a derivative of the embedded language Lua from PUC-Rio in
-Brazil \opencite{ierusalimschy:lua}.
-Lua is more portable than the Bourne shell; it can support internal stages
-as well as external ones; and Lua code can replace Icon code for  many
-purposes.
-An implementation of Lua is distributed with Version~3.
-Therefore, when the Icon code is replaced, it will be possible to
-distribute \texttt{noweb} as a single binary, plus scripts written in Lua.
-(The source code will, of course, continue to be available.)
+
+\subsubsection{Tagging keys}
+
+The structural keys carry all the code and documentation that
+appears in a {\tt noweb} source file.
+The tagging keys carry information about that code or
+documentation.
+The \nkw{FILE} key carries the name of the source file from which the
+following lines come.
+The \nkw{LINE} key gives the line number of the next \nkw{TEXT} line
+within the current file (as determined by the most recent \nkw{FILE}
+key). 
+The only guarantee about where these appear is that {\tt markup}
+introduces each new source file with a \nkw{FILE} that appears between
+chunks.
+Most filters ignore \nkw{FILE} and \nkw{LINE}, but {\tt tangle}
+respects them, so that {\tt
+no tangle} can properly mark line numbers if some {\tt noweb}
+filter starts moving lines around.
+
+\paragraph{Programming languages}
+
+To support automatic indexing or prettyprinting, it's possible to
+indicate the programming language in which a chunk is written.
+The \nkw{LANGUAGE} key may appear at most once between
+each \nkw{BEGIN\_CODE} and \nkw{END\_CODE} pair.
+Standard values of \nkw{LANGUAGE} and their associated meanings are:
+\begin{quote}
+\begin{tabularx}{\linewidth}{@{}>{\ttfamily}lX@{}}
+\texttt{awk}&awk\\
+\texttt{c}&C\\
+\texttt{c++}&C$++$\\
+\texttt{caml}&CAML\\
+\texttt{haskell}&Haskell\\
+\texttt{html}&HTML\\
+\texttt{icon}&Icon\\
+\texttt{latex}&{\LaTeX} source\\
+\texttt{lua}&Lua or Lua-2.5$+$nw\\
+\texttt{lisp}&Lisp or Scheme\\
+\texttt{make}&A Makefile\\
+\texttt{m3}&Modula-3\\
+\texttt{ocaml}&Objective CAML\\
+\texttt{perl}&A perl script\\
+\texttt{python}&Python\\
+\texttt{sh}&A shell script\\
+\texttt{sml}&Standard ML\\
+\texttt{tex}&plain {\TeX}\\
+\texttt{tcl}&tcl\\
+\end{tabularx}
+\end{quote}
+If the \nkw{LANGUAGE} key catches on, it may be useful to create an
+automatic registry on the World-Wide Web.
+
+I have made it impossible to place \nkw{LANGUAGE} information directly
+in a \texttt{noweb} source file.
+My intent is that tools will identify the language of the root chunks
+using any of several methods: conventional names of chunks, being told
+on a command line, or identifying the language by looking at the
+content of the chunks.
+(Of these methods, the most practical is to name the root chunks after
+the files to which they will be extracted, and to use the same naming
+conventions as \texttt{make} to figure out what the contents are.)
+A \texttt{noweb} filter will tag non-root chunks with the appropriate
+\nkw{LANGUAGE} by propagating information from uses to definitions.
+(This filter does not currently exist. Contributions gratefully accepted.)
+
+\paragraph{Indexing and cross-reference concepts}
+
+
+The index and cross-reference commands use \itlabel s, \ident s, and \tag s.
+A \itlabel\ is a unique string generated to refer to some element of a
+literate program.
+They serve as labels or ``anchor points'' for back ends that are
+capable of implementing their own cross-reference.
+So, for example, the {\LaTeX} back end uses labels as arguments to \verb+\label+
+and \verb+\ref+, and the HTML back end uses labels to name and refer
+to anchors.
+Labels never contain white space, which simplifies parsing.
+The standard filters cross-reference at the chunk level, so that each
+label refers to a particular code chunk, and all references to that
+chunk use the same label.
+
+An \ident\ refers to a source-language identifier.
+{\tt noweb}'s concept of identifier is general; an identifier is
+an arbitrary string.
+It can even contain whitespace.
+Identifiers are used as keys in the index; references to the same
+string are assumed to denote the same identifier.
+
+{\rm\it Tag\/}s are the strings used to identify components for
+cross-reference in the final document.
+For example, Classic {\tt WEB} uses consecutive ``section numbers'' to
+refer to chunks.
+{\tt noweb}, by default, uses ``sub-page references,'' e.g., ``24b''
+for the second chunk appearing on page~24.
+The HTML back end doesn't use any tags at all; instead, it
+implements cross-referencing using the ``hot link'' mechanism.
+
+The final step of cross-referencing involves generating tags and
+associating a tag with each label.
+All the existing back ends rely on a document formatter to do this
+job, but that strategy might be worth changing.
+Computing tags within a {\tt noweb} filter could be lots easier than
+doing it in a formatter.
+For example, a filter that computed sub-page numbers by grubbing in
+{\tt .aux} files would be pretty easy to write, and it would eliminate
+a lot of squirrelly {\LaTeX} code.
+
+\paragraph{Index information}
+
+I've divided the index keys into several groups.
+There seems to be a plethora of keys, but most of them are
+straightforward representations of parts of a document produced by
+{\tt no weave}.  Readers may want to have a sample of {\tt no weave}'s
+output handy when studying this and the next section.
+
+\begin{table}
+\begin{center}
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Definitions, uses, and {\tt @ \%def}}
+\hline
+NW\_INDEX\_DEFN \ident&The current chunk contains a definition of \ident\\
+NW\_INDEX\_LOCALDEFN \ident&The current chunk contains a definition of
+               \ident, which is not to be visible outside this file\\
+NW\_INDEX\_use \ident&The current chunk contains a use of \ident\\
+NW\_INDEX\_nl \ident&A newline that is part of markup, not part of the chunk\\
+\hline
+\ttitle{Identifiers defined in a chunk}
+\hline
+NW\_INDEX\_BEGINDEFS&Start list of identifiers defined in this chunk\\
+NW\_INDEX\_ISUSED \itlabel&
+        The identifier named in the following \nikw{DEFITEM} is used in
+        the chunk labelled by \itlabel\\
+NW\_INDEX\_DEFITEM \ident&
+        \ident\ is defined in this chunk, and it is used in all the
+        chunks named in the immediately preceding \nikw{ISUSED}.\\
+NW\_INDEX\_ENDDEFS&End list of identifiers defined in this chunk\\
+\hline
+\ttitle{Identifiers used in a chunk}
+\hline
+NW\_INDEX\_BEGINUSES&Start list of identifiers used in this chunk\\
+NW\_INDEX\_ISDEFINED \itlabel&
+        The identifier named in the following \nikw{USEITEM} is defined in
+        the chunk labelled by \itlabel\\
+NW\_INDEX\_USEITEM \ident&
+        \ident\ is used in this chunk, and it is defined in each of the
+        chunks named in the immediately preceding \nikw{ISDEFINED}.\\
+NW\_INDEX\_ENDUSES&End list of identifiers used in this chunk\\
+\hline
+\end{tabularx}\\
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{The index of identifiers}
+\hline
+NW\_INDEX\_BEGININDEX&Start of the index of identifiers\\
+NW\_INDEX\_ENTRYBEGIN \itlabel\ \ident&
+        Beginning of the entry for \ident, whose first definition is
+        found at \itlabel\\
+NW\_INDEX\_ENTRYUSE \itlabel&
+        A use of the identifer named in the last \nikw{ENTRYBEGIN}
+        occurs at the chunk labelled with \itlabel.\\
+NW\_INDEX\_ENTRYDEFN \itlabel&
+        A definition of the identifer named in the last \nikw{ENTRYBEGIN}
+        occurs at the chunk labelled with \itlabel.\\
+NW\_INDEX\_ENTRYEND&
+        End of the entry started by the last \nikw{ENTRYBEGIN}\\
+NW\_INDEX\_ENDINDEX&End of the index of identifiers\\
+\hline
+\end{tabularx}
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{FIXME: Keys Without Corresponding External Pipeline Explanation}
+\hline
+NW\_INDEX\_USE&FIXME: This is ...\\
+NW\_INDEX\_NL&FIXME: This is ...\\
+\hline
+\end{tabularx}
+\end{center}
+\caption{Indexing keys}
+\label{tab:lua-index}
+\vskip -5pt
+\end{table}
+
+\paragraph{Definitions, uses, and {\tt @ \%def}}
+
+The \nkw{INDEX} keys
+\nikw{DEFN}, \nikw{USE}, and \nikw{NL} are the only ones
+that appear in {\tt markup}'s output, and thus
+which can appear in any program.
+They may appear only within the boundaries of a code chunk
+(\nkws{BEGIN\_CODE}{END\_CODE}).
+\nikw{DEFN} and \nikw{USE} simply indicate that the current chunk
+contains a definition or use of the identifier \ident\ which follows
+the key.
+The placement of \nikw{DEFN} need not bear a relationship to the
+text of the definition, but \nikw{USE} is normally followed by a
+\nkw{TEXT} that contains the source-code text identified as the
+use.%
+\footnote{This property can't hold when one identifier is a prefix of
+another; see the description of {\tt finduses} on page~\pageref{finduses}.
+FIXME: STILL TRUE?}
+
+Instances of \nikw{DEFN} normally come from one of two sources: either a
+language-dependent recognizer of definitions, or a hand-written
+\verb+@ %def+ line.
+In the latter case, the line is terminated by a newline that is
+neither part of a code chunk nor part of a documentation chunk.
+To keep line numbers accurate, that newline can't just be abandoned,
+but neither can it be represented by \nkw{NL} in a documentation or
+code chunk.
+The solution is the \nikw{NL} key, which serves no purpose other
+than to keep track of these newlines, so that back ends can produce
+accurate line numbers.
+
+Following a suggestion by Oren Ben-Kiki,
+\nikw{LOCALDEFN} indicates a definition that is not to be visible
+outside the current file.
+It may be produced by a language-dependent recognizer or other filter.
+Because I have questions about the need for \nikw{LOCALDEFN}, there is
+officially no way to cause {\tt markup} to produce it.
+
+\paragraph{Identifiers defined in a chunk}
+
+The keys from \nikw{BEGINDEFS} to \nikw{ENDDEFS} are used to represent
+a more complex data structure giving the list of identifiers defined
+in a code chunk.
+The constellation represents a list of identifiers; one \nikw{DEFITEM}
+appears for each identifier.
+The group also tells in what other chunks each identifier is used;
+those chunks are listed by \nikw{ISUSED} keys which appear just
+before \nikw{DEFITEM}.
+The labels in these keys appear in the order of the corresponding
+code chunks, and there are no duplicates.
+
+These keys can appear anywhere inside a code chunk, but
+filters are encouraged to keep these keys together.
+The standard
+filters guarantee that only
+\nikw{ISUSED} and \nikw{DEFITEM} appear between \nikw{BEGINDEFS} and
+\nikw{ENDDEFS}.
+The standard filters put them at the end of the code chunk, which
+simplifies translation by the {\LaTeX} back end, but that strategy
+might change in the future.
+
+
+It should go without saying, but the keys in these and all similar
+groups (including some \nkw{XREF} groups) must be properly structured.
+That is to say:
+\begin{enumerate}
+\item
+Every \nikw{BEGINDEFS} must have a matching \nikw{ENDDEFS} within the
+same code chunk.
+\item
+\nikw{ISUSED} and \nikw{DEFITEM} may appear only between matching
+\nikw{BEGINDEFS} and \nikw{ENDDEFS}.
+\item
+The damn things can't be nested.
+\end{enumerate}
+
+\paragraph{Identifiers used in a chunk}
+
+
+The keys from \nikw{BEGINUSES} to \nikw{ENDUSES} are the dual of
+\nikw{BEGINDEF} to \nikw{ENDDEF};
+the structure lists the identifiers used in the current code chunk,
+with cross-references to the definitions.
+Similar interpretations and restrictions apply.
+Note that an identifier can be defined in more than one chunk,
+although we expect that to be an unusual event.
+{\hfuzz=1.2pt\par}
+
+\paragraph{The index of identifiers}
+
+Keys \nikw{BEGININDEX} to \nikw{ENDINDEX} represent the
+complete index of all the identifiers used in the document.
+Each entry in the index is bracketed by \nikws{ENTRYBEGIN}{ENTRYEND}.
+An entry provides the name of the identifier, plus the labels of all the
+chunks in which the identifier is defined or used.
+The label of the first defining chunk
+is given at the beginning of the entry so that back ends needn't
+search for it.
+{\hfuzz=4.9pt\par}
+
+Filters are encouraged to keep these keys together.
+The standard filters put them almost at the very end of the
+{\tt noweb} file, just before the optional \nkw{TRAILER}.
+
+\paragraph{Cross-reference information}
+
+\newcommand\anchor{{\rmfamily\textit{anchor}}}
+
+% l2h substitution anchor <i>anchor</i>
+
+The most basic function of the cross-referencing keys is to
+associate labels and pointers (cross-references) with elements of the
+document, which is done with the \nxkw{REF} and \nxkw{LABEL} keys.
+The other \nkw{XREF} keys all express chunk cross-reference
+information that is emitted directly by one or more back ends.
+
+Chunk cross-reference introduces the idea of
+an {\anchor}, which is a label that refers to an ``interesting point''
+we identify with the
+beginning of a code chunk.
+The anchor is the place we expect to turn to when we want to know about a
+code chunk;
+its exact value and interpretation depend on the back end being used.
+The standard {\LaTeX} back end uses the sub-page number of the
+defining chunk as the anchor, but the standard HTML back end uses some
+\nkw{TEXT} from the documentation chunk preceding the code chunk.
+
+
+\begin{table}
+\begin{center}
+\begin{tabularx}{\textwidth}{|>{\tt}l>{\raggedright\arraybackslash}X|}
+\ttitle{Basic cross-reference}
+\hline
+NW\_XREF\_LABEL \itlabel&Associates \itlabel\ with tagged item.\\
+NW\_XREF\_REF \itlabel&
+        Cross-reference from tagged item to item associated with \itlabel.\\
+\hline
+\ttitle{Linking previous and next definitions of a code chunk}
+\hline
+NW\_XREF\_PREVDEF \itlabel&
+   The \nkw{DEFN} from the previous definition of this chunk is
+   associated with \itlabel.\\
+NW\_XREF\_NEXTDEF \itlabel&
+   The \nkw{DEFN} from the next definition of this chunk is
+   associated with \itlabel.\\
+\hline
+\ttitle{Continued definitions of the current chunk}
+\hline
+NW\_XREF\_BEGINDEFS&Start ``This definition is continued in \ldots''\\
+NW\_XREF\_DEFITEM \itlabel&Gives the label of a chunk in which the
+definition of the current chunk is continued.\\
+NW\_XREF\_ENDDEFS&Ends the list of chunks where definition is continued.\\
+\hline
+\ttitle{Chunks where this code is used}
+\hline
+NW\_XREF\_BEGINUSES&Start ``This code is used in \ldots''\\
+NW\_XREF\_USEITEM \itlabel&Gives the label of a chunk in which this
+    chunk is used.\\
+NW\_XREF\_ENDUSES&Ends the list of chunks in which this code is used.\\
+NW\_XREF\_NOTUSED {\rm\it name}&
+        Indicates that this chunk isn't used anywhere in this document.\\
+\hline
+\ttitle{The list of chunks}
+\hline
+NW\_XREF\_BEGINCHUNKS&Start of the list of chunks\\
+NW\_XREF\_CHUNKBEGIN \itlabel\ {\it name}&
+        Beginning of the entry for chunk {\it name}, whose {\anchor}
+        is found at \itlabel.\\
+NW\_XREF\_CHUNKUSE \itlabel&
+        The chunk is used in the chunk labelled with \itlabel.\\
+NW\_XREF\_CHUNKDEFN \itlabel&
+        The chunk is defined in the chunk labelled with \itlabel.\\
+NW\_XREF\_CHUNKEND&End of the entry started by the last \nxkw{CHUNKBEGIN}\\
+NW\_XREF\_ENDCHUNKS&End of the list of chunks\\
+\hline
+\ttitle{Converting labels to tags}
+\hline
+NW\_XREF\_TAG \itlabel\ \tag&Associates \itlabel\ with \tag.\\
+\hline
+\end{tabularx}
+\end{center}
+\vskip -4pt
+\caption{Cross-referencing keys}
+\label{tab:lua-xref}
+\vskip -3pt
+\end{table}
+
+\paragraph{Basic cross-reference}
+
+\nxkw{LABEL} and \nxkw{REF} are named by analogy with the {\LaTeX}
+\verb+\label+ and \verb+\ref+ commands.
+\nxkw{LABEL} is used to associate a \itlabel\ with a succeeding item.
+Items that can be so labelled include:
+\begin{quote}
+\begin{tabularx}{\linewidth}{>{\tt}l>{\raggedright\arraybackslash}X}
+NW\_DEFN&Labels the code chunk that begins with this \rlap{\kw{defn}.}\\
+                                                % cheating the line breaker
+NW\_USE&Labels this particular use.\\
+NW\_INDEX\_DEFN&Labels this definition of an identifier.\\
+NW\_INDEX\_USE&Labels this use of an identifier.\\
+NW\_TEXT&Typically labels part of a documentation chunk.\\
+NW\_END\_DOCS&Typically labels an empty documentation chunk.\\
+\end{tabularx}
+\end{quote}
+I haven't made up my mind whether this should be the complete set, but
+these are the ones used by the standard filters.
+Most back ends use the chunk as the basic unit of cross-reference, so
+the labels of \nkw{DEFN} are the ones that are most often used.
+The HTML back end, however, does something a little different---it
+uses labels that refer to documentation preceding a chunk, because
+typical HTML browsers place the label%
+\footnote{The HTML terminology calls a label an ``anchor.''}
+at the top of the screen, and using the label of the \nkw{DEFN} would
+lose the documentation immediately preceding a chunk.
+The labels used by this back end usually point to \nkw{TEXT}, but they
+may point to \nkw{END\_DOCS} when no text is available.
+
+
+\nxkw{REF} is used to associate a reference with a succeeding item.
+Such items include
+\begin{quote}
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}X}
+{\tt NW\_DEFN}, {\tt NW\_USE}&Refers to the label used as an {\anchor} for this chunk.\\
+\vtop{\hbox{\strut{\tt NW\_INDEX\_DEFN},}\hbox{\strut{\tt NW\_INDEX\_USE}}}&
+  Refers to the label used as an {\anchor} for the first
+           chunk in which this identifier is defined.\\
+\end{tabularx}
+\end{quote}
+
+\paragraph{Linking previous and next definitions of a code chunk}
+
+\nxkw{PREVDEF} and \nxkw{NEXTDEF} may appear anywhere in a code chunk,
+and they give the labels of the preceding and succeeding definitions
+of that code chunk, if any.
+Standard filters currently put them at the beginning of the code
+chunk, following the initial \nkw{DEFN}, so the information can be used
+with the \nkw{DEFN} key,
+\`a la \citeN{fraser:retargetable:book}.
+
+\paragraph{Continued definitions of the current chunk}
+
+The keys ranging from \nxkw{BEGINDEFS} to \nxkw{ENDDEFS} appear in the first
+definition of each code chunk.
+They provide the information needed by the ``This definition is
+continued in \ldots'' message printed by the standard {\LaTeX} back
+end.
+They can appear anywhere in a code chunk, but standard filters put
+them after all the \nkw{TEXT} and \nkw{NL}s, so that back ends can just
+print out text.
+
+
+\paragraph{Chunks where this code is used}
+
+The keys from \nxkw{BEGINUSES} to \nxkw{ENDUSES} are the dual of
+\nxkw{BEGINDEFS} to \nxkw{ENDDEFS}; they show where the current chunk is
+used.
+As with \nxkws{BEGINDEFS}{ENDDEFS}, they appear only in the first
+definition of any code chunk, and they come at the end.
+Sometimes, as with root chunks, the code isn't used anywhere, in which
+case \nxkw{NOTUSED} appears instead of \nxkws{BEGINUSES}{ENDUSES}.
+The name of the current chunk appears as an argument to \nxkw{NOTUSED}
+because some back ends may want to print a special message for unused
+chunks---they might be written to files, for example.
+
+\paragraph{The list of chunks}
+
+The list of chunks, which is defined by the keys
+\nxkws{BEGINCHUNKS}{ENDCHUNKS}, is the
+analog of the index of identifiers, but it lists all the code chunks
+in the document, not all the identifiers.
+
+Filters are encouraged to keep these keys together.
+The standard filters put them at the end of the {\tt noweb}
+file, just before the index of identifiers.
+
+\paragraph{Converting labels to tags}
+
+None of the existing back ends actually computes tags; they all use
+formatting engines to do the job.
+The {\LaTeX} back end uses an elaborate macro package to compute
+sub-page numbers, and the HTML back end arranges for ``hot links'' to
+be used instead of textual tags.
+
+Some people have argued that literate-programming tools shouldn't require
+elaborate macro packages, that they should use the basic facilities
+provided by a formatter.  Nuweb, for example, uses standard {\LaTeX}
+commands only, but goes digging through {\tt .aux} files to find
+labels and compute sub-page numbers.
+Doing this kind of computation in a real programming language is much
+easier than doing it with {\TeX} macros, and I expect that one day
+{\tt noweb} will have a tag-computing filter, the results of
+which will be expressed using the \nxkw{TAG} key.
+
+The rules governing \nxkw{TAG} are that it can appear anywhere.
+None of the standard filters or back ends does anything with it.
+
+
+
+\subsubsection{Wrapper keys}
+
+The wrapper keys, \nkw{HEADER} and \nkw{TRAILER}, are anomalous in
+that they're not generated by {\tt markup} or by any of the
+standard filters; instead they're inserted by the {\tt no weave} Lua
+script at the very beginning and end of file.
+FIXME: STILL TRUE?
+The standard {\TeX}, {\LaTeX}, and HTML back ends use them to provide
+preamble and postamble markup, i.e., boilerplate that usually has to
+surround a document.
+They're not required (sometimes you don't want that boilerplate), but
+when they appear they must be the very first and last items in the
+buffer, and the formatter names must match.
+
+\subsubsection{Error key}
+
+FIXME: Verify phrasing of this section w.r.t. Lua code.
+
+The error key \nkw{FATAL} signifies that a fatal error has
+occurred.
+The pipeline stage originating such an error gives its own name and a
+message, and it also writes a message to standard error.
+Filters seeing \nkw{FATAL} must copy it to their output and terminate
+themselves with error status.
+Back ends seeing \nkw{FATAL} must terminate themselves with error
+status. (They should not write anything to standard error since that
+will have been done.)
+
+Using \nkw{FATAL} enables shell scripts to detect
+that something has gone wrong even if the only exit status they have
+access to is the
+exit status of the last stage in a pipeline.
+
+\subsubsection{Lying, cheating, stealing key}
+
+The \nkw{LITERAL} key is used to hack output directly into \texttt{no weave}
+back ends, like \texttt{totex} and \texttt{tohtml}.
+These back ends simply copy the text to their output.
+Tangling back ends ignore \nkw{LITERAL}.
+The \nkw{LITERAL} key is used by Master Hackers who are too lazy to
+write new back ends.
+Its use is deprecated.
+It should not exist.
+
+%=============================================================================
+
+\subsection{Buffers}
+
+As mentioned,
+Lua buffers hold sequences of key-value pairs.
+The following Lua functions are provided on buffers:\\
+\begin{luafuns}
+NWB.new&
+Creates a new, empty buffer, which is userdata with tag
+\texttt{NWBUFFER}.\\ 
+NWB.reader&
+Given one argument, a buffer, returns a ``reader.''
+The reader is an abstraction capable of reading key-value
+pairs; it initially points to the first pair in the buffer.
+Readers are represented as userdata with tag \texttt{NWREADER}.\\
+NWB.read&
+Takes one argument, a reader, and returns \emph{two} results: the next
+key and value in the reader.
+If the pairs in the reader have been exhausted, both results are nil.\\
+NWB.put&
+Takes three arguments (buffer, key, value) and appends the key-value
+pair to the end of the buffer.
+The value may be omitted and defaults to nil.
+It is not specified whether calling \texttt{NWB.put} to append to a
+buffer changes the sequence returned by a previously created reader.
+This means that if you write code that writes to and reads from the same
+buffer at the same time, your code shouldn't depend on whether what
+you write shows up when you read.
+\\
+NWB.pull&
+Takes one argument, a buffer, and returns \emph{two} results: the final
+key and value in the buffer.
+Has the side effect of removing that pair from the buffer.
+If the buffer is empty, both results are nil, and no side effects take
+place.
+The \texttt{pull} operation is the inverse of \texttt{put}.\\
+\end{luafuns}
+
+\subsection{Building pipelines}
+
+Both the internal and external pipelines are available in Lua, but
+this section discusses only the mixed pipeline, of which the other
+two can be treated as special cases.
+
+Pipelines are composed of \emph{stages}, which may be sources,
+filters, or sinks.
+The first stage in any pipeline must be a source, the last stage must
+be a sink, and the remaining stages must be filters.
+All are userdata, with the following tags:
+\begin{luafuns}
+MSOURCE&
+A source, which can be connected to a sink to form a pipeline.\\
+MSINK&
+A sink, which can be connected to a source to form a pipeline.\\
+MFILTER&
+A filter, which can be connected to a source, sink, or filter without
+changing its type.\\
+MPIPE&
+A pipeline, which can be run or printed.\\
+\end{luafuns}
+These things are created using the following functions:\\
+\begin{luafuns}
+MPipe.source&
+Passed two arguments, to create source stages.
+If the first argument is a string, it is taken to be the name of a
+program to be run as an external pipeline stage, and 
+the second argument should be a 
+list of strings to be used as arguments.
+If the first argument is a Lua function, it is run as an internal
+pipeline stage, and the second argument is passed to it (along with a
+buffer into which information should be emitted).\\
+MPipe.xsource&
+Like \texttt{MPipe.source}, except even Lua functions are run in
+external pipeline stages.\\
+MPipe.sink&
+Like \texttt{MPipe.source}, except it creates a sink, not a source.\\
+MPipe.filter&
+Like \texttt{MPipe.source} and \texttt{MPipe.sink}, except it
+creates a filter, not a source or sink.\\
+MPipe.connect&
+Takes two arguments, both stages, and connects them, returning a stage
+or a pipeline, as described by the following table:
+\begin{quote}
+\begin{tabular}{|l|l||l|}
+\hline
+Left Stage& Right Stage& Result\\
+\hline
+Source&Filter&Source\\
+Source&Sink&Pipeline\\
+Filter&Filter&Filter\\
+Filter&Sink&Sink\\
+\hline
+\end{tabular}
+\end{quote}\\
+MPipe.run&
+Run a pipeline.\\
+MPipe.print&
+Print a textual representation of a pipeline or stage.\\
+\end{luafuns}
+
+\subsection{Writing Filters}
+
+As Nicklaus Wirth once put it, ``Algorithms + Data = Programs.''
+The data is the NWB buffer.
+Your job is to supply the algorithm.
+Writing a filter consists primarily
+of writing a loop that reads key--value pairs from the input
+buffer, uses a {\tt case} to find keys of interest, manipulates the
+corresponding values, and then writes everything to the output
+buffer.
+
+As mentioned, filter functions take three arguments: an input buffer,
+an output buffer and arbitrary third argument.  The third argument is
+usually a list of command line options that can be used to modify
+the behavior of the filter.
+
+The typical structure of a filter function is:
+
+\begin{verbatim}
+function Stages.myfilter(inbuf, output, args)
+do
+    -- Typically, one processes the options first.  The following is
+    -- essentially boiler-plate code that loops over the strings in
+    -- the `args' list, looking for options and processing them.
+    -- This would usually be done as a separate noweb chunk.
+
+    -- Convert a string into a list
+    if type(args) == "string" then args = List.fromstring(args) end
+
+    -- Loop over the list
+    while List.length(args) > 0 do
+        local a = List.get(args) 
+        case a of
+        | "-foo" => ... -- code for foo
+        | "-bar" => ... -- code for bar
+        else => noweb_error("unknown argument ", a)
+        end
+    end
+
+    -- Create a reader from the buffer
+    local r = NWB.reader(inbuf)
+
+    local key, val
+
+    -- read initial key/value pair
+    key, val = NWB.read(r)
+    while key ~= nil do     -- loop until done
+        case key of
+        | .... => ....
+        end
+        NWB.put(outbuf, key, val)
+
+        key, val = NWB.read(inbuf)
+    end
+end -- myfilter
+\end{verbatim}
+
+The following is (a slightly edited version of) the
+{\tt Stages.elideuses} filter
+from the {\tt noweb} distribution that illustrates this structure nicely:
+
+\begin{verbatim}
+function Stages.elideuse(sourcebuf, sinkbuf, globs)
+  local r = NWB.reader(sourcebuf)
+  if type(globs) == "string" then globs = List.fromstring(globs) end
+  local eat = nil
+  if globs[1] == "-eat" then List.get(globs); eat = List.get(globs) end
+  local key, arg
+  key, arg = NWB.read(r)
+  local eliding = nil
+  while key do 
+    case key of
+    | NW_USE =>
+        @<<set [[matches]] if [[arg]] matches a pattern in [[globs]]>>
+        if matches then
+          eliding = 1
+        else
+          NWB.put(sinkbuf, key, arg)
+        end
+    | NW_TEXT =>
+        if eliding and strfind(arg, "^%s*$") then
+          -- do nothing
+        else
+ 	  eliding = nil
+          NWB.put(sinkbuf, key, arg)
+        end
+    | NW_NL =>
+        if eliding then
+          local k, a = NWB.pull(sinkbuf)
+          while k == NW_TEXT and strfind(a, "^%s*$") do
+            k, a = NWB.pull(sinkbuf)
+          end
+          NWB.put(sinkbuf, k, a)
+          if eat then NWB.put(sinkbuf, "literal", eat) end
+          eliding = nil
+        end
+        NWB.put(sinkbuf, key, arg)
+    else =>          
+      NWB.put(sinkbuf, key, arg)
+    end
+    key, arg = NWB.read(r)
+  end
+  return 0
+end
+\end{verbatim}
+
+\subsection{C version}
+
+You'll get a pointer to the \texttt{nwbuffer} and \texttt{mpipe}
+modules.
+
+FIXME: NORMAN: THIS SECTION SHOULD EITHER BE REMOVED OR EXPANDED, BUT
+I THINK YOU'LL HAVE TO DO IT.
+
+\subsection{Miscellaneous Lua functions}
+
+The {\tt no}  binary includes the following functions:\\
+\begin{luafuns}
+<<hackers: entries for miscellaneous functions>>
+\end{luafuns}
+
+\medskip
+\noindent
+The {\tt no} binary also loads the following functions written in Lua:\\
+\begin{luafuns}
+<<hackers: entries for Lua functions>>
+\end{luafuns}
+
+\paragraph{Lists}
+Noweb uses Lua tables to represent lists.
+(A future version may use a specialized, more efficient data type.)
+The first element in a list~\texttt{l} is \texttt{l[1]}, then
+\texttt{l[2]}, etc.
+The standard Lua literal notation may be used for lists.
+The Lua concatenation operator ``\texttt{..}'' may be used to
+concatenate lists.  It may also be used to concatenate strings and
+lists, and fallbacks are set up to make \texttt{nil} an identity when
+used with ``\texttt{..}'' and a list.
+In addition to these operators,
+the following functions are provided:\\
+\begin{luafuns}
+<<hackers: entries for list functions>>
+\end{luafuns}
+
+\paragraph{Sets}
+Noweb uses Lua tables to represent sets.
+(A future version may use a specialized, more efficient data type.)
+The keys in the table are the set members; values are always~1.
+The following functions are provided:\\
+\begin{luafuns}
+<<hackers: entries for set functions>>
+\end{luafuns}
+
+
+
+\section{Standard internal pipeline stages}
+
+The standard internal stages and filters are stored in the tables
+\texttt{Stages}, so it is always possible to get
+a list by running \texttt{no} without arguments, and typing
+\texttt{show(Stages)}.
+
+Internal sources take two arguments: a buffer into which information
+should be emitted, and an arbitrary argument used to pass
+source-specific information.
+In C~versions of internal stages, the arbitrary argument is a value of
+type~\texttt{void~*}; in Lua versions, it may be a value of any type.
+Internal sinks also take a buffer and an arbitrary argument, but
+information is read from the buffer, not written.
+An internal filter takes three arguments: an input buffer, an output
+buffer, and an additional, arbitrary argument.
+
+Please convert existing stages to internal form!
+
+\subsection{Internal sources}
+<<hackers: subsubsections for internal sources>>
+\subsection{Internal sinks}
+<<hackers: subsubsections for internal sinks>>
+
+\subsubsection{The sink \texttt{Stages.unmarkup}}
+
+The sink \texttt{Stages.unmarkup} converts the contents of the
+pipeline back to its ASCII input representation.
+The arbitrary argument may be an open file; if it is, the results are
+written to that file.
+Otherwise, they are written to the standard Lua output file.
+
+\subsection{Internal filters}
+<<hackers: subsubsections for internal filters>>
+
+
+
+% FIXME: I think all of this prose has been covered by new stuff
+% and it's safe to remove it.
+%
+%\citeN{ramsey:simplified} describes {\tt noweb} from a user's
+%point of view, showing its simplicity and examples of its use.
+%The {\tt noweb} tools are implemented as {\em pipelines}.
+%Each pipeline begins with the {\tt noweb}
+%source file.  Successive stages of the pipeline implement simple
+%transformations of the source, until the desired result emerges from
+%the end of the pipeline.  Figures
+%\ref{fig:pipe-notangle}~and~\ref{fig:pipe-noweave} on
+%page~\pageref{fig:pipe-notangle} show pipelines for
+%{\tt notangle} and {\tt noweave}.  
+%Pipelines are responsible for {\tt {\tt noweb}}'s
+%extensibility, which enables its users to create new literate-programming
+%features without having to write their own tools.
+%This document explains how to change or extend {\tt noweb} by
+%inserting or removing pipeline stages.
+%Readers should be familiar with the {\tt {\tt noweb}} man pages, which
+%describe the structure of {\tt {\tt noweb}} source files.
+%
+%{\tt markup}, which is the first stage in
+%every pipeline, converts {\tt noweb} source to a representation easily
+%manipulated by common Unix tools like {\tt sed} and {\tt awk}, simplifying
+%the construction of later pipeline stages.  Middle stages add
+%information to the representation.  {\tt notangle}'s final stage converts to
+%code; {\tt noweave}'s final stages convert to TeX, LaTeX or HTML.
+%A final stage for GNU {\tt troff -mm} is supplied
+%in the distribution, but is not supported.
+%Middle stages are called {\em filters}, by analogy with Unix filters.
+%Final stages are called {\em back ends}, by analogy with
+%compilers---they don't transform {\tt {\tt noweb}}'s intermediate
+%representation; they emit something else.
+%
+%Version~2 used the Unix pipeline to implement the \texttt{noweb}
+%pipeline, and it used Bourne shell scripts to specify pipelines.
+%Version~3 is distinguished by having three implementations of
+%pipelines:
+%\begin{itemize}
+%\item 
+%The \emph{external pipeline} is equivalent to the Version~2 pipeline;
+%it consists of separate programs that pass information using the ASCII
+%pipeline representation documented in the first half of this Guide.
+%Two implementations are included; one uses Unix pipes, and one uses
+%temporary files.
+%The temporary-file implementation may one day be generalized to
+%support DOS, Windows, and Mac platforms.
+%\item
+%The \emph{internal pipeline} is an abstract datatype used to build
+%pipelines within a \emph{single} program.
+%The stages in such pipelines are simple functions that read from one
+%buffer and write to another.
+%Internal pipelines are much more efficient than external pipelines,
+%because they avoid the overhead of spawning processes and converting
+%to and from ASCII.
+%The catch is that many \texttt{noweb} pipeline stages are not yet available in
+%internal form.
+%\item
+%The \emph{mixed pipeline} creates a pipeline in which stages may be
+%internal functions or external programs.
+%The implementation transparently introduces conversions to and from
+%ASCII so that the Right Thing happens.
+%The mixed pipeline supports backwards compatibility for old external
+%stages, plus it supports new external stages that users or third
+%parties might write.
+%\end{itemize}
+%In Version~3, the shell scripts are replaced with scripts written in
+%Lua$+$nw, a derivative of the embedded language Lua from PUC-Rio in
+%Brazil \opencite{ierusalimschy:lua}.
+%Lua is more portable than the Bourne shell; it can support internal stages
+%as well as external ones; and Lua code can replace Icon code for  many
+%purposes.
+%An implementation of Lua is distributed with Version~3.
+%Therefore, when the Icon code is replaced, it will be possible to
+%distribute \texttt{noweb} as a single binary, plus scripts written in Lua.
+%(The source code will, of course, continue to be available.)
 
 
 \section{The ASCII pipeline representation}
+
+%FIXME: This is the original prose.  It could profitably be chopped down,
+%now that there's full explanation for the version 3 stuff.
 
 In the external pipeline, stages pass information by reading and
 writing ASCII files.
@@ -240,7 +1590,7 @@ inserted directly by the {\tt noweave} shell script, not by {\tt markup}.
 \hline
 \end{tabularx}
 
-\caption{Keywords used in {\tt noweb}'s pipeline representation}
+\caption{Keywords used in {\tt noweb}'s external pipeline representation}
 \label{table:keywords}
 
 \end{table}
@@ -411,7 +1761,7 @@ Computing tags within a {\tt noweb} filter could be lots easier than
 doing it in a formatter.
 For example, a filter that computed sub-page numbers by grubbing in
 {\tt .aux} files would be pretty easy to write, and it would eliminate
-a lot of squirrely {\LaTeX} code.
+a lot of squirrelly {\LaTeX} code.
 
 
 \subsubsection{Index information}
@@ -475,7 +1825,7 @@ output handy when studying this and the next section.
 \hline
 \end{tabularx}
 \end{center}
-\caption{Indexing keywords}
+\caption{External Pipeline Indexing keywords}
 \label{tab:index}
 \vskip -5pt
 \end{table}
@@ -604,7 +1954,7 @@ Chunk cross-reference introduces the idea of
 an {\anchor}, which is a label that refers to an ``interesting point''
 we identify with the
 beginning of a code chunk.
-The anchor is the place we expect to turn when we want to know about a
+The anchor is the place we expect to turn to when we want to know about a
 code chunk;
 its exact value and interpretation depend on the back end being used.
 The standard {\LaTeX} back end uses the sub-page number of the
@@ -666,7 +2016,7 @@ definition of the current chunk is continued.\\
 \end{tabularx}
 \end{center}
 \vskip -4pt
-\caption{Cross-referencing keywords}
+\caption{External Pipeline Cross-referencing keywords}
 \label{tab:xref}
 \vskip -3pt
 \end{table}
@@ -802,7 +2152,7 @@ file, and the formatter names must match.
 
 \subsection{Error keyword}
 
-The error keyword \kw{fatal} signifies that a fatal error as
+The error keyword \kw{fatal} signifies that a fatal error has
 occurred.
 The pipeline stage originating such an error gives its own name and a
 message, and it also writes a message to standard error.
@@ -1032,7 +2382,7 @@ are bare {\tt troff} commands.
 
 \subsection{\tt unmarkup}
 
-{\tt unmarkup} attempts to  be the inverse of markup---a document
+{\tt unmarkup} attempts to  be the inverse of {\tt markup}---a document
 already in the pipeline is converted back to {\tt noweb} source form.
 This back end is useful primarily for trying to convert other literate
 programs to {\tt noweb} form.
@@ -1040,6 +2390,8 @@ It might also be used to capture and edit the output of an automatic
 definition recognizer.
 
 \section{Standard commands}
+
+FIXME: This section needs reevaluating.
 
 
 \begin{figure}[t]
@@ -1050,7 +2402,7 @@ XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\={}\kill
 {\tt nt:} Extract desired chunk to standard output
 \end{tabbing}
 \caption{Stages in pipeline for {\tt notangle}}
-\label{fig:pipe-notangle}
+\label{fig:pipe-notangle-external}
 
 \noindent
 \begin{tabbing}
@@ -1062,7 +2414,7 @@ XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\=XXl\={}\kill
 {\tt totex}: Convert to {\LaTeX}
 \end{tabbing}
 \caption{Stages in pipeline for {\tt noweave -index -autodefs c}}
-\label{fig:pipe-noweave}
+\label{fig:pipe-noweave-external}
 \end{figure}
 
 
@@ -1072,12 +2424,12 @@ They assemble Unix pipelines using {\tt markup} and the filters and
 back ends described above.  They are documented in man pages, and
 there is no sense in repeating that material here.
 I do show two sample pipelines in
-Figures \ref{fig:pipe-notangle}~and~\ref{fig:pipe-noweave}.
+Figures \ref{fig:pipe-notangle-external}~and~\ref{fig:pipe-noweave-external}.
 The source code is available in the {\tt shell} directory for those
 who want to explore further.
 
 The Version~3 commands are written as Lua scripts.
-Version~3 uses a new style; the command
+Version~3 uses a new style; the command:
 \begin{quote}
 \texttt{no weave} \emph{arguments}
 \end{quote}
@@ -1085,269 +2437,10 @@ searches for a Lua script named \texttt{weave}, then executes that
 script, passing the \emph{arguments} in a Lua variable named
 \texttt{argv}.
 Look at \texttt{lua/weave.nw} and \texttt{lua/tangle.nw} for examples.
-(Weave is way too complicated.)
-
-
-\section{The internal pipeline representation}
-
-\subsection{Lua version}
-
-Lua code uses a sequence of (key, value) pairs as the elements of the
-pipelines.
-The values of the predefined keys are predefined in Lua, with the
-names given in Table~\ref{tab:lua-keys}.
-These values are userdata values, with tag~\texttt{NWKEY}.
-The Lua version accomodates non-predefined keys by using their string
-values.
-
-
-\begin{table}
-\begin{multicols}{3}
-\ttfamily
-\noindent
-NW\_BEGIN\_CODE\\
-NW\_BEGIN\_DOCS\\
-NW\_END\_CODE\\
-NW\_END\_DOCS\\
-NW\_TEXT\\
-NW\_NL\\
-NW\_DEFN\\
-NW\_USE\\
-NW\_QUOTE\\
-NW\_ENDQUOTE\\
-NW\_FILE\\
-NW\_LINE\\
-NW\_LANGUAGE\\
-NW\_HEADER\\
-NW\_TRAILER\\
-NW\_INDEX\_DEFN\\
-NW\_INDEX\_LOCALDEFN\\
-NW\_INDEX\_USE\\
-NW\_INDEX\_NL\\
-NW\_INDEX\_BEGINDEFS\\
-NW\_INDEX\_ISUSED\\
-NW\_INDEX\_DEFITEM\\
-NW\_INDEX\_ENDDEFS\\
-NW\_INDEX\_BEGINUSES\\
-NW\_INDEX\_ISDEFINED\\
-NW\_INDEX\_USEITEM\\
-NW\_INDEX\_ENDUSES\\
-NW\_INDEX\_BEGININDEX\\
-NW\_INDEX\_ENTRYBEGIN\\
-NW\_INDEX\_ENTRYUSE\\
-NW\_INDEX\_ENTRYDEFN\\
-NW\_INDEX\_ENTRYEND\\
-NW\_INDEX\_ENDINDEX\\
-NW\_XREF\_LABEL\\
-NW\_XREF\_REF\\
-NW\_XREF\_PREVDEF\\
-NW\_XREF\_NEXTDEF\\
-NW\_XREF\_BEGINDEFS\\
-NW\_XREF\_DEFITEM\\
-NW\_XREF\_ENDDEFS\\
-NW\_XREF\_BEGINUSES\\
-NW\_XREF\_USEITEM\\
-NW\_XREF\_ENDUSES\\
-NW\_XREF\_NOTUSED\\
-NW\_XREF\_BEGINCHUNKS\\
-NW\_XREF\_CHUNKBEGIN\\
-NW\_XREF\_CHUNKUSE\\
-NW\_XREF\_CHUNKDEFN\\
-NW\_XREF\_CHUNKEND\\
-NW\_XREF\_ENDCHUNKS\\
-NW\_XREF\_TAG\\
-NW\_FATAL
-\end{multicols}
-\caption{Lua versions of predefined keywords}
-\label{tab:lua-keys}
-\end{table}
-
-Lua code uses ``buffers,'' which hold sequences of key-value pairs.
-The following Lua functions are provided on buffers:\\
-\begin{luafuns}
-NWB.new&
-Creates a new, empty buffer, which is userdata with tag
-\texttt{NWBUFFER}.\\ 
-NWB.reader&
-Given one argument, a buffer, returns a ``reader.''
-The reader is an abstraction capable of reading key-value
-pairs; it initially points to the first pair in the buffer.
-Readers are represented as userdata with tag \texttt{NWREADER}.\\
-NWB.read&
-Takes one argument, a reader, and returns \emph{two} results: the next
-key and value in the reader.
-If the pairs in the reader have been exhausted, both results are nil.\\
-NWB.put&
-Takes three arguments (buffer, key, value) and appends the key-value
-pair to the end of the buffer.
-The value may be omitted and defaults to nil.
-It is not specified whether calling \texttt{NWB.put} to append to a
-buffer changes the sequence returned by a previously created reader.
-This means that if you write code that writes to and reads from the same
-buffer at the same time, your code shouldn't depend on whether what
-you write shows up when you read.
-\\
-NWB.pull&
-Takes one argument, a buffer, and returns \emph{two} results: the final
-key and value in the buffer.
-Has the side effect of removing that pair from the buffer.
-If the buffer is empty, both results are nil, and no side effects take
-place.
-The \texttt{pull} operation is the inverse of \texttt{put}.\\
-\end{luafuns}
+({\tt weave} is way too complicated.)
 
 
 
-\subsubsection{Building pipelines}
-
-Both the internal and external pipelines are available in Lua, but
-this document discusses only the mixed pipeline, of which the other
-two can be treated as special cases.
-
-Pipelines are composed of \emph{stages}, which may be sources,
-filters, or sinks.
-The first stage in any pipeline must be a source, the last stage must
-be a sink, and the remaining stages must be filters.
-All are userdata, with the following tags:
-\begin{luafuns}
-MSOURCE&
-A source, which can be connected to a sink to form a pipeline.\\
-MSINK&
-A sink, which can be connected to a source to form a pipeline.\\
-MFILTER&
-A filter, which can be connected to a source, sink, or filter without
-changing its type.\\
-MPIPE&
-A pipeline, which can be run or printed.\\
-\end{luafuns}
-These things are created using the following functions:\\
-\begin{luafuns}
-MPipe.source&
-Passed two arguments, to create source stages.
-If the first argument is a string, it is taken to be the name of a
-program to be run as an external pipeline stage, and 
-the second argument should be a 
-list of strings to be used as arguments.
-If the first argument is a Lua function, it is run as an internal
-pipeline stage, and the second argument is passed to it (along with a
-buffer into which information should be emitted).\\
-MPipe.xsource&
-Like \texttt{MPipe.source}, except even Lua functions are run in
-external pipeline stages.\\
-MPipe.sink&
-Like \texttt{MPipe.source}, except it creates a sink, not a source.\\
-MPipe.filter&
-Like \texttt{MPipe.source} and \texttt{MPipe.source}, except it
-creates a filter, not a source or sink.\\
-MPipe.connect&
-Takes two arguments, both stages, and connects them, returning a stage
-or a pipline, as described by the following table:
-\begin{quote}
-\begin{tabular}{|l|l||l|}
-\hline
-Left Stage& Right Stage& Result\\
-\hline
-Source&Filter&Source\\
-Source&Sink&Pipeline\\
-Filter&Filter&Filter\\
-Filter&Sink&Sink\\
-\hline
-\end{tabular}
-\end{quote}\\
-MPipe.run&
-Run a pipeline.\\
-MPipe.print&
-Print a text representation of a pipeline or stage.\\
-\end{luafuns}
-
-
-
-
-\subsubsection{Writing new pipeline stages}
-
-To be written.
-
-\subsection{C version}
-
-You'll get a pointer to the \texttt{nwbuffer} and \texttt{mpipe}
-modules.
-
-\subsection{Miscellaneous Lua functions}
-
-The {\tt noweb}  binary includes the following functions:\\
-\begin{luafuns}
-<<hackers: entries for miscellaneous functions>>
-\end{luafuns}
-
-\medskip
-\noindent
-The {\tt noweb} binary also loads the following functions written in Lua
-itself:\\
-\begin{luafuns}
-<<hackers: entries for Lua functions>>
-\end{luafuns}
-
-\paragraph{Lists}
-Noweb uses Lua tables to represent lists.
-(A future version may use a specialized, more efficient data type.)
-The first element in a list~\texttt{l} is \texttt{l[1]}, then
-\texttt{l[2]}, etc.
-The standard Lua literal notation may be used for lists.
-The Lua concatenation operator ``\texttt{..}'' may be used to
-concatenate lists.  It may also be used to concatenate strings and
-lists, and fallbacks are set up to make \texttt{nil} an identity when
-used with ``\texttt{..}'' and a list.
-In addition to these operators,
-the following functions are provided:\\
-\begin{luafuns}
-<<hackers: entries for list functions>>
-\end{luafuns}
-
-\paragraph{Sets}
-Noweb uses Lua tables to represent sets.
-(A future version may use a specialized, more efficient data type.)
-The keys in the table are the set members; values are always~1.
-The following functions are provided:\\
-\begin{luafuns}
-<<hackers: entries for set functions>>
-\end{luafuns}
-
-
-
-\section{Standard internal pipeline stages}
-
-The standard internal stages and filters are stored in the tables
-\texttt{Stages}, so it is always possible to get
-a list by running \texttt{no} without arguments, and typing
-\texttt{show(Stages)}.
-
-Internal sources take two arguments: a buffer into which information
-should be emitted, and an arbitrary argument used to pass
-source-specific information.
-In C~versions of internal stages, the arbitrary argument is a value of
-type~\texttt{void~*}; in Lua versions, it may be a value of any type.
-Internal sinks also take a buffer and an arbitrary argument, but
-information is read from the buffer, not written.
-An internal filter takes three arguments: an input buffer, an output
-buffer, and an additional, arbitrary argument.
-
-Please convert existing stages to internal form!
-
-\subsection{Internal sources}
-<<hackers: subsubsections for internal sources>>
-\subsection{Internal sinks}
-<<hackers: subsubsections for internal sinks>>
-
-\subsubsection{The sink \texttt{Stages.unmarkup}}
-
-The sink \texttt{Stages.unmarkup} converts the contents of the
-pipeline back to its ASCII input representation.
-The arbitrary argument may be an open file; if it is, the results are
-written to that file.
-Otherwise, they are written to the standard Lua output file.
-
-\subsection{Internal filters}
-<<hackers: subsubsections for internal filters>>
 
 \section{Examples}
 
@@ -1360,7 +2453,7 @@ In particular,
 \end{quote}
 prints (on standard error) the pipeline used by {\tt noweave}
 to implement any set of {\it options}.
-In this section, I give examples of a few nonstandard filters I've
+In this section, I give examples of a few nonstandard external filters I've
 thrown together for one purpose or another.
 
 {\hfuzz=6.8pt
@@ -1464,7 +2557,7 @@ that add prettyprinting to {\tt noweb}.
 Oikonomou's filters prettyprint Icon and Object-Oriented Turing;
 Martinez-Parra's filter prettyprints a variant of Dijkstra's language
 of guarded commands.
-These filters are in the noweb distribution in the \verb+contrib+ directory.
+These filters are in the {\tt noweb} distribution in the \verb+contrib+ directory.
 
 It's also possible to do useful or amusing things by writing new back
 ends.

@@ -70,7 +70,7 @@ end
 <<hackers: subsubsections for internal filters>>=
 \subsubsection{The filters \texttt{Stages.droptext} and \texttt{Stages.eattext}}
 The filters \texttt{Stages.droptext} and \texttt{Stages.eattext}
-remove text fragments chunks from a stream.
+remove text fragment chunks from a stream.
 They are normally used early in the pipeline so as to remove whole lines.
 For both filters, the arbitrary argument is either a single string or 
 a list of strings.

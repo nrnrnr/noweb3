@@ -11,7 +11,7 @@ Thanks to Bill Trost for getting me started with an early version.
 \subsubsection{The sink \texttt{Stages.tohtml}}
 
 This back end emits HTML.
-It uses the formatter {\tt html} with \kw{header} and \kw{trailer} to
+It uses the formatter {\tt html} with \nkw{HEADER} and \nkw{TRAILER} to
 emit suitable HTML boilerplate.
 For other formatters (like {\tt none}) it emits no header or trailer.
 Its arbitrary argument is a list of options:

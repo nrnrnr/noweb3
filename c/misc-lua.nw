@@ -216,6 +216,6 @@ function.
 If the argument is nil, turns off tracing.\\
 sort&
 Takes a comparison function and a table, and sorts the table using the
-C~library {\emph quicksort} function.\\
+C~library \emph{quicksort} function.\\
 @ 
 

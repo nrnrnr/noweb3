@@ -81,7 +81,9 @@ end
 <<hackers: entries for set functions>>=
 Set.new&
 Takes a list of elements and returns a set containing those elements.
-With no argument, returns a fresh, empty set.\\
+With no argument, returns a fresh, empty set.
+Recommended in case \texttt{noweb} moves to a more efficient
+implementation of sets.\\
 <<*>>=
 function Set.new (tbl)
   if not tbl then return { } end

@@ -12,7 +12,7 @@ The filter is sensitive to chunk definitions in the following form:
 where \emph{name} is the name of the chunk, as usual, and
 \emph{condition} is a restricted Boolean expression in Lua.
 The \emph{condition} may not include function calls, and it may not
-use Lua reserved words other than [[and]], [[or]], and~[[not]].
+use Lua reserved words other than \texttt{and}, \texttt{or}, and~\texttt{not}.
 
 The arbitrary argument is a list of identifiers; when the
 \emph{condition} is evaluated, those identifiers are

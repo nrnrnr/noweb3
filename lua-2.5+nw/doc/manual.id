@@ -16,6 +16,7 @@
 \indexentry{atan}{20}
 \indexentry{basic types}{2}
 \indexentry{block}{4}
+\indexentry{C pointers}{2}
 \indexentry{captures}{20}
 \indexentry{ceil}{20}
 \indexentry{CFunction}{2}
@@ -30,7 +31,6 @@
 \indexentry{condition expression}{5}
 \indexentry{constructors}{7}
 \indexentry{cos}{20}
-\indexentry{C pointers}{2}
 \indexentry{Data Structures}{25}
 \indexentry{date}{22}
 \indexentry{debug pragma}{11}
@@ -67,6 +67,7 @@
 \indexentry{log10}{20}
 \indexentry{log}{20}
 \indexentry{logical operators}{7}
+\indexentry{Lua Stand-alone}{31}
 \indexentry{lua\_callfunction}{14}
 \indexentry{lua\_call}{14}
 \indexentry{lua\_CFunction}{15}
@@ -105,7 +106,6 @@
 \indexentry{lua\_ref}{15}
 \indexentry{lua\_register}{15}
 \indexentry{lua\_setfallback}{14}
-\indexentry{Lua Stand-alone}{31}
 \indexentry{lua\_storeglobal}{13}
 \indexentry{lua\_storesubscript}{13}
 \indexentry{lua\_type}{12}
@@ -127,8 +127,8 @@
 \indexentry{Operator precedence}{7}
 \indexentry{order fallback}{9}
 \indexentry{or}{7}
-\indexentry{pattern}{20}
 \indexentry{pattern item}{20}
+\indexentry{pattern}{20}
 \indexentry{Persistence}{26}
 \indexentry{piped input}{21}
 \indexentry{piped output}{21}
@@ -140,9 +140,9 @@
 \indexentry{Programming with Classes}{28}
 \indexentry{random}{20}
 \indexentry{randomseed}{20}
+\indexentry{read pattern}{22}
 \indexentry{readfrom}{21}
 \indexentry{read}{22}
-\indexentry{read pattern}{22}
 \indexentry{records}{2}
 \indexentry{reference}{15}
 \indexentry{reflexivity}{15}
@@ -151,8 +151,8 @@
 \indexentry{rename}{22}
 \indexentry{repeat-until}{5}
 \indexentry{reserved words}{3}
-\indexentry{return}{4}
 \indexentry{return statement}{5}
+\indexentry{return}{4}
 \indexentry{self}{9}
 \indexentry{setfallback}{10}
 \indexentry{setfallback}{17}
