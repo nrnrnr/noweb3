@@ -1,0 +1,225 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Conversion of C External Pipeline functions to Lua}
+
+This is the Lua translation of the C functions defined in
+[[xpipe.nw]].  The interface for each function is described at the
+beginning of the section for that function; the implementation makes
+use of the lua library that allows values to be passed between Lua and
+C.
+
+<<xpipe-lua.c>>=
+#include "xpipe.h"
+#include "lua.h"
+#include "lualib.h"
+#include "xpipe-lua.h"
+#include "list.h"
+#include "mem.h"
+#include "lua-help.h"
+
+<<XPipe-program>>
+<<XPipe-connect>>
+<<XPipe-print>>
+<<XPipe-execute>>
+<<XPipe-free>>
+<<Lua registration of functions>>
+
+@
+
+\section{XPipe-program}
+
+\subsection{Lua Interface}
+
+\emph{name}[[ = XPipe_program(``]]\emph{program}[['', {``]]\emph{arg1}[['', ``]]\emph{arg2}[['', ...})]]
+
+A string is required for the first parameter and a table, possibly
+empty, is required for the second parameter; exactly two paramters
+must be passed.  The result is placed in \emph{name}.
+
+\subsection{C Implementation}
+
+This function takes the parameters to the Lua [[Pipeline_program]] and
+interprets them as a string for the program name and a list of strings
+for the arguments.  It takes these parameters and places them in the
+corresponding call to the C version of [[Pipeline_program]].
+
+<<XPipe-program>>=
+static void XPipe_create_lua(void) {
+  char** array;
+  extern char** environ;
+  lua_Object stage, arg;
+  lua_get_args("XPipe.stage", 2, LUA_STRING | FUNCTION, &stage, ANY, &arg);
+  if (lua_isstring(stage)) {
+    lua_get_args("XPipe.stage", 2, LUA_STRING, &stage, LUA_TABLE, &arg);
+    array = (char**)List_toArray(lua_makestringlist(arg), NULL);
+    lua_pushusertag(XPipe_program(lua_getstring(stage), array, environ), XPIPE);
+  } else if (lua_isfunction(stage)) {
+    lua_pushusertag(XPipe_function(apply_application,
+				   build_app_from_lua_args("XPipe.create")),
+		    XPIPE);
+  }
+}
+@ 
+
+\section{XPipe-connect}
+
+\subsection{Lua Interface}
+
+\emph{name}[[ = XPipe_connect(]]\emph{pipe1}[[, ]]\emph{pipe2}[[, ...)]]
+
+\subsection{C Implementation}
+
+The following function keeps track of [[prev_o]] and [[curr_o]], two
+[[lua_Objects]] that represent the connected pipe up to the current point
+in the iteration through the parameters and the current pipe to connect.
+
+Two or more parameters are required.  Each parameter is translated
+into a C [[XPipe]] and connected to a pipeline containing the
+previous parameters.  This process repeats until all parameters have
+been connected to the pipeline, at which time the function breaks out
+of the loop and the connected pipeline is pushed back onto the lua stack.
+
+<<XPipe-connect>>=
+static void XPipe_connect_lua(void) {
+  lua_Object o;
+  XPipe pipe;
+  int i;
+  <<insist on 2 or more parameters>>
+  o = lua_getparam(1);
+  if (lua_type(o) != XPIPE) 
+    lua_error("Only external pipelines may be passed to XPipe.connect");
+  pipe = lua_getuserdata(o);
+  for (i = 2; ; i++) {
+    o = lua_getparam(i);
+    if (o == LUA_NOOBJECT) break;
+    if (lua_type(o) != XPIPE) {
+      lua_error("Only external pipelines may be passed to XPipe.connect");
+      return;
+    }
+    pipe = XPipe_connect(pipe, lua_getuserdata(o));
+  }
+  lua_pushusertag(pipe, XPIPE);
+}
+
+<<insist on 2 or more parameters>>=
+if (lua_getparam(1) == LUA_NOOBJECT || lua_getparam(2) == LUA_NOOBJECT) {
+  lua_error("XPipe.connect did not get enough arguments.");
+  return;
+}
+
+<<insist that each parameter is userdata>>=
+if ((!lua_isuserdata(prev_o)) || (!lua_isuserdata(curr_o))) {
+  lua_error("Argument is not user data.");
+  return;
+}
+
+@ 
+
+\section{XPipe-print}
+
+\subsection{Lua Interface}
+
+[[XPipe_print(]]\emph{pipe}[[)]]
+
+\subsection{C Implementation}
+
+This function simply takes a single pipeline and prints its contents
+following a standard format.  The one lua parameter is translated into
+a C [[XPipe]] and then passed to the C version of [[XPipe_print]].
+
+<<XPipe-print>>=
+static void XPipe_print_lua(void) {
+  lua_Object pipeline_o = lua_getparam(1);
+  XPipe to_print;
+  <<insist on exactly 1 parameter>>
+  to_print = lua_getuserdata(pipeline_o);
+  XPipe_print(stderr, to_print);
+}
+
+<<insist on exactly 1 parameter>>=
+if (pipeline_o == LUA_NOOBJECT) {
+  lua_error("Function got no arguments.");
+  return;
+}
+else if (lua_getparam(2) != LUA_NOOBJECT) {
+  lua_error("Function got too many arguments.");
+  return;
+}
+
+@ 
+
+\section{XPipe-execute}
+
+\subsection{Lua Interface}
+
+[[XPipe_execute(]]\emph{pipe}[[)]]
+
+\subsection{C Implementation}
+
+Like the [[XPipe_print]] function, [[XPipe_execute]] simply
+checks that exactly one parameter is passed to it, then translates
+that lua parameter into a C [[XPipe]] and passes that to the C
+version of [[XPipe_execute]].
+
+<<XPipe-execute>>=
+static void XPipe_execute_lua(void) {
+  lua_Object pipeline_o = lua_getparam(1);
+  XPipe to_execute;
+  <<insist on exactly 1 parameter>>
+  to_execute = lua_getuserdata(pipeline_o);
+  lua_pushnumber((double)XPipe_execute(to_execute));
+}
+
+@ 
+
+\section{XPipe-free}
+
+\subsection{Lua Interface}
+
+[[XPipe_free(]]\emph{pipe}[[)]]
+
+\subsection{C Implementation}
+
+[[XPipe_free]] also checks that exactly one parameter is passed,
+then translates it into a C [[XPipe]] and passes the result to
+[[XPipe_free]].
+
+<<XPipe-free>>=
+static void XPipe_free_lua(void) {
+  lua_Object pipeline_o = lua_getparam(1);
+  XPipe to_free;
+  <<insist on exactly 1 parameter>>
+  to_free = lua_getuserdata(pipeline_o);
+  XPipe_free(&to_free);
+}
+
+@ 
+
+\section{Lua registration of functions}
+
+Each of the above functions is registered here for direct use within
+lua programs.
+
+<<Lua registration of functions>>=
+void XPipe_open(void) {
+  lua_module_register("XPipe", "stage",   XPipe_create_lua);
+  lua_module_register("XPipe", "connect", XPipe_connect_lua);
+  lua_module_register("XPipe", "print",   XPipe_print_lua);
+  lua_module_register("XPipe", "run",     XPipe_execute_lua);
+  lua_module_register("XPipe", "free",    XPipe_free_lua);
+}
+
+<<xpipe-lua.h>>=
+#ifndef XPIPELUA_H
+#define XPIPELUA_H
+
+extern void XPipe_open(void);
+
+#endif
+<<*>>=
+<<xpipe-lua.c>>
+<<header>>=
+<<xpipe-lua.h>>
+@
