@@ -13,7 +13,7 @@ The module definition information will be stored statically
 in a table supplied by [[modtrees.h]]; we'll cover the
 details later.
 <<header>>=
-void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
+void emit_module_named (FILE *out, char *rootname, char *locformat);
 <<*>>=
 static char rcsid[] = "$Id$";
 static char rcsname[] = "$Name$";
@@ -34,13 +34,8 @@ static char rcsname[] = "$Name$";
 
 <<Function declarations>>
 
-void notangle (FILE* in, FILE *out, char *rootname, char *locformat) {
+void emit_module_named (FILE *out, char *rootname, char *locformat) {
     Module root = NULL; /* ptr to root module */
-
-    read_defs(in);              /* read all the definitions */
-
-    apply_each_module(remove_final_newline);
-                                /* pretty up the module texts */
 
     root = lookup(rootname);
     <<quit if we couldn't find the root>>
