@@ -95,6 +95,7 @@ which scans the current piece, setting the following variables:
 [[outfile]]& Where output is written.\\
 [[cpif]]& Possible abstraction supporting \texttt{-cpif}.\\
 \end{tabular}
+\end{quote}
 <<scan piece starting at [[argv[i]]]>>=
 { int j;
   root_options_seen = 0;
