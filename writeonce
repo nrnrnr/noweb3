@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# writeonce - write a file once (making it read-only thereafter)
+
+# usage: writeonce file
+
+#   precondition: none
+#   postconditions:
+       `dirname file` exists
+       file exists and has contents from standard input
+       filename is read only
+
+
+case $# in
+  1) ;;
+  *) echo "Usage: $0 filename" 1>&2; exit 1 ;;
+esac
+
+d=`dirname $1`
+
+[ -d $d ] || mkdir $d || exit 1
+rm -f $1
+cat > $1 || exit 1
+chmod -w $1

@@ -1,0 +1,111 @@
+Guide to the ultimate structure of the noweb 3 distribution
+
+I'd like your opinion about whether it's a good idea to replicate the
+structure of the Noweb 2 distribution, which was two layers with src
+below dist, or whether dist and src should be flattened into a single
+directory.
+
+I'd like your opinion about whether to have a single LIB directory for
+both external pipeline stages and Lua scripts.  My inclination is yes.
+
+The stuff in dist in v2 is
+
+  binaries     Pre-built binaries
+  contrib      contributed software
+  examples     examples
+  src          the source code
+
+What's in the v3 src dir is
+
+  lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
+  cii	       CII, from Dave Hanson, stripped down to Noweb's needs only.
+  c            C source code for Noweb
+  lua          Lua source code for Noweb commands and pipeline stages
+  nocond       A filter to help build Noweb 3 from sources.
+  xdoc         Documentation, especially the revised Hacker's Guide
+
+  Makefile     Top-level Makefile.  
+  nwconfig     Configuration information (directories and such)
+
+Directories c and lua contain .nw files.  The distribution will have
+to contain the derived sources, much as is done in the `make tar'
+target in Noweb 2.
+
+A student worked on nwconfig.  Please see if some of those targets
+(e.g., POSIX, POPEN) can be removed, perhaps by making suitable
+adjustments in sources elsewhere.
+
+The following Makefile targets are needed:
+
+  all         build everything
+  install     install everything
+  install-*   install some things
+  source      Builds derived sources
+  tar         build tar file for distribution
+  tarnames    compute names that go in distribution
+  www         Puts documentation and examples in my web directory
+
+  clean       Removes unwanted files but keeps derived sources
+  clobber     Removes unwanted files *and* derived sources -- need
+              noweb to rebuild
+  touch       update timestamps
+  versioncheck support checking of proper version number in docs and sources
+  emacscheck  make sure emacs lisp is consistent with my personal edits
+  nwsrcfilter build tool to rearrange distribution
+  FAQ.html    copy the FAQ from my web directory (I know this is insane)
+  FAQ         build the ascii FAQ
+  Makefile    generate Makefile
+  DATE        rebuilds DATE with the current version and date
+  checkin     --- obsolete and should be removed ---
+
+The work of installation should change considerably in version 3:
+
+  Regarding binaries:
+    * weave and tangle are now in lua
+    * web, defs, and roots should be ported to lua
+    * untangle and cpif are obsolete and won't be in v3
+    * nuweb2noweb probably needs to be rewritten in Lua
+    * htmltoc stays
+
+  Regarding filters in lib:
+    * port to lua if not ported already: btdefn, emptydefn, unmarkup
+    * port to lua: nwmtime (will require a bit of C code), pipedocs
+    * unclear: h2a (port if sensible for pipedocs)
+    * delay porting as low priority: toascii.nw
+  The lib directory should go away eventually.
+
+  Regarding filters in awk:
+    * Not sure if noindex is ported: if not, it needs to be.
+    * Other filters are ported.
+  The awk directory should go away.
+
+  Regarding filters in Icon:
+    * A few have been ported to Lua.  The others will stay.
+      In particular it seems unlikely that the *defs filters
+      or l2h will ever be ported.
+
+N.B. pipedocs pipes document chunks, *as* *source*, through a shell
+command.  Writing it in Lua should speed it up considerably---a
+consummation most devoutly to be wished.  The conversion guide needs
+to explain how pipedocs is used with docs2comments to replace
+nountangle.
+
+  no weave -filter 'docs2comments -ml' -filter 'pipedocs "sl2h | h2a"'
+
+might do it.
+
+
+About the external filters callable from the command line: we probably
+need a `no filter' script to run internal filters as external ones.
+The old external filters should be replaced by one-line scripts as
+appropriate.  E.g., markup might become
+
+#!/bin/sh
+case $# in
+  0) exec no filter Stages.markup ;;
+  *) exec no filter Stages.markup "$@" ;;
+esac
+
+
+
+
