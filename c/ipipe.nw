@@ -41,6 +41,10 @@ We create a stage by providing a suitable function.
 \newcommand\sink{\mathit{sink}}
 \newcommand\filter{\mathit{filter}}
 \newcommand\con{\mathbin{\cdot}}
+% l2h substitution source <i>source</i>
+% l2h substitution sink <i>sink</i>
+% l2h substitution filter <i>filter</i>
+% l2h substitution con &lt;-&gt;
 \begin{eqnarray*}
 \source \con \filter &=& \source \\
 \source \con \sink   &=& \mathit{pipeline} \\
@@ -126,10 +130,13 @@ IPipe_T IPipe_connect(IPipe_T l, IPipe_T r) {
   return p;
 }
 @ 
-The pipeline is executed by walking down the left side of the tree until a leaf
-is reached, executing that function and placing results into the buffer at that
-leaf, then executing the next leaf to the right, and so on until all leaf
-functions are executed.
+The pipeline is executed by a recursive function.
+We always pass input and output buffers.
+For a leaf, we simply run the leaf stage with these buffers.
+For a pair, we cons up a new buffer to connect the two halves, then
+run each half.
+Note that we run both halves even if the first half fails---it's not
+clear if that's a good design decision.
 <<functions>>=
 int IPipe_run(IPipe_T p, NowebBuffer in, NowebBuffer out) {
   if (p->isPair) {
