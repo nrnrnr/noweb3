@@ -1,0 +1,168 @@
+build switch for noweb.
+<<init>>=
+stab["NW_BEGIN_CODE"] := "@begin code %s\n"
+stab["NW_BEGIN_DOCS"] := "@begin docs %s\n"
+stab["NW_END_CODE"] := "@end code %s\n"
+stab["NW_END_DOCS"] := "@end docs %s\n"
+stab["NW_TEXT"] := "@text %s\n"
+stab["NW_NL"] := "@nl\n"
+stab["NW_DEFN"] := "@defn %s\n"
+stab["NW_USE"] := "@use %s\n"
+stab["NW_QUOTE"] := "@quote\n"
+stab["NW_ENDQUOTE"] := "@endquote\n"
+stab["NW_FILE"] := "@file %s\n"
+stab["NW_LINE"] := "@line %s\n"
+stab["NW_LANGUAGE"] := "@language %s\n"
+stab["NW_HEADER"] := "@header %s\n"
+stab["NW_TRAILER"] := "@fatal %s\n"
+stab["NW_INDEX_DEFN"] := "@index defn %s\n"
+stab["NW_INDEX_LOCALDEFN"] := "@index localdefn %s\n"
+stab["NW_INDEX_USE"] := "@index use %s\n"
+stab["NW_INDEX_NL"] := "@index nl\n"
+stab["NW_INDEX_BEGINDEFS"] := "@index begindefs\n"
+stab["NW_INDEX_ISUSED"] := "@index isused %s\n"
+stab["NW_INDEX_DEFITEM"] := "@index defitem %s\n"
+stab["NW_INDEX_ENDDEFS"] := "@index endefs\n"
+stab["NW_INDEX_BEGINUSES"] := "@index beginuses\n"
+stab["NW_INDEX_ISDEFINED"] := "@index isdefined %s\n"
+stab["NW_INDEX_USEITEM"] := "@index useitem %s\n"
+stab["NW_INDEX_ENDUSES"] := "@index enduses\n"
+stab["NW_INDEX_BEGININDEX"] := "@index beginindex\n"
+stab["NW_INDEX_ENTRYBEGIN"] := "@index entrybegin %s\n"
+stab["NW_INDEX_ENTRYUSE"] := "@index entryuse %s\n"
+stab["NW_INDEX_ENTRYDEFN"] := "@index entrydefn %s\n"
+stab["NW_INDEX_ENTRYEND"] := "@index entryend\n"
+stab["NW_INDEX_ENDINDEX"] := "@index endindex\n"
+stab["NW_XREF_LABEL"] := "@xref label %s\n"
+stab["NW_XREF_REF"] := "@xref ref %s\n"
+stab["NW_XREF_PREVDEF"] := "@xref prevdef %s\n"
+stab["NW_XREF_NEXTDEF"] := "@xref nextdef %s\n"
+stab["NW_XREF_BEGINDEFS"] := "@xref begindefs\n"
+stab["NW_XREF_DEFITEM"] := "@xref defitem %s\n"
+stab["NW_XREF_ENDDEFS"] := "@xref enddefs\n"
+stab["NW_XREF_BEGINUSES"] := "@xref beginuses\n"
+stab["NW_XREF_USEITEM"] := "@xref useitem %s\n"
+stab["NW_XREF_ENDUSES"] := "@xref enduses\n"
+stab["NW_XREF_NOTUSED"] := "@xref notused %s\n"
+stab["NW_XREF_BEGINCHUNKS"] := "@xref beginchunks\n"
+stab["NW_XREF_CHUNKBEGIN"] := "@xref chunkbegin %s\n"
+stab["NW_XREF_CHUNKUSE"] := "@xref chunkuse %s\n"
+stab["NW_XREF_CHUNKDEFN"] := "@xref chunkdefn %s\n"
+stab["NW_XREF_CHUNKEND"] := "@xref chunkend\n"
+stab["NW_XREF_ENDCHUNKS"] := "@xref endchunks\n"
+stab["NW_XREF_TAG"] := "@xref tag %s\n"
+stab["NW_FATAL"] := "@fatal %s\n"
+@ 
+<<*>>=
+global tree, stab
+record witharg(keyword, pos)
+
+procedure add(k)
+  s := stab[k]
+  /tree[s[2]] := table()
+  s ? (tab(3), tree[s[2]] := addnode(k, tree[s[2]]))
+  return
+end
+<<*>>=
+procedure addnode(k, n)
+  case c := move(1) of {
+    "\n" : n[c] := k
+    "%" :  return witharg(k, &pos-2)
+    default : {
+      /n[c] := table()
+      n[c] := addnode(k, n[c])
+    }
+  }
+  return n
+end
+<<*>>=
+procedure main()
+  stab := table()
+  <<init>>
+
+  tree := table()
+
+  every add(key(stab))
+  write("@<<automatically generated recognizer@>>=")
+  dump(tree)
+end
+@ 
+<<*>>=
+procedure dump(n)
+  write("switch (p[1]) {")
+  n := sort(n)
+  while p := get(n) do {
+    iwrite(2, "case '", if p[1] == "\n" then "\\n" else p[1], "':")
+    wredge(4, mkedge(p[2], 2))
+#    iwrite(6, "goto string;")
+    iwrite(2, "break;")
+  }
+  iwrite(2, "default:")
+  iwrite(4, "goto string;")
+  write("}")
+  return
+end
+@ 
+<<*>>=
+record conj(l)
+record node(edges)
+record edge(tests, node)
+
+procedure mkedge(t, i)
+  if type(t) == "table" & *t = 1 then {
+    e := mkedge(!t, i+1)
+    push(e.tests, "p[" || i || "] == '" || escape(key(t)) || "'")
+    return e
+  } else if type(t) == "table" then {
+    l := []
+    t := sort(t)
+    while p := get(t) do {
+      e := mkedge(p[2], i+1)
+      push(e.tests, "p[" || i || "] == '" || escape(p[1]) || "'")
+      put(l, e)
+    }
+    return edge([], node(l))
+  } else return edge([], t)
+end
+@ 
+<<*>>=
+procedure wredge(i, e)
+  if *e.tests = 0 then wrnode(i, e.node)
+  else {
+    iwrites(i, "if (")
+    wrtests(e.tests)
+    write(") {")
+    wrnode(i+2, e.node)
+    iwrite(i, "} else")
+  }
+  return
+end
+<<*>>=
+procedure wrnode(i, n)
+  case type(n) of {
+    "node" : { every wredge(i, !n.edges); iwrite(i, "goto string;") }
+    "string" : iwrite(i, "NowebBuffer_append(buf, ", n, ", NULL);")
+    "witharg" : iwrite(i, "NowebBuffer_append(buf, ", n.keyword, ", ARG_AT(", n.pos, "));")
+    default : stop("bad node ", image(n))
+  }
+end
+@ 
+<<*>>=
+procedure wrtests(l)
+  writes(l[1])
+  i := 2
+  while writes(" && ", l[i]) do i +:= 1
+  return
+end
+<<*>>=
+procedure iwrite(indent, L[])
+  return write!(push(L,left("", indent)))
+end
+
+procedure iwrites(indent, L[])
+  return writes!(push(L,left("", indent)))
+end
+<<*>>=
+procedure escape(s)
+  return if s == "\n" then "\\n" else s
+end
