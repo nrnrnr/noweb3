@@ -85,10 +85,12 @@ static int inclinenumber (int pragma_allowed)
 {
   ++lua_linenumber;
   if (pragma_allowed && current == '$') {  /* is a pragma? */
-    char *buff = luaI_buffer(MINBUFF+1);
-    int i = 0;
+    char buff[MINBUFF+1];
+    int i;
+  pragma_start:
+    i = 0;
     next();  /* skip $ */
-    while (isalnum(current)) {
+    while (isalpha(current) || isdigit(current)) { /* isalnum broken in gcc */
       if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
       buff[i++] = current;
       next();
@@ -98,7 +100,40 @@ static int inclinenumber (int pragma_allowed)
       lua_debug = 1;
     else if (strcmp(buff, "nodebug") == 0)
       lua_debug = 0;
+    else if (strcmp(buff, "line") == 0 && isspace(current)) { 
+      for (; i >= 0; i--) buff[i] = 0;  /* not sure why, but prevents weird error */
+      next(); /* skip space */
+      while (isspace(current) && current != '\n') next();
+      if (isdigit(current)) {
+        lua_linenumber = 0;
+        while (isdigit(current)) {
+          lua_linenumber = 10 * lua_linenumber + (current - '0');
+	  next();
+	}
+	if (current == '\n')
+	  next();
+	else
+	  luaI_syntaxerror("invalid $line pragma");
+      } else
+	luaI_syntaxerror("invalid $line pragma");
+    }  
+    else if (strcmp(buff, "file") == 0 && isspace(current)) { 
+      for (; i >= 0; i--) buff[i] = 0;  /* not sure why, but prevents weird error */
+      i = 0;
+      next();  /* skip space */
+      while (current != '\n') {
+	if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
+	buff[i++] = current;
+	next();
+      }
+      buff[i] = 0;
+      next(); /* skip trailing newline */
+      ++lua_linenumber;
+      lua_parsedfile = luaI_createfixedstring(buff)->str;
+      for (; i >= 0; i--) buff[i] = 0;  /* not sure why, but prevents weird error */
+    }  
     else luaI_syntaxerror("invalid pragma");
+    if (current == '$') goto pragma_start;
   }
   return lua_linenumber;
 }
@@ -262,7 +297,9 @@ int luaY_lex (void)
       case '_':
       {
         TaggedString *ts;
-        do { save_and_next(); } while (isalnum(current) || current == '_');
+        do { save_and_next(); } 
+        while (isalpha(current) || isdigit(current) || current == '_');
+                        /* isalnum broken in gcc */
         save(0);
         ts = lua_createstring(yytext);
         if (ts->marked > 2)
