@@ -9,8 +9,8 @@ If [[tabsize == 0]], tabs shouldn't be touched on input and won't be
 generated on output.
 <<header>>=
 extern int tabsize;
-extern int columnwidth (char *s);      /* number of columns string occupies */
-extern int limitcolumn (char *s, int startcolumn);
+extern int columnwidth (const char *s);      /* number of columns string occupies */
+extern int limitcolumn (const char *s, int startcolumn);
                                 /* width of startcolumn blanks plus s */
 extern void indent_for (int width, FILE *fp);
                                 /* indent to width; next char -> width+1 */
@@ -18,17 +18,18 @@ extern void indent_for (int width, FILE *fp);
 <<*>>=
 static char rcsid[] = "$Id$";
 static char rcsname[] = "$Name$";
+extern char *columns_rcsid (void) { return ((void) rcsname, rcsid); }
 #include <stdio.h>
 #include "columns.h"
 
 int tabsize = 8;
 <<*>>=
-int columnwidth (char *s) {             /* width of a string in columns */
+int columnwidth (const char *s) {             /* width of a string in columns */
   return limitcolumn(s, 0);
 }
 @ %def columnwidth
 <<*>>=
-int limitcolumn (char *s, int col) {
+int limitcolumn (const char *s, int col) {
     while (*s) {
         col++;
         if (*s=='\t' && tabsize > 0) while (col % tabsize != 0) col++;

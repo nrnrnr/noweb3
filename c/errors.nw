@@ -16,6 +16,7 @@ queries it.
 <<*>>=
 static char rcsid[] = "$Id$";
 static char rcsname[] = "$Name$";
+extern char *errors_rcsid (void) { return ((void) rcsname, rcsid); }
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,10 +40,10 @@ char *progname = NULL;
 If an error occurred, one can exit with the proper notice on the
 filter:
 <<header>>=
-extern void nowebexit(char *optional_msg);
+extern void nowebexit(const char *optional_msg);
 @ 
 <<C functions>>=
-void nowebexit(char *msg) {
+void nowebexit(const char *msg) {
   if (!finalstage && errorlevel > Normal)
     printf("@fatal %s %s\n", progname != NULL ? progname : "a-noweb-filter",
 	   msg != NULL ? msg : "an unspecified error occurred");
@@ -51,13 +52,13 @@ void nowebexit(char *msg) {
 @
 The rest is just varying flavors of error messages.
 <<header>>=
-void errormsg(enum errorlevel level, char *s, ...);
+void errormsg(enum errorlevel level, const char *s, ...);
 #define overflow(S) errormsg(Fatal,"Capacity exceeded: %s", S)
 #define impossible(S) errormsg(Impossible, "This can't happen: %s", S)
 #define checkptr(P) do { if (!(P)) overflow("memory"); } while (0)
 @ %def errormsg overflow impossible checkptr
 <<C functions>>=
-void errormsg(enum errorlevel level, char *s,...) {     
+void errormsg(enum errorlevel level, const char *s,...) {     
     va_list args;                       /* see K&R, page 174 */
     va_start(args,s);
     <<set [[errorlevel]] and print [[s]] with [[args]]>>
@@ -67,9 +68,9 @@ void errormsg(enum errorlevel level, char *s,...) {
 }
 @ %def errormsg
 <<header>>=
-void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...);
+void errorat(const char *filename, int lineno, enum errorlevel level, const char *s, ...);
 <<C functions>>=
-void errorat(char *filename, int lineno, enum errorlevel level, char *s, ...) {     
+void errorat(const char *filename, int lineno, enum errorlevel level, const char *s, ...) {     
     va_list args;                       /* see K&R, page 174 */
     va_start(args,s);
     fprintf(stderr, "%s:%d: ", filename, lineno);
