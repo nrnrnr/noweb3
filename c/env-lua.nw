@@ -10,6 +10,8 @@ This file contains Lua registration of the C functions [[getenv]] and
 <<env-lua.c>>=
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
+
 #include "lua.h"
 #include "lualib.h"
 #include "lua-help.h"
@@ -18,6 +20,7 @@ This file contains Lua registration of the C functions [[getenv]] and
 <<getenv>>
 <<putenv>>
 <<abort>>
+<<functions>>
 <<Lua registration of functions>>
 @
 
@@ -54,11 +57,24 @@ static void abort_lua(void) {
   abort();
 }
 
+<<functions>>=
+static void fflush_lua(void) {
+  lua_Object var;
+  int rc;
+  lua_get_args("System.fflush", 1, LUA_USERDATA | LUA_NIL | OPTIONAL, &var);
+  if (lua_isuserdata(var)) rc = fflush(lua_getuserdata(var));
+  else if (lua_isnil(var)) rc = fflush(stdout);
+  else assert(0);
+  lua_pushnumber((double)rc);
+}
+
+
 <<Lua registration of functions>>=
 int posix_open(void) {
   lua_module_register("System", "getenv", getenv_lua);
   lua_module_register("System", "putenv", putenv_lua);
   lua_module_register("System", "abort",  abort_lua);
+  lua_module_register("System", "fflush", fflush_lua);
   lua_pushuserdata(stderr);
   lua_storeglobal("stderr");
   return 1;
