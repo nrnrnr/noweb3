@@ -66,6 +66,7 @@ extern void MPipe_free (MPipe_T *pipe);
 <<type definitions>>
 <<functions>>
 @
+\subsection{Representing a pipeline}
 A mixed pipeline is either a pair, internal, or external.
 <<type definitions>>=
 struct MPipe_T {
@@ -173,7 +174,7 @@ static XPipe_T combine_XI(XPipe_T l, IPipe_T r, int r_is_last) {
 
   if (l) wrapper = r_is_last ? ipipe_run_right : ipipe_run_middle;
   else   wrapper = (assert(!r_is_last), ipipe_run_left);
-  x = XPipe_function(wrapper, r);
+  x = XPipe_function(wrapper, r, "<wrapped internal pipeline>");
   if (l) x = XPipe_connect(l, x);
   return x;
 }
@@ -230,6 +231,7 @@ It's not entirely clear to me if we should run the external pipeline on
  or whether [[lua_infile]] and [[lua_outfile]]
 would be better.
 <<run [[ext]] followed by [[ints]]>>=
+/*fprintf(stderr, "Running in mpipe with ext = %p, ints = %p\n", ext, ints); fflush(stderr);*/
 if (!ext)
   return IPipe_run(ints, NULL, NULL);
 else if (!ints)
@@ -267,3 +269,26 @@ extern int  MPipe_run  (MPipe_T pipe) {
   return do_run(NULL, NULL, &cell);
 }
 @ 
+\subsection{Printing a pipeline}
+<<functions>>=
+static void print(FILE *fp, MPipe_T p) {
+  switch(p->type) {
+    case PAIR: 
+      print(fp, p->u.pair.l);
+      fprintf(fp, "\n| ");
+      print(fp, p->u.pair.r);
+      return;
+    case INTERNAL: 
+      IPipe_print(fp, p->u.i);
+      return;
+    case EXTERNAL: 
+      XPipe_print(fp, p->u.x);
+      return;
+  }
+}    
+void MPipe_print(FILE *fp, MPipe_T pipe) {
+  fprintf(fp, "# warning -- this is FYI only and will not reproduce the pipeline\n  ");
+  print(fp, pipe);
+}
+ 
+
