@@ -1,4 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+% -*- mode: Noweb; noweb-code-mode: c-mode; c-indent-level: 4; c-basic-offset: 4 -*-
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 \section{Tangling}
@@ -10,8 +10,10 @@ static char rcsname[] = "$Name$";
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <assert.h>
 #include "nwbuffer.h"
 #include "cargs.h"
+#include "cpif.h"
 #include "notangle.h"
 #include "errors.h"
 #include "columns.h"
@@ -47,13 +49,11 @@ to set global state, and counting any roots it sees.
 It then makes a second pass to emit all the roots, or if there are no
 roots on the command line, it emits the module (chunk) named [[<<*>>]].
 <<*>>=
+<<function [[cpif_like]]>>
 int notangle_sink(void *arg, NowebBuffer in, NowebBuffer out /* unused */) {
     CArgs args = arg;
     int argc = args->argc;
     char **argv = args->argv;
-    char *locformat = "";
-    char *Clocformat = "#line %L \"%F\"%N";
-    int root_options_seen = 0;
     int i;
 
     tabsize = 0;  /* default for nt is not to use tabs */
@@ -67,20 +67,116 @@ int notangle_sink(void *arg, NowebBuffer in, NowebBuffer out /* unused */) {
     read_defs(in);	             /* read all the definitions */
     if (errorrc) return errorrc;
     apply_each_module(remove_final_newline); /* pretty up the module texts */
-    if (root_options_seen == 0)
-      emit_module_named(stdout, "*", locformat);
-    else
-      for (i=1; i<argc; i++) 
-        if (argv[i][0] == '-' && argv[i][1] == 'R')
-	  emit_module_named(stdout, argv[i]+2, locformat);
-
+    <<emit files according to [[argv]]>>
     (void) rcsname; (void) rcsid;   /* slay warning */
     return errorrc;
 }
 @
+Here are the new rules.
+We use the arguments \texttt{-cpif}~\emph{file} to break the command
+line into pieces; each break comes immediately after
+\texttt{-cpif}~\emph{file}.
+(For this purpose, \texttt{-cp} is the same as \texttt{-cpif}.)
+For each piece, we emit all \texttt{-R}~options from that piece into
+the appropriate output.
+A \texttt{-L}~option anywhere in a piece affects the whole piece, and
+furthermore, pieces with no explicit \texttt{-L}~option inherit the
+one from the piece to their left.
+
+We do nothing with an empty piece.
+
+The major operation is [[<<scan piece starting at [[argv[i]]]>>]],
+which scans the current piece, setting the following variables:
+\begin{quote}
+\begin{tabular}{@{}ll}
+[[limit]]& Marks end of piece.\\
+[[root_options_seen]]& Shows if the piece includes~\texttt{-R}.\\
+[[locformat]]& From explicit \texttt{-L} or inherited.\\
+[[outfile]]& Where output is written.\\
+[[cpif]]& Possible abstraction supporting \texttt{-cpif}.\\
+\end{tabular}
+<<scan piece starting at [[argv[i]]]>>=
+{ int j;
+  root_options_seen = 0;
+  for (j = i; j < argc && !cpif_like(argv[j]); j++)
+      if (*argv[j]=='-')
+          switch(argv[j][1]) {
+          case 'R': /* change name of root module */
+              root_options_seen++;
+              break;
+          case 'L': /* have a #line number format  */
+              locformat = argv[j]+2;
+              if (!*locformat) locformat = Clocformat;
+              else if (!strcmp(locformat, "-")) locformat = "";
+              break;
+          case 't': /* ignored on this pass */
+              break;
+          default:
+              assert(0);
+          }
+  limit = j;
+  if (j < argc) {
+      assert(j + 1 < argc && cpif_like(argv[j]));
+      <<set [[outfile]] for cpif-like [[argv[j]]] to [[argv[j+1]]]>>;
+  } else
+      outfile = stdout;
+}
+@ 
+Now we can see the emission.      
+<<emit files according to [[argv]]>>=
+{
+  char *locformat = "";
+  static char *Clocformat = "#line %L \"%F\"%N";
+  int root_options_seen;
+  int limit;
+  FILE *outfile;
+  struct cpif *cpif;
+
+  i = 1;
+  do {
+      <<scan piece starting at [[argv[i]]]>>;
+      if (root_options_seen) {
+          for ( ; i < argc && i < limit; i++)
+              if (argv[i][0] == '-' && argv[i][1] == 'R')
+                  emit_module_named(outfile, argv[i]+2, locformat);
+      } else if (limit < argc || i == 1) {
+          /* either this is for a cpif-like, or there's no cpif */
+          emit_module_named(outfile, "*", locformat);
+          i = limit;
+      }
+      if (i < argc) {
+          assert(i + 1 < argc && cpif_like(argv[i]));
+          <<do what must be done to finish cpif-like [[argv[i]]] [[argv[i+1]]]>>;
+          i += 2;
+    }
+  } while (i < argc);
+}
+@ 
+
+For the moment, we just do ordinary writes.
+<<set [[outfile]] for cpif-like [[argv[j]]] to [[argv[j+1]]]>>=
+if (!strcmp(argv[j+1], "-"))
+    outfile = stdout;
+else if (!strcmp(argv[j], "-cp")) {
+    outfile = fopen(argv[j+1], "w");
+    if (outfile == NULL)
+        errormsg(Fatal, "%s: Cannot open file `%s' for write", argv[0], argv[j+1]);
+} else {
+    cpif = cpif_open(argv[j+1]);
+    outfile = cpif_file(cpif);
+}
+<<do what must be done to finish cpif-like [[argv[i]]] [[argv[i+1]]]>>=
+if (strcmp(argv[i+1], "-")) {
+    if (!strcmp(argv[i], "-cpif"))
+        cpif_close(&cpif);
+    else
+        fclose(outfile);
+}
+@
+
 <<process argument [[i]]---first pass>>=
 if (*argv[i]=='-') {
-    <<handle option in argument [[i]]>>
+    <<handle first-pass option in argument [[i]]>>
 } else {
     <<handle argument in argument [[i]]>>
 }
@@ -92,9 +188,13 @@ The following options are good on the command line:
 -L[format]&     Use the given format to write {\tt\#line} numbers.
                 If -L is given alone, use ANSI C format.
                 If not given, write no {\tt\#line} numbers.\\
--t[tabsize]& Fiddle with tabs
+-t[tabsize]& Fiddle with tabs.\\
+-cpif \emph{file}& Specify output.\\
+-cp \emph{file}& Specify output.\\
 \end{fields}
-<<handle option in argument [[i]]>>=
+@
+All options except \texttt{-t} are handled on the second pass.
+<<handle first-pass option in argument [[i]]>>=
     switch (argv[i][1]) {
         case 't': /* set tab size or turn off */
             if (isdigit(argv[i][2]))
@@ -102,20 +202,27 @@ The following options are good on the command line:
             else if (argv[i][2]==0)
                 tabsize = 0;            /* no tabs */
             else 
-                errormsg(Error, "%s: ill-formed option %s\n", argv[0], argv[i]);
+                errormsg(Error, "%s: ill-formed option %s", argv[0], argv[i]);
             break;          
-        case 'R': /* change name of root module */
-            root_options_seen++;
+        case 'c':
+            if (!cpif_like(argv[i]))
+                errormsg(Error, "%s: unknown option %s", argv[0], argv[i]);
+            else if (++i == argc)
+                errormsg(Fatal, "%s: a file must follow %s", argv[0], argv[i-1]);
             break;
-        case 'L': /* have a #line number format */
-            locformat = argv[i]+2;
-            if (!*locformat) locformat = Clocformat;
+        case 'R': /* change name of root module */
+        case 'L': /* have a #line number format  */
             break;
         default:
-            errormsg(Warning, "Ignoring unknown option -%s", argv[i]);
+            errormsg(Warning, "Ignoring unknown option %s", argv[i]);
      }
 @
 <<handle argument in argument [[i]]>>=
 errormsg(Warning,
     "I can't handle arguments yet, so I'll just ignore `%s'",argv[i]);
 
+@ 
+<<function [[cpif_like]]>>=
+static int cpif_like(const char *s) {
+    return !strcmp(s, "-cpif") || !strcmp(s, "-cp");
+}
