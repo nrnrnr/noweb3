@@ -89,7 +89,7 @@ implementations.
 \module{markmain}&
 This module already existed as a definition for an external stage; it was
 simply converted so that all calls to [[printf]] became calls to 
-[[NowebBuffer_append*]].  The stage ``[[markup]]'' is defined here.\\
+[[NowebBuffer_put*]].  The stage ``[[markup]]'' is defined here.\\
 \module{toascii}&
 A [[Sink]] that converts the contents of a [[NowebBuffer]] back into the
 original ASCII representation of Noweb tags.  This stage will be necessary

@@ -36,22 +36,22 @@ static void read_lua(void) {
 }
 @ 
 <<functions>>=
-static void append_lua(void) {
+static void put_lua(void) {
   lua_Object buf, key, val;
-  lua_get_args("NWB.append", 3, NWBUFFER, &buf, NWKEY | LUA_STRING, &key,
-	                        OPTIONAL | LUA_STRING, &val);
+  lua_get_args("NWB.put", 3, NWBUFFER, &buf, NWKEY | LUA_STRING, &key,
+	                     OPTIONAL | LUA_STRING, &val);
   if (lua_isstring(key))
-    NowebBuffer_append_str(lua_getuserdata(buf), lua_getstring(key),
+    NowebBuffer_put_str(lua_getuserdata(buf), lua_getstring(key),
 	                   lua_optstring(val));
   else
-    NowebBuffer_append(lua_getuserdata(buf), (NowebKey)lua_getuserdata(key),
+    NowebBuffer_put(lua_getuserdata(buf), (NowebKey)lua_getuserdata(key),
 		       lua_optstring(val));
 }
 <<functions>>=
 void nwbuffer_open(void) {
   lua_module_register("NWB", "reader", reader_lua);
   lua_module_register("NWB", "read",   read_lua);
-  lua_module_register("NWB", "append", append_lua);
+  lua_module_register("NWB", "put", put_lua);
 #define xx(NAME, PRINTARGS) \
   lua_pushusertag((void*)NAME, NWKEY); lua_storeglobal(#NAME);
   <<key macros>>

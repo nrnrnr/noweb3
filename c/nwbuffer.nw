@@ -20,14 +20,14 @@ from this buffer do not alter the contents of the buffer.
 [[NowebBuffer_create]] takes no parameters.  It creates a new, empty
 [[NowebBuffer]].
 
-[[NowebBuffer_append]] adds the pair [[(predefined, value)]] to the end
+[[NowebBuffer_put]] adds the pair [[(predefined, value)]] to the end
 of [[nwbuffer]].
 
-[[NowebBuffer_append_str]] also adds a pair to the end of
+[[NowebBuffer_put_str]] also adds a pair to the end of
 [[nwbuffer]].  In the case that the pair needed does not have a
 corresponding predefined key, this function may be used to add a
 string key to the buffer.  It first makes a call to
-[[NowebBuffer_append]] with [[NW_XXX_STRINGKEY]] as the predefined key
+[[NowebBuffer_put]] with [[NW_XXX_STRINGKEY]] as the predefined key
 (see description of {data-stuffing} below).
 
 [[NowebBuffer_read]] returns the pair at [[loc]] in [[nwbuffer]] and
@@ -55,8 +55,8 @@ typedef struct NowebReader* NowebReader;
 <<definition of [[struct NowebPair]]>>
 
 extern T    NowebBuffer_create        (void);
-extern T    NowebBuffer_append        (T nwbuffer, NowebKey predefined, const char* value);
-extern T    NowebBuffer_append_str    (T nwbuffer, const char* new_key, const char* value);
+extern T    NowebBuffer_put        (T nwbuffer, NowebKey predefined, const char* value);
+extern T    NowebBuffer_put_str    (T nwbuffer, const char* new_key, const char* value);
 extern NowebReader NowebBuffer_reader (T);
 extern NowebPair  NowebBuffer_read    (NowebReader);
 extern void NowebBuffer_free          (T* nwbuffer);
@@ -225,12 +225,12 @@ T NowebBuffer_create() {
   return new_buffer;
 }
 @ 
-[[NowebBuffer_append]] appends a [[NowebPair]] to the end of
+[[NowebBuffer_put]] appends a [[NowebPair]] to the end of
 [[nwbuffer]].  The pair that is added must be one containing a
 predefined key; the contents of this pair are passed as the second and
 third parameters.
 <<buffer operations>>=
-T NowebBuffer_append(T nwbuffer, NowebKey predefined, const char* value) {
+T NowebBuffer_put(T nwbuffer, NowebKey predefined, const char* value) {
   NowebPair new_pair = ALLOC(sizeof(struct NowebPair));
   new_pair->key = predefined;
   new_pair->u.value = value;
@@ -238,10 +238,10 @@ T NowebBuffer_append(T nwbuffer, NowebKey predefined, const char* value) {
   return nwbuffer;
 }
 @ 
-[[NowebBuffer_append_str]] allows a new pair to be added to the end of the
+[[NowebBuffer_put_str]] allows a new pair to be added to the end of the
 buffer.  The key and value are stored in an alternate pair.
 <<buffer operations>>=
-T NowebBuffer_append_str(T nwbuffer, const char* new_key, const char* value) {
+T NowebBuffer_put_str(T nwbuffer, const char* new_key, const char* value) {
   NowebPair new_pair = ALLOC(sizeof(struct NowebPair));
   struct NowebExtension *true;
   NEW(true);

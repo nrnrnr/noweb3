@@ -141,8 +141,8 @@ end
 procedure wrnode(i, n)
   case type(n) of {
     "node" : { every wredge(i, !n.edges); iwrite(i, "goto string;") }
-    "string" : iwrite(i, "NowebBuffer_append(buf, ", n, ", NULL);")
-    "witharg" : iwrite(i, "NowebBuffer_append(buf, ", n.keyword, ", ARG_AT(", n.pos, "));")
+    "string" : iwrite(i, "NowebBuffer_put(buf, ", n, ", NULL);")
+    "witharg" : iwrite(i, "NowebBuffer_put(buf, ", n.keyword, ", ARG_AT(", n.pos, "));")
     default : stop("bad node ", image(n))
   }
 end

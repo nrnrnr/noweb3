@@ -53,7 +53,7 @@ static enum keys end_keys  [] = { 0, NW_END_CODE,   NW_END_DOCS,   NW_END_CODE }
 static enum keys *keys[] = { NULL, begin_keys, end_keys };
 
 static void print_state(NowebBuffer out, Mark be, State state, int count) {
-  NowebBuffer_append(out, keys[be][state], Atom_int(count));
+  NowebBuffer_put(out, keys[be][state], Atom_int(count));
 }
 @ 
 We want all values in a noweb pipeline to be atoms, 
@@ -66,7 +66,7 @@ typedef enum index {Defn=1, Use=2, Newline=3} Index;
 static NowebKey indices[] = 
   { NW_FATAL /* can't happen */, NW_INDEX_DEFN, NW_INDEX_USE, NW_INDEX_NL };
 static void print_index(NowebBuffer out, Index idx, char *arg) {
-  NowebBuffer_append(out, indices[idx], arg ? Atom_string(arg) : arg);
+  NowebBuffer_put(out, indices[idx], arg ? Atom_string(arg) : arg);
 }
 @ 
 I am only slightly embarrassed by the following hack on newlines.
@@ -75,11 +75,11 @@ static void print_text(NowebBuffer out, char *text) {
   int last=strlen(text)-1;
   if (last>=0 && text[last]=='\n') {
     text[last] = 0;
-    NowebBuffer_append(out, NW_TEXT, Atom_string(text));
-    NowebBuffer_append(out, NW_NL, 0);
+    NowebBuffer_put(out, NW_TEXT, Atom_string(text));
+    NowebBuffer_put(out, NW_NL, 0);
     text[last] = '\n';
   } else {
-    NowebBuffer_append(out, NW_TEXT, Atom_string(text));
+    NowebBuffer_put(out, NW_TEXT, Atom_string(text));
   }
 }
 @ 
@@ -143,7 +143,7 @@ code is started by a module definition, which must appear on a line by itself.
 Documentation is started by a character sequence, 
 and arbitrary documentation text can follow on the same line.
 <<copy all lines from [[in]] to [[out]], adding markup>>=
-NowebBuffer_append(out, NW_FILE, Atom_string(filename));
+NowebBuffer_put(out, NW_FILE, Atom_string(filename));
 print_state(out, Begin, state, count);
 while ((line = getline_expand(in)) != NULL) {
     lineno++;
@@ -155,8 +155,8 @@ while ((line = getline_expand(in)) != NULL) {
         state = Code;
         print_state(out, Begin, state, count);
         getmodname(modname,MAX_MODNAME,line);
-        NowebBuffer_append(out, NW_DEFN, Atom_string(modname));
-        NowebBuffer_append(out, NW_NL, 0); /* could be implicit but this is better */
+        NowebBuffer_put(out, NW_DEFN, Atom_string(modname));
+        NowebBuffer_put(out, NW_NL, 0); /* could be implicit but this is better */
     } else if (is_def(line)) {
         <<emit index definitions and index newline>>
         if (state == Code)
@@ -196,7 +196,7 @@ before printing the final [[@end]].
 <<remember if a newline was missing from the last line>>=
 missing_newline = line[strlen(line)-1] != '\n';
 <<add a trailing newline if one was missing>>=
-if (missing_newline) NowebBuffer_append(out, NW_NL, 0);
+if (missing_newline) NowebBuffer_put(out, NW_NL, 0);
 @
 The conversion engine copies the input [[line]] to the output [[buf]],
 using the pointers [[s]] on the left for the destination and [[t]] on the
@@ -381,7 +381,7 @@ ls: lexassert(state == Docs);
     if (c == LS2) {
       <<emit [[p]] to [[s]] as text>>
       quoting = 1; last_open_quote = lineno; 
-      NowebBuffer_append(out, NW_QUOTE, 0); 
+      NowebBuffer_put(out, NW_QUOTE, 0); 
       next(c);
     }
     *s++ = LS1;
@@ -439,7 +439,7 @@ ce -> t  [label="c- (emit text; endquote)"]
 ce: lexassert(quoting);
     if (c == RS2) copy(ce);
     quoting = 0; <<emit [[p]] to [[s]] as text>> 
-    NowebBuffer_append(out, NW_ENDQUOTE, 0);
+    NowebBuffer_put(out, NW_ENDQUOTE, 0);
     goto t;
 @
 Now's here where we might be seeing a use.
@@ -545,7 +545,7 @@ s = p = buf + 2;
 @ emit the empty use regardless
 <<emit [[p]] to [[s]] as use>>=
 *s = 0;
-NowebBuffer_append(out, NW_USE, Atom_string(p));
+NowebBuffer_put(out, NW_USE, Atom_string(p));
 s = p = buf + 2;
 @
 <<complain of unescaped @<< in documentation>>=
