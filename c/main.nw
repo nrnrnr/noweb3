@@ -19,12 +19,35 @@ static char rcsname[] = "$Name$";
 #include "modtrees.h"
 
 @ 
+<<hackers: subsubsections for internal sinks>>=
+\subsubsection{The sink \texttt{Stages.nt}}
+
+The \texttt{Stages.nt} sink (back end) implements tangling.
+By  all
+uses to their definitions, 
+it extracts the program defined by one or more chunks named in
+arguments,
+and it writes that program on standard
+output.
+Its arbitrary argument is a list of strings representing these options:
+\begin{quote}
+\begin{tabularx}{\linewidth}{lX}
+\tt -t&Turn off expansion of tabs.\\
+\tt -t$n$&Expand tabs on $n$-column boundaries.\\
+\tt -R{\rmfamily\textit{name}}&Expand the code chunk named \textit{name}.\\
+\tt -L{\rmfamily\textit{format}}&Use \textit{format} as the format string
+        to emit line-number information.
+\end{tabularx}
+\end{quote}
+See the man page for {\tt notangle} for details on the meanings of
+these options and on the expansion performed by \texttt{Stages.nt}.
+@
 The main program makes one pass through the arguments, using options
 to set global state, and counting any roots it sees.
 It then makes a second pass to emit all the roots, or if there are no
 roots on the command line, it emits the module (chunk) named [[<<*>>]].
 <<*>>=
-int notangle_sink(void *arg, NowebBuffer in) {
+int notangle_sink(void *arg, NowebBuffer in, NowebBuffer out /* unused */) {
     CArgs args = arg;
     int argc = args->argc;
     char **argv = args->argv;
