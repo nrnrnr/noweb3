@@ -25,6 +25,7 @@ external pipeline commands built in [[xpipe-lua.nw]] and [[xpipe.nw]].
 #include "env-lua.h"
 #include "util.h"
 #include "noweb-lua.h"
+#include "misc-lua.h"
 #include "stages.h"
 
 extern void nwbuffer_open(void);
@@ -58,6 +59,7 @@ int main(int argc, char* argv[]) {
   stages_open();
   noweb_open();
   nwbuffer_open();
+  misc_open();
   lua_argv = lua_createtable();
   for (i = 2; i < argc; i++) {
     <<add [[argc[i]]] to [[lua_argv]] as element [[i-1]]>>
