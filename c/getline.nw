@@ -26,7 +26,7 @@ static char rcsname[] = "$Name$";
 #include "getline.h"
 
 static char *buf1 = NULL, *buf2 = NULL; /* lines without, with tabs expanded */
-static buf_size = START_SIZE;           /* size of both buffers if non-NULL */
+static int buf_size = START_SIZE;           /* size of both buffers if non-NULL */
 
 <<C functions>>
 @ %def START_SIZE buf_size buf1 buf2
