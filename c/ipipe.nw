@@ -27,6 +27,7 @@ All other stages are filters.
 #ifndef IPIPE_H
 #define IPIPE_H
 
+#include <stdio.h>
 #include "nwbuffer.h"
 
 typedef struct IPipe_stage *IPipe_T, *IPipe_Source, *IPipe_Filter, *IPipe_Sink;
@@ -49,8 +50,8 @@ We create a stage by providing a suitable function.
 This example should suggest why distinct static types were deemed
 undesirable. 
 <<exported functions and values>>=
-extern IPipe_T IPipe_stage(int (*stage)(void*, NowebBuffer, NowebBuffer),
-			       void* arg);
+extern IPipe_T IPipe_stage(char *name, int (*stage)(void*, NowebBuffer, NowebBuffer),
+			   void* arg);
 extern IPipe_T IPipe_connect(IPipe_T, IPipe_T);
 @ 
 We provide an identity filter $\mathit{id}$; it is both a left and
@@ -58,16 +59,20 @@ right identity for~$\con$.
 <<exported functions and values>>=
 extern IPipe_Filter IPipe_identity;
 @ 
-Once completed, a pipeline may be executed or freed from memory.
+Once completed, a pipeline may be run, printed, or freed from memory.
+To be printed nicely, a pipeline should be preceded by two blanks and
+followed by a newline.
 <<exported functions and values>>=
-extern int    IPipe_run (IPipe_T pipe, NowebBuffer in, NowebBuffer out);
-extern void   IPipe_free(IPipe_T *pipe);
+extern int  IPipe_run  (IPipe_T pipe, NowebBuffer in, NowebBuffer out);
+extern void IPipe_print(FILE *fp, IPipe_T pipe);
+extern void IPipe_free (IPipe_T *pipe);
 @ 
 \section{Implementation}
 Here's what the implementation looks like.
 <<ipipe.c>>=
 #include "ipipe.h"
 #include "nwbuffer.h"
+#include <stdio.h>
 #include <mem.h>
 
 <<type definitions>>
@@ -82,6 +87,7 @@ struct IPipe_stage {
       IPipe_T left, right;
     } pair;
     struct {
+      char *name;		/* identifies the stage */
       int (*stage)(void*, NowebBuffer, NowebBuffer);
       void* arg;
     } leaf;
@@ -91,9 +97,11 @@ struct IPipe_stage {
 The create functions simply allocate space for the particular type and set
 the appropriate data members equal to the parameters.
 <<functions>>=
-IPipe_T IPipe_stage(int (*stage)(void*, NowebBuffer, NowebBuffer), void* arg) {
+IPipe_T IPipe_stage(char *name, int (*stage)(void*, NowebBuffer, NowebBuffer),
+                    void* arg) {
   IPipe_T p = ALLOC(sizeof(*p));
   p->isPair = 0;
+  p->u.leaf.name = name;
   p->u.leaf.stage = stage;
   p->u.leaf.arg = arg;
   return p;
@@ -121,6 +129,17 @@ int IPipe_run(IPipe_T p, NowebBuffer in, NowebBuffer out) {
     return rc;
   } else
     return p->u.leaf.stage(p->u.leaf.arg, in, out);
+}
+@ 
+We print a pipeline without its preceding indentation or its trailing newline.
+<<functions>>=
+void IPipe_print(FILE *fp, IPipe_T p) {
+  if (p->isPair) {
+    IPipe_print(fp, p->u.pair.left);
+    fprintf(fp, "\n| ");
+    IPipe_print(fp, p->u.pair.right);
+  } else
+    fprintf(fp, "%s", p->u.leaf.name);
 }
 @ 
 Freeing means walking the tree.
