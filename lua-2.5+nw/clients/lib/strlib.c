@@ -10,6 +10,8 @@ char *rcs_strlib="$Id$";
 #include <stdlib.h>
 #include <ctype.h>
 
+#include <mem.h>
+
 #include "lua.h"
 #include "lualib.h"
 
@@ -28,8 +30,10 @@ static char *lua_strbuffer (unsigned long size)
   if (size > lbuffer.max) {
     /* ANSI "realloc" doesn't need this test, but some machines (Sun!)
        don't follow ANSI */
-    lbuffer.b = (lbuffer.b) ? realloc(lbuffer.b, lbuffer.max=size) :
-                              malloc(lbuffer.max=size);
+    if (lbuffer.b)
+      RESIZE(lbuffer.b, lbuffer.max=size);
+    else
+      lbuffer.b = ALLOC(lbuffer.max=size);
     if (lbuffer.b == NULL)
       lua_error("memory overflow");
   }
@@ -433,7 +437,7 @@ static void add_s (lua_Object newp)
     lbuffer.b = NULL; lbuffer.max = lbuffer.size = 0;
     lua_callfunction(newp);
     /* restore old buffer */
-    free(lbuffer.b);
+    FREE(lbuffer.b);
     lbuffer = oldbuff;
     res = lua_getresult(1);
     addstr(lua_isstring(res) ? lua_getstring(res) : "");
