@@ -13,6 +13,7 @@ verbose = nil
 while List.length(argv) > 0 do
   a = List.get(argv)
   globmatch a of
+  | "-e" => dostring(List.get(argv))
   | "-internal" => markup = Stages.markup; nt = Stages.nt
   | "-external" => markup = libFile("markup"); nt = libFile("nt")
   | "-v" => verbose = 1
@@ -23,6 +24,9 @@ while List.length(argv) > 0 do
 	      List.put(markopt, "-t")
       	      List.put(opt, a)
   | "-filter" => List.put(filters, MD.stringFilter(List.get(argv)))
+  | "-ifilter" =>
+      dostring("if 1 then local f, arg = " .. List.get(argv) .. 
+               "; List.put(filters, MPipe.filter(f, arg)) end")
   | "-markup" => markup = List.get(argv)
   | "-w[0-9]", "-w[0-9][0-9]*" =>  -- ignore arg meant for nountangle
   | "-L*" => List.put(markopt, "-t"); List.put(opt, "-t"); List.put(opt, a)
@@ -35,7 +39,9 @@ end
 
 P = MPipe
 
-System.putenv("PATH=" .. System.getenv("PATH") .. ":" .. LIB)
+if System.getenv("PATH") then
+  System.putenv("PATH=" .. System.getenv("PATH") .. ":" .. LIB)
+end
 
 -- write("opt has length ", List.length(opt), "\n")
 -- write("markopt has length ", List.length(markopt), "\n")
@@ -46,7 +52,7 @@ while List.length(filters) > 0 do
   p = P.connect(p, List.get(filters))
 end
 p = P.connect(p, P.sink(nt, opt))
-if verbose then P.print(p, stderr) end
+if verbose then P.print(p); local out = writetox(stderr); write("\n"); writeto(out) end
 exit(P.run(p))
 @ 
 This goo makes it a shell script
