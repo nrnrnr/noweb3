@@ -1,15 +1,14 @@
 % -*- mode: Noweb; noweb-code-mode: c-mode -*-
 
 \section{System dependencies}
-<<header ((unx))>>=
+<<header>>=
+#ifdef nw_unix
 #define Sys_dirsep "/"
 #define Sys_pathsep ':'
-<<header ((dos))>>=
+#else
 #define Sys_dirsep "\\"
 #define Sys_pathsep ';'
-<<header ((tmpfiles))>>=
-#define Sys_dirsep "/"
-#define Sys_pathsep ':'
+#endif
 @ 
 <<*>>=
 int Sys_ignoreme;
