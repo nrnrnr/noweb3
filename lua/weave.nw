@@ -221,7 +221,7 @@ using_index=nil; using_xref=nil
     i = i + 1
 | "-ifilter" =>
     dostring("if 1 then local f, arg = " .. argv[i+1] .. 
-             "; filters = filters .. MPipe.filter(f, arg)) end"
+             "; filters = filters .. MPipe.filter(f, arg)) end")
     i = i + 1
 | "-x" => 
     filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
