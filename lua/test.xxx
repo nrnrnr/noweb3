@@ -1,0 +1,17 @@
+function test(buf)
+  local key, value
+  local r = NWB.reader(buf)
+  local n = 1
+  key, value = NWB.read(r)
+  while key do
+    if type(key) == 'string' then
+      write('Record ', n, ' is a string: ', format('%q', key), ' ',
+	    format('%q', value or '(nil)'), '\n')
+    end 
+    n = n + 1
+    key, value = NWB.read(r)
+  end
+end
+
+P = MPipe
+P.run(P.connect(P.source(Stages.fromascii), P.sink(test)))
