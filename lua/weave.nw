@@ -71,6 +71,7 @@ shortxref = false
 noquote= List.new {"-noquote"}
 noquote = List.new { }  -- with hyperref, uses in quoted code are helpful
 docanchor= List.new {}
+indexdatabase = List.new {}
 noindex="-noindex"
 filters = P.identityFilter
 @
@@ -215,6 +216,7 @@ using_index=nil; using_xref=nil
 | "-x" =>                           using_xref=1 
 | "-index" =>            noindex=nil ; using_index=1
 | "-indexfrom" => i=i+1; noindex=nil ; using_index=1
+| "-indexdb" =>   i = i + 1; indexdatabase = indexdatabase .. List.fromstring(argv[i])
 <<second pass {\tt noweave} options>>=
 | "-filter" => 
     filters = filters .. MD.stringFilter(argv[i+1])
@@ -227,7 +229,7 @@ using_index=nil; using_xref=nil
     filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
 | "-index" =>  
   filters = filters .. P.filter(Defaults.finduses, noquote)
-  filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
+  filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
 | "-indexfrom" =>
   filters = filters .. P.filter(Defaults.finduses, noquote .. {argv[i+1]})
   filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)

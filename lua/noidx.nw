@@ -1,4 +1,7 @@
-\documentstyle[noweb]{article}
+% -*- mode: Noweb; noweb-code-mode: fundamental-mode -*-
+
+\documentclass{article}
+\usepackage{noweb}
 \pagestyle{noweb}\noweboptions{shortxref}
 \begin{document}
 Missing ``{\tt @xref tag} {\it label tag},'' where {\it label} is the name of 
@@ -43,6 +46,14 @@ This option is used to create anchors suitable for the HTML back end.
 Its effect  is to jump the documentation preceding a code chunk 
 rather than to the code chunk itself.
 
+The \texttt{-dbout \emph{file}} option causes the filter to emit, on
+\emph{file}, information about the first and last definitions of
+chunks in this file.
+(What about uses?)
+
+The \texttt{-dbin file} option notes that chunks may be linked in from
+a preceding or succeeding file, as determined by
+whether \texttt{-dbin} precedes or succeeds \texttt{-dbout}.
 <<*>>=
 function Stages.noidx(sourcebuf, sinkbuf, args)
 --global lines		# all the input lines
@@ -50,10 +61,16 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
 --global anchordist	# max distance before code chunk to place defining @xref label
 
   local theseuses, thesedefns, thischunk
+  local dboutfile, defndb -- first and last defns of each chunk
 
+  Noidx.prevdb = nil  -- definitions preceding this file
+  Noidx.nextdb = nil  -- definitions following this file
   <<initialization>>
   delay = nil
   <<swallow [[args]]>>
+  local prevdb = Noidx.prevdb or { }
+  local nextdb = Noidx.nextdb or { }
+
   r = NWB.reader(sourcebuf)
   local newbuf = NWB.new()
   key, arg = NWB.read(r)
@@ -75,6 +92,7 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   end
 
   <<write trailers if not already written>>
+  <<write output database>>
 end
 @
 <<swallow [[args]]>>=
@@ -83,10 +101,25 @@ while List.length(args) > 0 do
   case a of
   | "-delay" => delay = 1
   | "-docanchor" => anchordist = tonumber(List.get(args)) or anchordist
+  | "-dbout" => dboutfile = List.get(args);
+                if not Noidx.prevdb then
+                  Noidx.prevdb = Noidx.nextdb; Noidx.nextdb = nil
+                end
+  | "-dbin" =>  Noidx.nextdb = Noidx.nextdb or { }
+                dofile(List.get(args))
   else => noweb_error("unknown argument ", a)
   end
 end
 @
+<<*>>=
+function Noidx.add_db_defns(chunk, first, last)
+  local db = Noidx.nextdb
+  if db[chunk] then
+    db[chunk].last = last
+  else
+    db[chunk] = { first = first, last = last }
+  end
+end
 <<*>>=
 --global curfile		# unique id of the current @file
 --global lastbeginarg	# identifies last chunk (for -delay)
@@ -138,6 +171,20 @@ This trick lets me avoid planting anchors in empty documentation chunks.
         Noidx.addlabel(defanchors, arg, lastanchorlabel)
         Noidx.addud(chunkud, "defn", arg, lastanchorlabel)
         thisusecount = 0
+<<write output database>>=
+if dboutfile then
+  local oldout = writetox(dboutfile)
+  local chunk, v = next(defanchors, chunk)
+  while chunk do
+    local n = defout[chunk] or 0
+    if v[1] and v[n] then    
+      write(format('  Noidx.add_db_defns(%q, %q, %q)\n', chunk, v[1], v[n]))
+    end
+    chunk, v = next(defanchors, chunk)
+  end
+  writeto(oldout)
+end
+<<cases for pass 1>>=
 | NW_USE => 
    if lastbegin == NW_BEGIN_CODE then
           Set.insert(allchunks, arg)
@@ -223,7 +270,12 @@ defout = { }   -- regrettably, can't set default to 0
     <<write index cross-reference>>
     NWB.put(sinkbuf, key, arg)
 | NW_USE => 
-    NWB.put(sinkbuf, NW_XREF_REF, anchorlabel[arg] or "nw@notdef") -- was "???"
+    -- may not be right, but is something, anyway
+    local l = anchorlabel[arg] or
+              (prevdb[arg] and prevdb[arg].first) or 
+              (nextdb[arg] and nextdb[arg].first) or 
+              "nw@notdef"
+    NWB.put(sinkbuf, NW_XREF_REF, l) -- was "???"
     NWB.put(sinkbuf, key, arg)
 | NW_INDEX_DEFN, NW_INDEX_LOCALDEFN =>
     Set.insert(thesedefns, arg) -- no xref ref because of bug fix
