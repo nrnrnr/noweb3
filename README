@@ -9,7 +9,7 @@ To get some idea of what is going on with Noweb 3, look at the revised
 Hacker's Guide.
 
 To build Noweb 3, you need a working Noweb 2, plus a C compiler.  See
-http://www.cs.virginia.edu/~nr/noweb for Noweb 2.
+http://www.eecs.harvard.edu/~nr/noweb for Noweb 2.
 The distribution includes:
 
   lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
@@ -68,6 +68,6 @@ Noweb 3 would not have been possible without the efforts of Garret
 Prestwood.
 
 
-Do send feedback to nr@cs.virginia.edu!
+Do send feedback to nr@eecs.harvard.edu!
 
 Norman Ramsey

@@ -15,6 +15,14 @@ Edit the nwconfig file in the root directory.
        - make sure you have write permission to these directories.
        - refrain from making them point into the noweb source distribution.
 
+     Your Noweb 2 installation should use Icon; in particular you will
+     need at least one Icon-only filter in order to create the woven
+     documentation. See http://www.cs.arizona.edu/icon/ for download
+     information.
+
+     Installing Icon is a good idea in any case, since Noweb 3 uses any
+     external filters that haven't been rewritten in Lua.
+
   3) Now, set configuration for your system:
      First point a compiler to be used to build the tools and
      library by setting the CC variable in the Makefile:
@@ -47,4 +55,3 @@ distribution.
 
 If you encounter a problem building noweb 3, please send email to
 nr@eecs.harvard.edu.
-
