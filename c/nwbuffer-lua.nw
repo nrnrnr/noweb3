@@ -6,6 +6,7 @@
 
 #include "lua-help.h"
 #include "nwbuffer.h"
+#include "atom.h"
 
 <<functions>>
 @ 
@@ -46,11 +47,11 @@ static void put_lua(void) {
   lua_get_args("NWB.put", 3, NWBUFFER, &buf, NWKEY | LUA_STRING, &key,
 	                     OPTIONAL | LUA_STRING, &val);
   if (lua_isstring(key))
-    NowebBuffer_put_str(lua_getuserdata(buf), lua_getstring(key),
-	                   lua_optstring(val));
+    NowebBuffer_put_str(lua_getuserdata(buf), Atom_string(lua_getstring(key)),
+	                   lua_optatom(val));
   else
     NowebBuffer_put(lua_getuserdata(buf), (NowebKey)lua_getuserdata(key),
-		       lua_optstring(val));
+		       lua_optatom(val));
 }
 @ 
 <<functions>>=
@@ -83,5 +84,7 @@ void nwbuffer_open(void) {
   lua_pushusertag((void*)NAME, NWKEY); lua_storeglobal(#NAME);
   <<key macros>>
 #undef xx
-  lua_pushnumber(NWKEY); lua_storeglobal("NWKEY");
+  lua_pushnumber(NWKEY);    lua_storeglobal("NWKEY");
+  lua_pushnumber(NWBUFFER); lua_storeglobal("NWBUFFER");
+  lua_pushnumber(NWREADER); lua_storeglobal("NWREADER");
 }  
