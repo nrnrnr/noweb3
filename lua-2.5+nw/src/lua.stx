@@ -386,6 +386,10 @@ static void codeIf (Long thenAdd, Long elseAdd)
   code_word_at(basepc+thenAdd+1,elseinit-(thenAdd+sizeof(Word)+1));
 }
 
+static void codeIfEqJmp(Long label_address, Long target) {
+  /*assert(target >= label_address + 2);*/
+  code_word_at(basepc+label_address,target-(label_address+2));
+}
 
 /*
 ** Parse LUA code.
@@ -426,16 +430,18 @@ void lua_parse (TFunc *tf)
 
 %token WRONGTOKEN
 %token NIL
-%token IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL END
+%token IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL CASE OF END
 %token RETURN
 %token LOCAL
 %token FUNCTION
 %token DOTS
+%token ARROW
 %token <vFloat> NUMBER
 %token <vWord>  STRING
 %token <pTStr>  NAME 
 
-%type <vLong> PrepJump
+%type <vLong> PrepJump, PrepIfEqJump
+%type <vLong> tagged_arm_and_body /* label just before ARROW */
 %type <vLong> exprlist, exprlist1  /* if > 0, points to function return
 	counter (which has list length); if <= 0, -list lenght */
 %type <vLong> functioncall, expr  /* if != 0, points to function return
@@ -515,6 +521,8 @@ sc	 : /* empty */ | ';' ;
 stat   : IF expr1 THEN PrepJump block PrepJump elsepart END
 	{ codeIf($4, $6); }
 
+       | CASE expr1 OF case_body END
+
        | WHILE {$<vLong>$=pc;} expr1 DO PrepJump block PrepJump END
        {
         basepc[$5] = IFFJMP;
@@ -553,6 +561,24 @@ elsepart : /* empty */
 	{ codeIf($4, $6); }
          ;
      
+ /* keeps a copy of expr1 (from CASE expr1 of) on stack until arm is chosen */
+ /* we have to insert DUP *before* tagged_arm_and_body to avoid parser confusion */
+case_body : '|' {code_byte(DUP);} tagged_arm_and_body
+          | ELSE ARROW {code_byte(POP);} block 
+          | /* empty */ {code_byte(POP); /* should code for fallback here */ }
+          ;
+
+tagged_arm_and_body
+       : expr1 PrepIfEqJump ',' /* if it equals tag, will jump to backpatched label */
+         {code_byte(DUP);} tagged_arm_and_body
+   	 {codeIfEqJmp($2,$5); $$=$5;}  /* backpatch and return the label */
+       | expr1 {code_byte(EQOP);} PrepJump ARROW /* if equal, jump to block */
+         {code_byte(POP);} /* we found an arm; pop expr1 (from CASE expr1 OF) */
+         block PrepJump    /* execute block, then jump to end of case stmt */
+         case_body 
+         {codeIf($3,$7);$$=$3+3;} /* patch jumps; return label for other patch */
+       ;                      
+
 block    : {$<vInt>$ = nlocalvar;} statlist ret 
          {
 	  if (nlocalvar != $<vInt>1)
@@ -583,6 +609,12 @@ PrepJump : /* empty */
          }
 	 ;
 	   
+PrepIfEqJump : /* empty --- returns address to patch label */ 
+             { code_byte(EQOP); code_byte(NOTOP); code_byte(IFFJMP); 
+               $$ = pc; code_word(0);
+             }
+             ;
+
 expr1	 : expr { adjust_functioncall($1, 1); }
 	 ;
 				
