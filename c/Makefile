@@ -150,7 +150,7 @@ depend:
 columns.o: columns.c columns.h
 cpif.o: cpif.c cpif.h errors.h strsave.h
 errors.o: errors.c errors.h
-finduses.o: errors.h match.h getline.h recognize.h
+finduses.o: errors.h match.h getline.h recognize.h nwbuffer.h
 getline.o: getline.c columns.h errors.h getline.h
 ipipe.o: ipipe.c ipipe.h nwbuffer.h
 main.o: main.c notangle.h errors.h columns.h modules.h modtrees.h \
