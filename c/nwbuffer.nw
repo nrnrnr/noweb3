@@ -28,19 +28,15 @@ of [[nwbuffer]].
 [[NowebBuffer_put_str]] also adds a pair to the end of
 [[nwbuffer]].  In the case that the pair needed does not have a
 corresponding predefined key, this function may be used to add a
-string key to the buffer.  It first makes a call to
-[[NowebBuffer_put]] with [[NW_XXX_STRINGKEY]] as the predefined key
-(see description of {data-stuffing} below).
+string key to the buffer.  
 
 [[NowebBuffer_put_pair]] adds an existing pair to the end
 of [[nwbuffer]].
-It allocates memory to make a copy of the pair, so as not to screw up
-calls to [[NowebBuffer_free]].
-One day, we have to figure out how to handle memory management in a
-much better way.
+It makes a copy of the pair, so the caller need not preserve the
+memory that is pointed to.
 
 [[NowebBuffer_pull]] removes a pair from the end of [[nwbuffer]],
-returning that pair, and deallocating its memory. 
+returning that pair.
 It is a checked runtime error to attempt to
 remove a pair from an empty buffer.
 
@@ -55,7 +51,8 @@ returns an abstraction that enables sequential reading of the pairs in
 the buffer.  [[NowebBuffer_read]] returns the elements one by one,
 returning [[NULL]] when the buffer is empty.
 
-[[NowebBuffer_toascii]] writes the contents of a buffer on an output file passed as an argument.
+[[NowebBuffer_toascii]] writes the contents of a buffer on an output
+file passed as an argument. 
 <<header>>=
 #ifndef NWBUFFER_H
 #define NWBUFFER_H
@@ -70,9 +67,9 @@ typedef struct NowebReader* NowebReader;
 
 extern T    NowebBuffer_create    (void);
 extern int  NowebBuffer_length    (T nwbuffer);
-extern T /*@alt void@*/    NowebBuffer_put       (T nwbuffer, NowebKey predefined, const char* value);
-extern T /*@alt void@*/   NowebBuffer_put_str   (T nwbuffer, const char* new_key, const char* value);
-extern T /*@alt void@*/   NowebBuffer_put_pair  (T nwbuffer, NowebPair pair);
+extern T    NowebBuffer_put       (T nwbuffer, NowebKey predefined, const char* value);
+extern T    NowebBuffer_put_str   (T nwbuffer, const char* new_key, const char* value);
+extern T    NowebBuffer_put_pair  (T nwbuffer, NowebPair pair);
 struct NowebPair   NowebBuffer_pull   (T nwbuffer);
 extern NowebReader NowebBuffer_reader (T);
 extern NowebPair   NowebBuffer_read   (NowebReader);
@@ -86,30 +83,29 @@ extern int NowebBuffer_toascii(void * /*output file*/, NowebBuffer buf,
 @ 
 
 The buffer is stored with objects of type [[NowebPair]], which contain
-a [[key]] and a [[value]].  In most cases the [[key]] will be one of a
+a [[key]] and a [[value]].  
+In most cases the [[key]] will be one of a
 predefined set (a [[NowebKey]]), but the interface allows for
-extensibility through [[u.alternate]].
-If [[p.key]] is [[NW_XXX_STRINGKEY]], then [[p.u.alternate]] holds a
-pointer to a key and a value.
-Otherwise, [[p.u.value]] is the value.
+extensibility through [[keystr]].
+If [[p.key]] is [[NW_XXX_STRINGKEY]], then [[p.keystr]] holds a
+pointer to a string that defines the key.
+Regardless, [[p.value]] is the value.
 Values may be omitted, in which case the corresponding pointers are
 [[NULL]].
 All [[value]] fields are immutable and must be atoms in the sense of
 the [[Atom]] interface.
- Keys, if string-like, must be atoms.
+Strings stored in [[p.keystr]] must also be atoms.
 <<definition of [[struct NowebPair]]>>=
 struct NowebPair {
-  NowebKey key;			/* predefined keys */
-  union {
-    const char *value;		/* NULL means value is omitted */
-    struct NowebExtension {
-      const char *key;		/* new keys; must be atom */
-      const char *value;
-    } *alternate;		/* pointer to key and value */
-  } u;
+  NowebKey key;
+  const char *keystr;       /* meaningful iff key == NW_XXX_STRINGKEY */
+  const char *value;
 };
-@ 
-
+@ Although the ``pair'' in the interface requires three words of
+memory, an aggressive implementation could use only two words to store
+pairs with predefined keys, at the cost of needing four words to store
+pairs with string keys.
+@
 Each [[NowebKey]] has a string equivalent, which is to be used in the
 external pipeline representation as specified in the Hackers' Guide.
 The idea of the [[NowebKey]]s is that they are compile-time constants
@@ -175,7 +171,7 @@ xx(NW_XREF_TAG,        	(fp, "@xref tag %s\n", VAL))
 xx(NW_FATAL,           	(fp, "@fatal %s\n", VAL))
 @ 
 I rely on clustering to identify classes of keywords.
-<<helper functions>>=
+<<nwbuffer functions>>=
 int NowebBuffer_is_index(NowebKey key) {
   return NW_INDEX_DEFN <= key && key <= NW_INDEX_ENDINDEX;
 } 
@@ -192,26 +188,10 @@ typedef enum keys {
 @
 \section{Implementation}
 
-The implementation would create an arena to use to allocate memory for
-pairs.  Beyond that, a simple implementation might use sequences from
-CII.  Later, we'll want a better-tailored implementation that avoids
-indirection and copying.
-
-This implementation creates and facilitates the use of the buffer type
-[[NowebBuffer]], which is defined here.  The [[NowebBuffer]] is simply
-a sequence of [[NowebPair]]s; the operations on the buffer are similar
-to operations on a sequence.
-If we improve the implementation one day, we will use
-a second sequence to store the alternate keys.
-<<definition of [[struct NowebBuffer]]>>=
-struct NowebBuffer {
-  Seq_T pairs;
-};
-@ 
+This implementation makes no effort to cram predefined pairs into two words.
 <<*>>=
 #include <stdio.h>
 #include <assert.h>
-
 #include <seq.h>
 #include <mem.h>
 
@@ -219,138 +199,201 @@ struct NowebBuffer {
 
 #define T NowebBuffer
 
-<<definition of [[struct NowebBuffer]]>>
-<<definition of [[struct NowebReader]]>>
-
-<<helper functions>>
-<<buffer operations>>
-<<functions>>
-
+<<nwbuffer declarations>>
+<<nwbuffer functions>>
 #undef T
-@ 
-[[NowebBuffer_create]] allocates and returns an empty buffer.  The
-initial size of the buffer is set at 500 as a result of several tests
-run on sample Noweb files.  Both the C source code for Noweb and the
-source code for Modula3, which each contain relatively small files,
-averaged 400 pair per file.  Larger programs such as the New Jersey
-Machine-Code Toolkit--both the Standard ML and Icon versions--averaged
-around 1100 pair per file.  Because of these test numbers, the
-initial size of 500 pair was chosen for the buffers.
-<<buffer operations>>=
+@
+The implementation uses a doubly-linked list of arenas of [[ARENASIZE]] pairs each.
+A prior implementation used [[500]] pairs initially in a sequence
+(which perhaps also means growth by 500 each time),
+based on some measurements using the noweb source files.
+This implementation uses an arena size of 
+We use [[128]] because it is where the knee in the performance
+curve seems to be on the machine being used to develop this
+(a 233 MHz Pentium II running Plan 9 and compiling using the APE environment's malloc).
+The code works with [[1]] and [[2]], from which rsc concludes that it works for all values.
+<<nwbuffer declarations>>=
+enum {
+  ARENASIZE = 128
+};
+<<nwbuffer declarations>>=
+struct NowebBufferArena {
+  struct NowebPair base[ARENASIZE];
+  struct NowebPair *freep;
+  struct NowebPair *limitp;
+  struct NowebBufferArena *prev;
+  struct NowebBufferArena *next;
+};
+@ %
+The [[limitp]] pointer points to the end of the arena,
+while the [[freep]] pointer points past the last used pair.
+@
+A [[NowebBuffer]] is just the list of arenas.
+To make writing easy, we also keep the
+arena currently being written.
+<<nwbuffer declarations>>=
+struct NowebBuffer {
+  struct NowebBufferArena *arenalist;
+  struct NowebBufferArena *wr;
+  int length;
+};
+@
+<<nwbuffer functions>>=
 T NowebBuffer_create() {
-  T new_buffer = ALLOC(sizeof(struct T));
-  new_buffer->pairs = Seq_new(500);
+  T new_buffer;
+
+  new_buffer = ALLOC(sizeof(struct T));
+  memset(new_buffer, 0, sizeof(struct T));
   return new_buffer;
 }
 @ 
-<<buffer operations>>=
+<<nwbuffer functions>>=
 int NowebBuffer_length (T nwbuffer) {
-  return Seq_length(nwbuffer->pairs);
+  return nwbuffer->length;
 }
 @ 
 [[NowebBuffer_put]] appends a [[NowebPair]] to the end of
 [[nwbuffer]].  The pair that is added must be one containing a
 predefined key; the contents of this pair are passed as the second and
 third parameters.
-<<buffer operations>>=
+<<nwbuffer functions>>=
 T NowebBuffer_put(T nwbuffer, NowebKey predefined, const char* value) {
-  NowebPair new_pair = ALLOC(sizeof(struct NowebPair));
+  NowebPair new_pair;
+
+  new_pair = NowebBuffer_next_write_pair(nwbuffer);
   new_pair->key = predefined;
-  new_pair->u.value = value;
-  Seq_addhi(nwbuffer->pairs, new_pair);
+  new_pair->value = value;
   return nwbuffer;
 }
-@ 
+@ %
+The helper [[NowebBuffer_next_write_pair]] makes sure there is
+room for one more pair and returns a pointer to it.
+<<nwbuffer declarations>>=
+static NowebPair NowebBuffer_next_write_pair(T nwbuffer);
+<<nwbuffer functions>>=
+static NowebPair
+NowebBuffer_next_write_pair(T nwbuffer)
+{
+  struct NowebBufferArena *a;
+
+  if(nwbuffer->wr == NULL || nwbuffer->wr->freep == nwbuffer->wr->limitp) {
+    /* can happen because of pull */
+    if(nwbuffer->wr && nwbuffer->wr->next)
+      a = nwbuffer->wr->next;
+    else {
+      a = ALLOC(sizeof(*a));
+      a->freep = a->base;
+      a->limitp = a->base+ARENASIZE;
+      a->prev = nwbuffer->wr;
+      a->next = NULL;
+      if(a->prev)
+        a->prev->next = a;
+      else
+        nwbuffer->arenalist = a;
+    }
+    nwbuffer->wr = a;
+  }
+
+  assert(nwbuffer->wr->freep < nwbuffer->wr->limitp);
+  nwbuffer->length++;
+  return nwbuffer->wr->freep++;
+}
+@
 [[NowebBuffer_put_str]] allows a new pair to be added to the end of the
-buffer.  The key and value are stored in an alternate pair.
-<<buffer operations>>=
+buffer.
+<<nwbuffer functions>>=
 T NowebBuffer_put_str(T nwbuffer, const char* new_key, const char* value) {
-  NowebPair new_pair = ALLOC(sizeof(struct NowebPair));
-  struct NowebExtension *true;
-  NEW(true);
-  true->key = new_key;
-  true->value = value;
+  NowebPair new_pair;
+
+  new_pair = NowebBuffer_next_write_pair(nwbuffer);
   new_pair->key = NW_XXX_STRINGKEY;
-  new_pair->u.alternate = true;
-  Seq_addhi(nwbuffer->pairs, new_pair);
+  new_pair->keystr = new_key;
+  new_pair->value = value;
   return nwbuffer;
 }
 @ 
 We can also simply append pairs.
-<<buffer operations>>=
+<<nwbuffer functions>>=
 T NowebBuffer_put_pair (T nwbuffer, NowebPair pair) {
-  NowebPair p = ALLOC(sizeof(*p));
-  *p = *pair;
-  Seq_addhi(nwbuffer->pairs, p);
+  *NowebBuffer_next_write_pair(nwbuffer) = *pair;
   return nwbuffer;
 }
-@ 
-When we pull a pair, we free its memory.
-<<buffer operations>>=
+@ To pull a pair we just back up the write pointer.
+<<nwbuffer functions>>=
 struct NowebPair NowebBuffer_pull(T nwbuffer) {
-  struct NowebPair pair, *p;
-  assert(NowebBuffer_length(nwbuffer) > 0);
-  p = Seq_remhi(nwbuffer->pairs);
-  pair = *p;
-  FREE(p);
-  return pair;
+  assert(nwbuffer->length > 0);
+  if(nwbuffer->wr->freep == nwbuffer->wr->base) {
+    nwbuffer->wr = nwbuffer->wr->prev;
+    assert(nwbuffer->wr->freep == nwbuffer->wr->limitp);
+  }
+  --nwbuffer->length;
+  return *--nwbuffer->wr->freep;
 }
 @ 
-The read function requires passing a pointer to the [[NowebReader]];
-the function uses this value to point to the current 
-sequence index to read, then increments it for the next call to read
-using that same parameter.  This prevents the read function from
-having side effects on the buffer while still allowing the calling
-procedure to know where to read next.
-
-The reader holds a pointer to the buffer, plus
- an integer that represents an element
-in the sequence.
-<<definition of [[struct NowebReader]]>>=
+The read function requires passing a pointer to the [[NowebReader]],
+which holds a finger pointing at the next place to read.
+<<nwbuffer declarations>>=
 struct NowebReader {
   NowebBuffer buf;
-  int index;
+  struct NowebBufferArena *a;
+  struct NowebPair *readp;
 };
 @ 
-[[NowebBuffer_reader]] points to the first element in the given buffer.  
-<<helper functions>>=
+[[NowebBuffer_reader]] creates a new structure.
+The arena and pair pointers will be ``faulted in'' on the
+first read.
+<<nwbuffer functions>>=
 NowebReader NowebBuffer_reader(T nwbuffer) {
   struct NowebReader* rdr;
-  NEW(rdr);
+
+  rdr = ALLOC(sizeof(*rdr));
+  memset(rdr, 0, sizeof(*rdr));
   rdr->buf = nwbuffer;
-  rdr->index = 0;
   return rdr;
 }
 @
-[[NowebBuffer_read]] simply returns the pair in [[buf]] referred to
-by [[index]].  In the case that [[index]] is outside the bounds of
-[[nwbuffer]], the function returns NULL.
-<<buffer operations>>=
+[[NowebBuffer_read]] simply returns the next pair in [[buf]].
+In the case that we are out of input,
+the function returns NULL.
+<<nwbuffer functions>>=
 NowebPair NowebBuffer_read (NowebReader rdr) {
-  Seq_T s = rdr->buf->pairs;
-  if (rdr->index < Seq_length(s))
-    return Seq_get(s, rdr->index++);
-  else return 0;
-}
-@ 
-[[NowebBuffer_free]] frees all the [[NowebPairs]] included in
-[[nwbuffer]], then makes the [[Seq_free]] call to free that buffer.
-<<buffer operations>>=
-void NowebBuffer_free(T* nwbuffer) {
-  int i;
-  NowebPair to_free;
-  assert(nwbuffer && *nwbuffer);
-  for (i = 0; i < Seq_length((*nwbuffer)->pairs); i++) {
-    to_free = Seq_get((*nwbuffer)->pairs, i);
-    if (to_free->key == NW_XXX_STRINGKEY)
-      Mem_free(to_free->u.alternate, __FILE__, __LINE__);
-    FREE(to_free);
+  if(rdr->a == NULL) {
+    rdr->a = rdr->buf->arenalist;
+    if(rdr->a == NULL)
+      return NULL;
+    rdr->readp = rdr->a->base;
   }
-  Seq_free(&(*nwbuffer)->pairs);
-  FREE(*nwbuffer);
+
+  if(rdr->readp == rdr->a->limitp && rdr->a->next != NULL) {
+    rdr->a = rdr->a->next;
+    rdr->readp = rdr->a->base;
+  }
+
+  if(rdr->readp == rdr->a->freep)
+    return NULL;
+
+  assert(rdr->a->base <= rdr->readp && rdr->readp < rdr->a->freep);
+  return rdr->readp++;
 }
+@ %
+Apparently there is no way to free a [[NowebReader]]. (--rsc)
 @
-<<functions>>=
+[[NowebBuffer_free]] frees all the storage associated with the buffer.
+<<nwbuffer functions>>=
+void NowebBuffer_free(T* nwbuffer) {
+  struct NowebBufferArena *a, *anext;
+
+  for(a=(*nwbuffer)->arenalist; a; a=anext) {
+    anext = a->next;
+    FREE(a);
+  }
+  FREE(*nwbuffer);
+  *nwbuffer = NULL;
+}
+@ %
+The old implementation didn't set [[*nwbuffer = NULL]] (--rsc).
+@
+<<nwbuffer functions>>=
 int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignored) {
   FILE *fp = out;
   NowebReader rdr = NowebBuffer_reader(in);
@@ -359,9 +402,9 @@ int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignore
   for (pair = NowebBuffer_read(rdr); pair; pair = NowebBuffer_read(rdr)) {
     switch(pair->key) {
       case NW_XXX_STRINGKEY:
-	fprintf(fp, "@%s %s\n", pair->u.alternate->key, pair->u.alternate->value);
+	fprintf(fp, "@%s %s\n", pair->keystr, pair->value);
 	break;
-#define VAL (pair->u.value)
+#define VAL (pair->value)
 #define xx(NAME, PRINTARGS) case NAME: fprintf PRINTARGS; break;
 <<key macros>>
 #undef xx
