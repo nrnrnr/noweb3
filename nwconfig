@@ -1,0 +1,55 @@
+################################################################
+#
+# configuration for Noweb's behavior
+
+# How should Noweb run external pipelines?
+#   fork    Unix fork and Unix pipelines
+#   spawn   Run programs sequentially using spawn and temporary files
+PIPE=spawn
+
+# What file and PATH conventions should Noweb use (unix or dos)?
+PLATFORM=unix
+
+################################################################
+#
+# installation instructions for your site
+
+# BIN is where the no command lands
+# LIB2 is where external pipeline stages from Noweb 2 are stored
+# LIB3 is where Noweb 3 scripts and configuration files go
+BIN=/usr/local/bin
+LIB2=/usr/local/noweb/lib
+LIB3=/usr/local/lib/noweb3
+
+
+################################################################
+#
+#  information about your system
+
+# Adjust these three lines for your ANSI C compiler
+CC=gcc -ansi -pedantic
+XCFLAGS=
+LD=gcc
+
+# if your system doesn't have ranlib, change "ranlib" to "true" 
+RANLIB=ranlib
+
+# set the alignment (in bytes) of pointers returned by malloc
+# see cii/install.html for more
+#CIIMAXALIGN=8		# Sparc, Alpha
+CIIMAXALIGN=4		# Linux x86
+
+# in SunOs 4.1.x, uncomment the following line to avoid prototypes warnings
+# for standard functions 
+#XINCLUDES=-I/usr/5include
+
+# if you don't have popen() in your C library, comment the following line:
+POPEN=-DPOPEN
+
+# if your C library is not POSIX compliant, comment the following line:
+POSIX=-DPOSIX
+
+# if you don't have strerror() in your C library, uncomment the following line:
+#NOSTRERROR= -DNOSTRERROR
+
+

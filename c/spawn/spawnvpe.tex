@@ -1,0 +1,458 @@
+\documentclass[11pt,a4paper]{article}% ===> this file was generated automatically by noweave --- better not edit it
+\usepackage{noweb}
+\usepackage{times}
+\usepackage{fancyhdr}
+\usepackage{graphics}
+\usepackage{latexsym}
+\pagestyle{noweb}
+\noweboptions{}
+\begin{document}
+\pagestyle{headings}
+
+\nwfilename{spawnvpe.tmp}\nwbegindocs{1}\nwdocspar
+\title{\_spawnvpe, \_spwanvp}
+  \author{Kai Uwe Karl Baumbach\\
+  Email: baumbach@kabece.com}
+  
+\maketitle
+
+\tableofcontents
+
+% spawnvpe.nw
+% June 2000 by Kai Uwe Karl Baumbach, baumbach@kabece.com
+\nwenddocs{}\nwbegindocs{2}\nwdocspar
+\section {Introduction}
+
+Why should one want a {\Tt{}spawn()} function for Unix when a 
+{\Tt{}fork()}/{\Tt{}exec()} combination is much more flexible and
+powerful? In a large amount of cases you simply want to run a
+different program from scratch and you don't want to rely
+on {\Tt{}system()} which may be dangerous and doesn't provide
+much control.
+
+If you're trying to port an application to systems where 
+processes can't be forked and continue in the midst of
+execution (i.e. MS-Windows or AS/400) your program's 
+logic is easier to understand if you can use just one 
+function call and keep the rest in a separate library.
+
+This one-function-library gives you a {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()} according to the 
+Micro\-soft\copyright{} specification but keeping GCC (DJGPP) 
+in mind. It doesn't implement the mode flag {\Tt{}P{\_}OVERLAY} 
+because I can't see any use in calling spawn when I really 
+mean exec.
+
+\subsection {Synopsis}
+
+{\tt\# include "nwprocess.h"\\[2ex]
+int \_spawnvpe (\\
+\hspace*{1em}int mode,\\ 
+\hspace*{1em}const char *filename,\\
+\hspace*{1em}char *const argv[],\\
+\hspace*{1em}char *const envp[]);\\[2ex]
+int \_spawnvp (\\
+\hspace*{1em}int mode,\\ 
+\hspace*{1em}const char *filename,\\
+\hspace*{1em}char *const argv[]);}\\[2ex]
+\textbf{Note:} {\Tt{}\nwlinkedidentq{{\_}spawnvp}{NW1b9oex-3JXb8d-1}()} is implemented as a macro.\\
+Please also note that the parameter declaration is taken from GCC. 
+Microsoft\copyright{} uses
+\begin {quote}
+  {\Tt{}const\ char\ *const\ *argv}
+\end {quote}
+which is even more weird. They both deserve an award for the
+most useless use of {\Tt{}const}.
+
+\subsection {Description}
+
+{\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}} creates and executes a process. It searches
+the PATH for the new process' image. For details on this,
+please have a look at your system's documentation of the
+{\Tt{}execvp()} function.
+
+\subsubsection {Function parameters}
+{\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}} takes the following arguments:
+\begin{itemize}
+  \item{{\Tt{}mode}---the mode flag may be:
+    \begin {itemize}
+      \item{{\Tt{}\nwlinkedidentq{P{\_}WAIT}{NW1b9oex-g0o7p-1}} and {\Tt{}\nwlinkedidentq{{\_}P{\_}WAIT}{NW1b9oex-g0o7p-1}}---wait until the child
+        process has finished and return it's return value.}
+      \item{{\Tt{}\nwlinkedidentq{P{\_}NOWAIT}{NW1b9oex-g0o7p-1}}, {\Tt{}\nwlinkedidentq{{\_}P{\_}NOWAIT}{NW1b9oex-g0o7p-1}} and {\Tt{}\nwlinkedidentq{{\_}P{\_}NOWAITO}{NW1b9oex-g0o7p-1}}---return
+        immediately with the child's PID as the return value.}
+    \end {itemize}
+  }
+  \item{{\Tt{}filename}---a pointer to a string containing the name of
+    the child's executable image. If it is in the PATH, no path 
+    information is necessary.
+    
+    {\Tt{}filename} must be identical to {\Tt{}argv[0]}, giving you the chance
+      for an additional error.}
+  \item{{\Tt{}argv}---an array of pointers to strings containing the
+    command line arguments of the called process. This array shall 
+    be terminated with the null-pointer constant NULL.
+    
+    As a very wise decision in interface design {\Tt{}argv[0]} has to be
+    the same as {\Tt{}filename}.}
+  \item{{\Tt{}envp}---an array of pointers to environment variables. This, too,
+    has to be terminated with NULL.
+    
+    {\Tt{}\nwlinkedidentq{spawnvp}{NW1b9oex-3JXb8d-1}} doesn't take this argument---it just uses the default 
+    environment of the caller.}
+\end{itemize}
+
+You'll find examples of calls to {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()} on p. \pageref{test}. 
+
+\subsection {Return value}
+\subsubsection {From synchronous {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()}}
+
+The return value from a synchronous {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()}
+(when {\Tt{}\nwlinkedidentq{{\_}P{\_}WAIT}{NW1b9oex-g0o7p-1}} was specified for mode) is the exit 
+status of the new process. Please see {\Tt{}man\ 2\ waitpid}
+for details on Unix systems.\\[2ex]
+\textbf{Important:} GNU-{\Tt{}\nwlinkedidentq{spawnvpe}{NW1b9oex-3JXb8d-1}} is identical to
+the Unix-Versions of {\Tt{}exec} and returns the exit code of the child 
+process in the lower 8 bits of the return value which
+our version does not.
+
+\subsubsection {From asynchronous {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()}}
+When {\Tt{}\nwlinkedidentq{{\_}P{\_}NOWAIT}{NW1b9oex-g0o7p-1}} or {\Tt{}\nwlinkedidentq{{\_}P{\_}NOWAITO}{NW1b9oex-g0o7p-1}} are specified for {\Tt{}mode}
+the return value from {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()} is the process id
+of the child process.\\[2ex]
+On error {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()} returns -1 and {\Tt{}errno} is set. Please
+refer to the man pages of your system for possible error
+values. For asynchronous {\Tt{}spawn} you'll find these in the
+the documentation to {\Tt{}fork()} for synchronous {\Tt{}spawn} you'll
+have to look at {\Tt{}fork()} and {\Tt{}execvp()}.
+
+\section {The main file {\Tt{}\nwlinkedidentq{spawnvpe}{NW1b9oex-3JXb8d-1}.c}}
+
+{\Tt{}WIN32} is a standard define in Microsoft's 32 bit ML. We won't
+have anything to do then.
+\nwenddocs{}\nwbegincode{3}\sublabel{NW1b9oex-VqLz4-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-VqLz4-1}}}\moddef{spawnvpe.c~{\nwtagstyle{}\subpageref{NW1b9oex-VqLz4-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+#ifndef WIN32
+\LA{}The include files in \code{}spawnvpe.c\edoc{}~{\nwtagstyle{}\subpageref{NW1b9oex-3tsKu9-1}}\RA{}
+int 
+\nwlinkedidentc{_spawnvpe}{NW1b9oex-3JXb8d-1} (
+  int mode, 
+  const char *filename, 
+  char *const argv[], 
+  char *const envp[] )
+\{
+  extern char **environ;
+  pid_t pid;
+  \LA{}Assert yourself~{\nwtagstyle{}\subpageref{NW1b9oex-3iW6L4-1}}\RA{}
+  pid = fork();
+  if (mode == \nwlinkedidentc{P_WAIT}{NW1b9oex-g0o7p-1})
+  \{
+    \LA{}Exec and wait for child process~{\nwtagstyle{}\subpageref{NW1b9oex-1EndFn-1}}\RA{}
+  \}
+  else
+  \{
+    \LA{}Exec without waiting for child process~{\nwtagstyle{}\subpageref{NW1b9oex-1CNOWv-1}}\RA{}
+  \}
+  return -1;
+\}
+#endif
+\nwnotused{spawnvpe.c}\nwidentuses{\\{{\nwixident{{\_}spawnvpe}}{:unspawnvpe}}\\{{\nwixident{P{\_}WAIT}}{P:unWAIT}}}\nwindexuse{\nwixident{{\_}spawnvpe}}{:unspawnvpe}{NW1b9oex-VqLz4-1}\nwindexuse{\nwixident{P{\_}WAIT}}{P:unWAIT}{NW1b9oex-VqLz4-1}\nwendcode{}\nwbegincode{4}\sublabel{NW1b9oex-3iW6L4-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-3iW6L4-1}}}\moddef{Assert yourself~{\nwtagstyle{}\subpageref{NW1b9oex-3iW6L4-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-VqLz4-1}}\nwenddeflinemarkup
+assert (filename != NULL);
+assert (argv != NULL);
+assert (argv[0] != NULL);
+assert (envp != NULL);
+\nwused{\\{NW1b9oex-VqLz4-1}}\nwendcode{}\nwbegincode{5}\sublabel{NW1b9oex-1EndFn-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-1EndFn-1}}}\moddef{Exec and wait for child process~{\nwtagstyle{}\subpageref{NW1b9oex-1EndFn-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-VqLz4-1}}\nwenddeflinemarkup
+int status;
+if (pid == 0)
+\{
+  \LA{}Redirect the environment pointer~{\nwtagstyle{}\subpageref{NW1b9oex-XZV91-1}}\RA{}
+  execvp (filename, argv);
+\}
+else
+\{
+  pid = waitpid (pid, &status, 0);
+  if (pid == -1)
+  \{
+    return pid;
+  \}
+  if (WIFEXITED (status))
+  \{
+    return ((signed char)WEXITSTATUS (status));
+  \}
+  else
+  \{
+    return 0;
+  \}
+\}
+\nwused{\\{NW1b9oex-VqLz4-1}}\nwendcode{}\nwbegincode{6}\sublabel{NW1b9oex-1CNOWv-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-1CNOWv-1}}}\moddef{Exec without waiting for child process~{\nwtagstyle{}\subpageref{NW1b9oex-1CNOWv-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-VqLz4-1}}\nwenddeflinemarkup
+if (pid == 0)
+\{
+  \LA{}Redirect the environment pointer~{\nwtagstyle{}\subpageref{NW1b9oex-XZV91-1}}\RA{}
+  execvp (filename, argv);
+\}
+else
+\{
+  return pid;
+\}
+\nwused{\\{NW1b9oex-VqLz4-1}}\nwendcode{}\nwbegindocs{7}\nwdocspar
+This one is dirty for two reasons:
+\begin {enumerate}
+  \item {One must never ever cast away a {\Tt{}const}-specifier. On the
+    other hand a {\Tt{}const} in a prototype in C isn't very much more
+    than a promise not to change the caller's pointers---but
+    we don't and the child can't.}
+  \item {I don't know if it really works everywhere. 
+    I've looked in several UNIX man pages 
+    (Linux, BSD, Solaris, HPUX) but there seems to be
+    no standard method to get the {\Tt{}PATH} for {\Tt{}execvp()}---it may 
+    in the worst case only search `{\Tt{}/bin:/usr/bin}' after this 
+    redirect of {\Tt{}environ}. So it may be wise to include the {\Tt{}PATH}
+    in {\Tt{}envp} before the call to {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}()}.
+    
+    To get the full functionality MS-Windows\texttrademark{} has in 
+    this respect, one would have to search the {\Tt{}PATH} first, store
+    the pathname of the found executable in a buffer and only after
+    that assign {\Tt{}environ} and call {\Tt{}execv()}.}
+\end {enumerate}
+\nwenddocs{}\nwbegincode{8}\sublabel{NW1b9oex-XZV91-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-XZV91-1}}}\moddef{Redirect the environment pointer~{\nwtagstyle{}\subpageref{NW1b9oex-XZV91-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-1EndFn-1}\\{NW1b9oex-1CNOWv-1}}\nwenddeflinemarkup
+environ = (char **) envp;
+\nwused{\\{NW1b9oex-1EndFn-1}\\{NW1b9oex-1CNOWv-1}}\nwendcode{}\nwbegincode{9}\sublabel{NW1b9oex-3tsKu9-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-3tsKu9-1}}}\moddef{The include files in \code{}spawnvpe.c\edoc{}~{\nwtagstyle{}\subpageref{NW1b9oex-3tsKu9-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-VqLz4-1}}\nwenddeflinemarkup
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <assert.h>
+#include "nwprocess.h"
+\nwused{\\{NW1b9oex-VqLz4-1}}\nwendcode{}\nwbegindocs{10}\nwdocspar
+\section {The header file {\Tt{}nwprocess.h}}
+
+This file must be included to use our Unix-version of {\Tt{}\nwlinkedidentq{{\_}spawnvpe}{NW1b9oex-3JXb8d-1}}.
+On Microsoft\copyright{} Windows\texttrademark{} systems it only
+includes {\Tt{}process.h}.
+
+\nwenddocs{}\nwbegincode{11}\sublabel{NW1b9oex-4cxXo7-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-4cxXo7-1}}}\moddef{nwprocess.h~{\nwtagstyle{}\subpageref{NW1b9oex-4cxXo7-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+#ifndef NWPROCESS_INCLUDED
+#define NWPROCESS_INCLUDED
+  #ifdef WIN32
+    #include <process.h>
+  #else
+    \LA{}\code{}spawnvpe()\edoc{} prototype and macros~{\nwtagstyle{}\subpageref{NW1b9oex-3JXb8d-1}}\RA{}
+    \LA{}\code{}spawnvpe()\edoc{} constants~{\nwtagstyle{}\subpageref{NW1b9oex-g0o7p-1}}\RA{}
+  #endif
+#endif
+\nwnotused{nwprocess.h}\nwendcode{}\nwbegindocs{12}\nwdocspar
+\subsection {Prototype and macros}
+\nwenddocs{}\nwbegincode{13}\sublabel{NW1b9oex-3JXb8d-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-3JXb8d-1}}}\moddef{\code{}spawnvpe()\edoc{} prototype and macros~{\nwtagstyle{}\subpageref{NW1b9oex-3JXb8d-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-4cxXo7-1}}\nwenddeflinemarkup
+int \nwlinkedidentc{_spawnvpe}{NW1b9oex-3JXb8d-1} (
+  int mode, 
+  const char *filename, 
+  char * const argv[], 
+  char *const envp[] );
+
+#define \nwlinkedidentc{spawnvpe}{NW1b9oex-3JXb8d-1} \nwlinkedidentc{_spawnvpe}{NW1b9oex-3JXb8d-1}
+#define \nwlinkedidentc{_spawnvp}{NW1b9oex-3JXb8d-1}(mode, filename, argvect) \\
+  \nwlinkedidentc{_spawnvpe}{NW1b9oex-3JXb8d-1} ((mode), (filename), (argvect), environ);
+#define \nwlinkedidentc{spawnvp}{NW1b9oex-3JXb8d-1}(mode, filename, argvect) \\
+  \nwlinkedidentc{_spawnvpe}{NW1b9oex-3JXb8d-1} ((mode), (filename), (argvect), environ);
+\nwindexdefn{\nwixident{{\_}spawnvpe}}{:unspawnvpe}{NW1b9oex-3JXb8d-1}\nwindexdefn{\nwixident{spawnvpe}}{spawnvpe}{NW1b9oex-3JXb8d-1}\nwindexdefn{\nwixident{{\_}spawnvp}}{:unspawnvp}{NW1b9oex-3JXb8d-1}\nwindexdefn{\nwixident{spawnvp}}{spawnvp}{NW1b9oex-3JXb8d-1}\eatline
+\nwused{\\{NW1b9oex-4cxXo7-1}}\nwidentdefs{\\{{\nwixident{{\_}spawnvp}}{:unspawnvp}}\\{{\nwixident{{\_}spawnvpe}}{:unspawnvpe}}\\{{\nwixident{spawnvp}}{spawnvp}}\\{{\nwixident{spawnvpe}}{spawnvpe}}}\nwendcode{}\nwbegindocs{14}\nwdocspar
+\nwenddocs{}\nwbegindocs{15}\nwdocspar
+\subsection {Constants}
+Please note that DJGPP defines {\Tt{}\nwlinkedidentq{P{\_}WAIT}{NW1b9oex-g0o7p-1}} as 1 and {\Tt{}\nwlinkedidentq{P{\_}NOWAIT}{NW1b9oex-g0o7p-1}} as 2. 
+The following values conform to the Microsoft\copyright{} {\Tt{}process.h}.
+\nwenddocs{}\nwbegincode{16}\sublabel{NW1b9oex-g0o7p-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-g0o7p-1}}}\moddef{\code{}spawnvpe()\edoc{} constants~{\nwtagstyle{}\subpageref{NW1b9oex-g0o7p-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-4cxXo7-1}}\nwenddeflinemarkup
+#ifndef \nwlinkedidentc{_P_WAIT}{NW1b9oex-g0o7p-1}
+  #define \nwlinkedidentc{_P_WAIT}{NW1b9oex-g0o7p-1} 0
+#endif
+#ifndef \nwlinkedidentc{P_WAIT}{NW1b9oex-g0o7p-1}
+  #define \nwlinkedidentc{P_WAIT}{NW1b9oex-g0o7p-1} \nwlinkedidentc{_P_WAIT}{NW1b9oex-g0o7p-1}
+#endif
+
+#ifndef \nwlinkedidentc{_P_NOWAIT}{NW1b9oex-g0o7p-1}
+  #define \nwlinkedidentc{_P_NOWAIT}{NW1b9oex-g0o7p-1} 1
+#endif
+#ifndef \nwlinkedidentc{P_NOWAIT}{NW1b9oex-g0o7p-1}
+  #define \nwlinkedidentc{P_NOWAIT}{NW1b9oex-g0o7p-1} \nwlinkedidentc{_P_NOWAIT}{NW1b9oex-g0o7p-1}
+#endif
+
+#ifndef \nwlinkedidentc{_P_NOWAITO}{NW1b9oex-g0o7p-1}
+  #define \nwlinkedidentc{_P_NOWAITO}{NW1b9oex-g0o7p-1} 3
+#endif
+\nwindexdefn{\nwixident{{\_}P{\_}WAIT}}{:unP:unWAIT}{NW1b9oex-g0o7p-1}\nwindexdefn{\nwixident{P{\_}WAIT}}{P:unWAIT}{NW1b9oex-g0o7p-1}\nwindexdefn{\nwixident{{\_}P{\_}NOWAIT}}{:unP:unNOWAIT}{NW1b9oex-g0o7p-1}\nwindexdefn{\nwixident{P{\_}NOWAIT}}{P:unNOWAIT}{NW1b9oex-g0o7p-1}\nwindexdefn{\nwixident{{\_}P{\_}NOWAITO}}{:unP:unNOWAITO}{NW1b9oex-g0o7p-1}\eatline
+\nwused{\\{NW1b9oex-4cxXo7-1}}\nwidentdefs{\\{{\nwixident{{\_}P{\_}NOWAIT}}{:unP:unNOWAIT}}\\{{\nwixident{{\_}P{\_}NOWAITO}}{:unP:unNOWAITO}}\\{{\nwixident{{\_}P{\_}WAIT}}{:unP:unWAIT}}\\{{\nwixident{P{\_}NOWAIT}}{P:unNOWAIT}}\\{{\nwixident{P{\_}WAIT}}{P:unWAIT}}}\nwendcode{}\nwbegindocs{17}\nwdocspar
+% spawntest.nw
+% June 2000 by Kai Uwe Karl Baumbach, baumbach@kabece.com
+\nwenddocs{}\nwbegindocs{18}\nwdocspar
+\section {A small test suite} \label{test}
+
+This `test suite' requires GNU GCC. Basically one should write
+a test routine for every piece of code. This one may also serve as 
+an example for the usage of {\Tt{}\nwlinkedidentq{spawnvpe}{NW1b9oex-3JXb8d-1}()}.
+
+\subsection {{\Tt{}spawntest.exe}}
+\nwenddocs{}\nwbegincode{19}\sublabel{NW1b9oex-1u8iTI-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-1u8iTI-1}}}\moddef{spawntest.c~{\nwtagstyle{}\subpageref{NW1b9oex-1u8iTI-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+#include <stdlib.h> 
+#include <stdio.h> 
+#include <errno.h>
+#include <string.h>
+#include "nwprocess.h"
+
+int 
+\nwlinkedidentc{main}{NW1b9oex-1u8iTI-1} (void)
+\{
+  char *environment[] = \{
+    "THIS=is",
+    "THE=environment",
+    "TO=be",
+    "PASSED=to",
+    "THE=child",
+    "PROCESS=end",
+    NULL
+  \};
+  char *argvector[] = \{
+    "spawnchild.exe",
+    "First Parameter",
+    "Second Parameter",
+    "Third Parameter",
+    NULL
+  \};
+  int retval;
+  int wait_mode;
+  char *program_name;
+  
+  program_name = "spawnchild.exe";
+
+  wait_mode = \nwlinkedidentc{P_NOWAIT}{NW1b9oex-g0o7p-1};
+  \LA{}Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}\RA{}
+  wait_mode = \nwlinkedidentc{P_WAIT}{NW1b9oex-g0o7p-1};
+  \LA{}Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}\RA{} 
+
+  program_name = "ls";
+  argvector[0] = program_name;
+  argvector[1] = "-Flias";
+  argvector[2] = NULL;
+  
+  wait_mode = \nwlinkedidentc{_P_NOWAITO}{NW1b9oex-g0o7p-1};
+  \LA{}Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}\RA{}
+  wait_mode = \nwlinkedidentc{P_WAIT}{NW1b9oex-g0o7p-1};
+  \LA{}Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}\RA{} 
+
+  program_name = "program_with_a_silly_name";
+  argvector[0] = program_name;
+  argvector[1] = NULL;
+  
+  wait_mode = \nwlinkedidentc{_P_WAIT}{NW1b9oex-g0o7p-1};
+  \LA{}Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}\RA{} 
+  
+  program_name = "sh";
+    argvector[0] = program_name;
+    argvector[1] = "-c";
+    argvector[2] = "set";
+    argvector[3] = NULL;
+
+    wait_mode = \nwlinkedidentc{_P_WAIT}{NW1b9oex-g0o7p-1};
+    \LA{}Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}\RA{}
+  
+  return EXIT_SUCCESS;
+\}
+\nwindexdefn{\nwixident{main}}{main}{NW1b9oex-1u8iTI-1}\eatline
+\nwnotused{spawntest.c}\nwidentdefs{\\{{\nwixident{main}}{main}}}\nwidentuses{\\{{\nwixident{{\_}P{\_}NOWAITO}}{:unP:unNOWAITO}}\\{{\nwixident{{\_}P{\_}WAIT}}{:unP:unWAIT}}\\{{\nwixident{P{\_}NOWAIT}}{P:unNOWAIT}}\\{{\nwixident{P{\_}WAIT}}{P:unWAIT}}}\nwindexuse{\nwixident{{\_}P{\_}NOWAITO}}{:unP:unNOWAITO}{NW1b9oex-1u8iTI-1}\nwindexuse{\nwixident{{\_}P{\_}WAIT}}{:unP:unWAIT}{NW1b9oex-1u8iTI-1}\nwindexuse{\nwixident{P{\_}NOWAIT}}{P:unNOWAIT}{NW1b9oex-1u8iTI-1}\nwindexuse{\nwixident{P{\_}WAIT}}{P:unWAIT}{NW1b9oex-1u8iTI-1}\nwendcode{}\nwbegincode{20}\sublabel{NW1b9oex-1h2skZ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}}\moddef{Spawn a child process and display the results~{\nwtagstyle{}\subpageref{NW1b9oex-1h2skZ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-1u8iTI-1}}\nwenddeflinemarkup
+printf (
+  "Spawning %s in mode _P_%sWAIT:\\n",
+  program_name,
+  wait_mode == \nwlinkedidentc{P_WAIT}{NW1b9oex-g0o7p-1} ? "" : "NO" );
+retval = \nwlinkedidentc{_spawnvpe}{NW1b9oex-3JXb8d-1} (
+  wait_mode,
+  program_name,
+  argvector,
+  environment);
+printf ("The return value was %d.\\n",
+  retval);
+if (retval == -1)
+\{
+  printf (
+    "errno = %d: %s.\\n", 
+    errno,
+    strerror (errno));
+\}
+\nwused{\\{NW1b9oex-1u8iTI-1}}\nwidentuses{\\{{\nwixident{{\_}spawnvpe}}{:unspawnvpe}}\\{{\nwixident{P{\_}WAIT}}{P:unWAIT}}}\nwindexuse{\nwixident{{\_}spawnvpe}}{:unspawnvpe}{NW1b9oex-1h2skZ-1}\nwindexuse{\nwixident{P{\_}WAIT}}{P:unWAIT}{NW1b9oex-1h2skZ-1}\nwendcode{}\nwbegindocs{21}\nwdocspar
+\subsection {{\Tt{}spawnchild.exe}}
+
+Note that the definition of {\Tt{}\nwlinkedidentq{main}{NW1b9oex-1u8iTI-1}()} in this program is not ISO-C
+and is deprecated even on systems where it is available. It nevertheless
+is a nice test to see, if {\Tt{}environ\ =\ envp} before the call to {\Tt{}execvp()}
+really works.
+\nwenddocs{}\nwbegincode{22}\sublabel{NW1b9oex-1nyD9J-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-1nyD9J-1}}}\moddef{spawnchild.c~{\nwtagstyle{}\subpageref{NW1b9oex-1nyD9J-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+#include <stdlib.h> 
+#include <stdio.h> 
+#ifndef WIN32
+  #include <unistd.h> 
+#else
+  #define sleep(x) (void)0
+#endif
+
+int 
+\nwlinkedidentc{main}{NW1b9oex-1u8iTI-1} (int argc, char *argv[], char *envp[])
+\{
+  sleep (1);
+  puts ("Environment in spawnchild.exe:");
+  \LA{}Print the process environment~{\nwtagstyle{}\subpageref{NW1b9oex-2t5zF7-1}}\RA{}
+  puts ("\\nParameters in spawnchild.exe:");
+  \LA{}Print the process parameters~{\nwtagstyle{}\subpageref{NW1b9oex-4EVmeQ-1}}\RA{}
+  puts ("\\nVariable \\"THIS\\" in spwanchild:");
+  printf ("%s\\n", getenv ("THIS"));
+  return EXIT_SUCCESS;
+\}
+\nwindexdefn{\nwixident{main}}{main}{NW1b9oex-1nyD9J-1}\eatline
+\nwnotused{spawnchild.c}\nwidentdefs{\\{{\nwixident{main}}{main}}}\nwendcode{}\nwbegincode{23}\sublabel{NW1b9oex-4EVmeQ-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-4EVmeQ-1}}}\moddef{Print the process parameters~{\nwtagstyle{}\subpageref{NW1b9oex-4EVmeQ-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-1nyD9J-1}}\nwenddeflinemarkup
+while (*argv)
+\{
+  printf ( "%s\\n", *argv);
+  argv++;
+\}
+\nwused{\\{NW1b9oex-1nyD9J-1}}\nwendcode{}\nwbegincode{24}\sublabel{NW1b9oex-2t5zF7-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-2t5zF7-1}}}\moddef{Print the process environment~{\nwtagstyle{}\subpageref{NW1b9oex-2t5zF7-1}}}\endmoddef\nwstartdeflinemarkup\nwusesondefline{\\{NW1b9oex-1nyD9J-1}}\nwenddeflinemarkup
+while (*envp)
+\{
+  printf ( "%s\\n", *envp);
+  envp++;
+\}
+\nwused{\\{NW1b9oex-1nyD9J-1}}\nwendcode{}\nwbegincode{25}\sublabel{NW1b9oex-4QIgwf-1}\nwmargintag{{\nwtagstyle{}\subpageref{NW1b9oex-4QIgwf-1}}}\moddef{spawntest.mak~{\nwtagstyle{}\subpageref{NW1b9oex-4QIgwf-1}}}\endmoddef\nwstartdeflinemarkup\nwenddeflinemarkup
+CC=gcc -Wall -pedantic
+
+all:
+  $\{CC\} -o spawntest.exe \nwlinkedidentc{spawnvpe}{NW1b9oex-3JXb8d-1}.c spawntest.c
+  $\{CC\} -o spawnchild.exe spawnchild.c
+  ./spawntest.exe
+
+
+\nwnotused{spawntest.mak}\nwidentuses{\\{{\nwixident{spawnvpe}}{spawnvpe}}}\nwindexuse{\nwixident{spawnvpe}}{spawnvpe}{NW1b9oex-4QIgwf-1}\nwendcode{}
+
+\nwixlogsorted{c}{{\code{}spawnvpe()\edoc{} constants}{NW1b9oex-g0o7p-1}{\nwixu{NW1b9oex-4cxXo7-1}\nwixd{NW1b9oex-g0o7p-1}}}%
+\nwixlogsorted{c}{{\code{}spawnvpe()\edoc{} prototype and macros}{NW1b9oex-3JXb8d-1}{\nwixu{NW1b9oex-4cxXo7-1}\nwixd{NW1b9oex-3JXb8d-1}}}%
+\nwixlogsorted{c}{{Assert yourself}{NW1b9oex-3iW6L4-1}{\nwixu{NW1b9oex-VqLz4-1}\nwixd{NW1b9oex-3iW6L4-1}}}%
+\nwixlogsorted{c}{{Exec and wait for child process}{NW1b9oex-1EndFn-1}{\nwixu{NW1b9oex-VqLz4-1}\nwixd{NW1b9oex-1EndFn-1}}}%
+\nwixlogsorted{c}{{Exec without waiting for child process}{NW1b9oex-1CNOWv-1}{\nwixu{NW1b9oex-VqLz4-1}\nwixd{NW1b9oex-1CNOWv-1}}}%
+\nwixlogsorted{c}{{nwprocess.h}{NW1b9oex-4cxXo7-1}{\nwixd{NW1b9oex-4cxXo7-1}}}%
+\nwixlogsorted{c}{{Print the process environment}{NW1b9oex-2t5zF7-1}{\nwixu{NW1b9oex-1nyD9J-1}\nwixd{NW1b9oex-2t5zF7-1}}}%
+\nwixlogsorted{c}{{Print the process parameters}{NW1b9oex-4EVmeQ-1}{\nwixu{NW1b9oex-1nyD9J-1}\nwixd{NW1b9oex-4EVmeQ-1}}}%
+\nwixlogsorted{c}{{Redirect the environment pointer}{NW1b9oex-XZV91-1}{\nwixu{NW1b9oex-1EndFn-1}\nwixu{NW1b9oex-1CNOWv-1}\nwixd{NW1b9oex-XZV91-1}}}%
+\nwixlogsorted{c}{{Spawn a child process and display the results}{NW1b9oex-1h2skZ-1}{\nwixu{NW1b9oex-1u8iTI-1}\nwixd{NW1b9oex-1h2skZ-1}}}%
+\nwixlogsorted{c}{{spawnchild.c}{NW1b9oex-1nyD9J-1}{\nwixd{NW1b9oex-1nyD9J-1}}}%
+\nwixlogsorted{c}{{spawntest.c}{NW1b9oex-1u8iTI-1}{\nwixd{NW1b9oex-1u8iTI-1}}}%
+\nwixlogsorted{c}{{spawntest.mak}{NW1b9oex-4QIgwf-1}{\nwixd{NW1b9oex-4QIgwf-1}}}%
+\nwixlogsorted{c}{{spawnvpe.c}{NW1b9oex-VqLz4-1}{\nwixd{NW1b9oex-VqLz4-1}}}%
+\nwixlogsorted{c}{{The include files in \code{}spawnvpe.c\edoc{}}{NW1b9oex-3tsKu9-1}{\nwixu{NW1b9oex-VqLz4-1}\nwixd{NW1b9oex-3tsKu9-1}}}%
+\nwixlogsorted{i}{{\nwixident{{\_}P{\_}NOWAIT}}{:unP:unNOWAIT}}%
+\nwixlogsorted{i}{{\nwixident{{\_}P{\_}NOWAITO}}{:unP:unNOWAITO}}%
+\nwixlogsorted{i}{{\nwixident{{\_}P{\_}WAIT}}{:unP:unWAIT}}%
+\nwixlogsorted{i}{{\nwixident{{\_}spawnvp}}{:unspawnvp}}%
+\nwixlogsorted{i}{{\nwixident{{\_}spawnvpe}}{:unspawnvpe}}%
+\nwixlogsorted{i}{{\nwixident{main}}{main}}%
+\nwixlogsorted{i}{{\nwixident{P{\_}NOWAIT}}{P:unNOWAIT}}%
+\nwixlogsorted{i}{{\nwixident{P{\_}WAIT}}{P:unWAIT}}%
+\nwixlogsorted{i}{{\nwixident{spawnvp}}{spawnvp}}%
+\nwixlogsorted{i}{{\nwixident{spawnvpe}}{spawnvpe}}%
+\nwbegindocs{26}\nwdocspar
+\section {Index}
+\subsection {Chunks}
+\nowebchunks{}
+\subsection{Identifiers}
+\nowebindex{}
+\end{document}
+\nwenddocs{}

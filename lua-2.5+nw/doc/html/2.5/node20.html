@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>6 Predefined Functions and Libraries</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node21.html">6.1 Predefined Functions</A>
+<B>Up:</B> <A HREF="manual.html">Reference Manual of the </A>
+<B> Previous:</B> <A HREF="node19.html">5.6 References to Lua </A>
+<HR>
+<H1><A NAME="S600">6 Predefined Functions and Libraries</A></H1>
+<P>
+The set of predefined functions<A NAME="853"></A> in Lua is small but powerful.
+Most of them provide features that allows some degree of
+reflexivity<A NAME="854"></A> in the language.
+Some of these features cannot be simulated with the rest of the
+Language nor with the standard Lua API.
+Others are just convenient interfaces to common API functions.
+<P>
+The libraries, on the other hand, provide useful routines
+that are implemented directly through the standard API.
+Therefore, they are not necessary to the language,
+and are provided as separated C modules.
+Currently there are three standard libraries:
+<UL><LI> string manipulation;<LI> mathematical functions (sin, cos, etc);<LI> input and output (plus some system facilities).
+</UL>
+In order to have access to these libraries,
+the host program must call the functions
+<TT><B>strlib_open</B></TT>, <TT><B>mathlib_open</B></TT>, and <TT><B>iolib_open</B></TT>,
+declared in <TT><B>lualib.h</B></TT>.
+<P>
+<BR> <HR>
+<UL> 
+<LI> <A HREF="node21.html#S610">6.1 Predefined Functions</A>
+<LI> <A HREF="node22.html#S620">6.2 String Manipulation</A>
+<LI> <A HREF="node23.html#S630">6.3 Mathematical Functions</A>
+<LI> <A HREF="node24.html#S640">6.4 I/O Facilities</A>
+</UL>
+<HR>
+<B> Next:</B> <A HREF="node21.html">6.1 Predefined Functions</A>
+<B>Up:</B> <A HREF="manual.html">Reference Manual of the </A>
+<B> Previous:</B> <A HREF="node19.html">5.6 References to Lua </A>
+<HR>
+</BODY>

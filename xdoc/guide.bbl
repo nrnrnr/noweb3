@@ -1,0 +1,42 @@
+% l2h ignore labelsep =
+% l2h let bibskip par
+% l2h ignore leavevmode
+% l2h ignore authoryear 2
+\begingroup \labelsep=0pt
+\begin{thebibliography}{\hbox to 2em{\hfil}}
+\newcommand{\bibrule}{\mbox{\vrule height 2pt depth -1.8pt width 3em}}
+\newcommand{\bibskip}{\vskip0pt plus 3\baselineskip\penalty-200\vskip0pt plus
+  -3\baselineskip}
+
+\bibskip\bibitem[\protect\authoryear{Aho, Kernighan, and
+  Weinberger}{1988}]{aho:awk}
+{\leavevmode\kern-2em}Aho, Alfred~V., Brian~W. Kernighan, and Peter~J.
+  Weinberger. 1988.
+\newblock {\em The {AWK} Programming Language}.
+\newblock Reading, MA: Addison-Wesley.
+
+\bibskip\bibitem[\protect\authoryear{Fraser and
+  Hanson}{1995}]{fraser:retargetable:book}
+{\leavevmode\kern-2em}Fraser, Christopher~W. and David~R. Hanson. 1995.
+\newblock {\em A Retargetable {C} Compiler: Design and Implementation}.
+\newblock Redwood City, CA: Benjamin/Cummings.
+
+\bibskip\bibitem[\protect\authoryear{Ierusalimschy, {De Figueiredo}, and {Celes
+  Filho}}{1996}]{ierusalimschy:lua}
+{\leavevmode\kern-2em}Ierusalimschy, Roberto, Luis~H. {De Figueiredo}, and
+  Waldemar {Celes Filho}. 1996~(June).
+\newblock {Lua} --- an extensible extension language.
+\newblock {\em Software---Practice \& Experience}, 26(6):635--??
+
+\bibskip\bibitem[\protect\authoryear{Kernighan and Pike}{1984}]{kernighan:unix}
+{\leavevmode\kern-2em}Kernighan, Brian~W. and Rob Pike. 1984.
+\newblock {\em The {UNIX} Programming Environment}.
+\newblock Englewood Cliffs, NJ: Prentice-Hall.
+
+\bibskip\bibitem[\protect\authoryear{Ramsey}{1994}]{ramsey:simplified}
+{\leavevmode\kern-2em}Ramsey, Norman. 1994~(September).
+\newblock Literate programming simplified.
+\newblock {\em IEEE Software}, 11(5):97--105.
+
+\end{thebibliography}
+\endgroup

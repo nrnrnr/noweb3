@@ -1,0 +1,58 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>8.1 Data Structures</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node31.html">8.2 The Functions next </A>
+<B>Up:</B> <A HREF="node29.html">8 Some Examples</A>
+<B> Previous:</B> <A HREF="node29.html">8 Some Examples</A>
+<HR>
+<A NAME="961"></A><H2><A NAME="S810">8.1 Data Structures</A></H2>
+<P>
+Tables are a strong unifying data constructor.
+They directly implement a multitude of data types,
+like ordinary arrays, records, sets, bags, and lists.
+<P>
+Arrays need no explanations.
+In Lua, it is conventional to start indices from 1,
+but this is only a convention.
+Arrays can be indexed by 0, negative numbers, or any other value (except <B>nil</B>).
+Records are also trivially implemented by the syntactic sugar
+<TT><B>a.x</B></TT>.
+<P>
+The best way to implement a set is to store
+its elements as indices of a table.
+The statement <TT><B>s = {}</B></TT> creates an empty set <TT><B>s</B></TT>. 
+The statement <TT><B>s[x] = 1</B></TT> inserts the value of <TT><B>x</B></TT> into
+the set <TT><B>s</B></TT>.
+The expression <TT><B>s[x]</B></TT> is true if and only if
+<TT><B>x</B></TT> belongs to <TT><B>s</B></TT>.
+Finally, the statement <TT><B>s[x] = nil</B></TT> removes <TT><B>x</B></TT> from <TT><B>s</B></TT>.
+<P>
+Bags can be implemented similarly to sets,
+but using the value associated to an element as its counter.
+So, to insert an element, 
+the following code is enough:
+<B><PRE>if s[x] then s[x] = s[x]+1 else s[x] = 1 end</PRE></B>
+and to remove an element:
+<B><PRE>if s[x] then s[x] = s[x]-1 end
+if s[x] == 0 then s[x] = nil end</PRE></B>
+<P>
+Lisp-like lists also have an easy implementation.
+The ``cons'' of two elements <TT><B>x</B></TT> and <TT><B>y</B></TT> can be
+created with the code <TT><B>l = {car=x, cdr=y}</B></TT>.
+The expression <TT><B>l.car</B></TT> extracts the header, 
+while <TT><B>l.cdr</B></TT> extracts the tail.
+An alternative way is to create the list directly with <TT><B>l={x,y}</B></TT>,
+and then to extract the header with <TT><B>l[1]</B></TT> and
+the tail with <TT><B>l[2]</B></TT>.
+<P>
+<HR>
+<B> Next:</B> <A HREF="node31.html">8.2 The Functions next </A>
+<B>Up:</B> <A HREF="node29.html">8 Some Examples</A>
+<B> Previous:</B> <A HREF="node29.html">8 Some Examples</A>
+<HR>
+</BODY>

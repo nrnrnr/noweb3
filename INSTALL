@@ -1,0 +1,50 @@
+These are installation instructions for *alpha* versions of Noweb 3.
+
+Edit the nwconfig file in the root directory.
+
+  1) Set PLATFORM to show how to run pipelines.  Leave this alone for now.
+
+  2) Choose locations for the noweb files, and set the appropriate
+     variables:
+       BIN        on $PATH, will hold the no binary
+       LIB2       a directory to store external stages from Noweb 2
+       LIB3       a directory to store configuration and script files
+     All of these files are *output* files, where noweb will place
+     binaries and man pages that are customized for your installation.
+     Therefore you should:
+       - make sure you have write permission to these directories.
+       - refrain from making them point into the noweb source distribution.
+
+  3) Now, set configuration for your system:
+     First point a compiler to be used to build the tools and
+     library by setting the CC variable in the Makefile:
+       CC         the name of an ANSI C compiler
+       XCFLAGS    any extra flags for compilation
+       LD         what to call to build an executable binary
+       RANLIB     how to index an object-code library
+     If your system provides tempnam(3), noweb's indexing will be more
+     efficient if you add -DTEMPNAM to XCFLAGS given to the C compiler.
+
+
+  4) Noweb 3 is built using parts of Dave Hanson's CII and PUC-Rio's Lua.
+     There's an ugly wart on the installation of CII; you *must* set
+     the CIIMAXALIGN variable as explained in cii/install.html, or you
+     risk random memory errors, core dumps, or assertion failures.
+
+     The rest of the nwconfig helps protect against a few oddities.
+
+  5) Fasten your seat belt and type `make all install'.  
+
+  6) You can clean up by typing `make clean'.  If you wish, you can
+     remove the pre-built sources by typing `make clobber', but then
+     you will be unable to build noweb unless you already have noweb.
+
+Instead of editing the nwconfig, you can create a shell script that
+invokes make with the proper variables.  `limake' is an example of
+such a script.  If you make your own script, call it something else so
+it won't get overwritten by the default nwmake when you unbundle a new
+distribution.
+
+If you encounter a problem building noweb 3, please send email to
+nr@eecs.harvard.edu.
+

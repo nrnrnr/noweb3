@@ -1,0 +1,48 @@
+\section{Conditional tangling}
+
+<<hackers: subsubsections for internal sinks>>=
+\subsubsection{The filter \texttt{Stages.cond}}
+
+The filter \texttt{Stages.cond} enables the Noweb programmer to
+include code chunks conditionally.
+The filter is sensitive to chunk definitions in the following form:
+\begin{quote}
+\texttt{@<<\textrm{\emph{name}} ((\textrm{\emph{condition}}))@>>=}
+\end{quote}
+where \emph{name} is the name of the chunk, as usual, and
+\emph{condition} is a restricted Boolean expression in Lua.
+The \emph{condition} may not include function calls, and it may not
+use Lua reserved words other than [[and]], [[or]], and~[[not]].
+
+The arbitrary argument is a list of identifiers; when the
+\emph{condition} is evaluated, those identifiers are
+taken to be non-nil, and all other identifiers are taken to be nil.
+The chunk definition is included in
+the output from \texttt{tangle} if and only 
+if the \emph{condition} is true.
+(The inclusion is implemented using Lee Wittenberg's trick of renaming
+the definition to \texttt{@<<\textrm{\emph{name}}@>>}.)
+
+@
+The main trick here is to set things up so that the identifiers have
+the right values during the evaluation of the condition.
+<<*>>=
+function Stages.cond(sourcebuf, sinkbuf, args)
+  local r = NWB.reader(sourcebuf)
+  local key, arg = NWB.read(r)
+  <<set up for rewriting using true idents in [[args]]>>
+  while key do
+    if key == NW_DEFN then
+      <<emit definition of [[arg]]>>
+    else
+      NWB.put(sinkbuf, key, arg)
+    end
+    key, arg = NWB.read(r)
+  end
+  return 0
+end
+@ 
+
+
+
+

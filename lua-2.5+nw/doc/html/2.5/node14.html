@@ -1,0 +1,35 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>5.1 Executing Lua Code</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node15.html">5.2 Converting Values between </A>
+<B>Up:</B> <A HREF="node13.html">5 The Application Program </A>
+<B> Previous:</B> <A HREF="node13.html">5 The Application Program </A>
+<HR>
+<H2><A NAME="S510">5.1 Executing Lua Code</A></H2>
+<P>
+A host program can execute Lua chunks written in a file or in a string,
+using the following functions:
+<A NAME="802"></A><A NAME="803"></A>
+<B><PRE>int lua_dofile   (char *filename);
+int lua_dostring (char *string);</PRE></B>
+Both functions return an error code:
+0, in case of success; non zero, in case of errors.
+More specifically, <TT><B>lua_dofile</B></TT> returns 2 if for any reason
+it could not open the file.
+The function <TT><B>lua_dofile</B></TT>, if called with argument <TT><B>NULL</B></TT> (0),
+executes the <TT><B>stdin</B></TT> stream.
+Function <TT><B>lua_dofile</B></TT> is also able to execute pre-compiled chunks.
+It automatically detects whether the file is text or binary,
+and loads it accordingly (see program <TT><B>luac</B></TT><A NAME="805"></A>).
+<P>
+<HR>
+<B> Next:</B> <A HREF="node15.html">5.2 Converting Values between </A>
+<B>Up:</B> <A HREF="node13.html">5 The Application Program </A>
+<B> Previous:</B> <A HREF="node13.html">5 The Application Program </A>
+<HR>
+</BODY>

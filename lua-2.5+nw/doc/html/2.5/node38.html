@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>8.9 A CFunction</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node39.html">8.10 Calling Lua Functions </A>
+<B>Up:</B> <A HREF="node29.html">8 Some Examples</A>
+<B> Previous:</B> <A HREF="node37.html">8.8 Modules</A>
+<HR>
+<H2><A NAME="S890">8.9 A CFunction</A></H2>
+ <A NAME="exCFunction"></A><A NAME="557"></A>
+A CFunction to compute the maximum of a variable number of arguments
+is shown below.
+<B><PRE>void math_max (void)
+{
+ int i=1;   /* number of arguments */
+ double d, dmax;
+ lua_Object o;
+ /* the function must get at least one argument */
+ if ((o = lua_getparam(i++)) == LUA_NOOBJECT)
+   lua_error (&quot;too few arguments to function `max'&quot;);
+ /* and this argument must be a number */
+ if (!lua_isnumber(o))
+   lua_error (&quot;incorrect argument to function `max'&quot;);
+ dmax = lua_getnumber (o);
+ /* loops until there is no more arguments */
+ while ((o = lua_getparam(i++)) != LUA_NOOBJECT)
+ {
+  if (!lua_isnumber(o))
+    lua_error (&quot;incorrect argument to function `max'&quot;);
+  d = lua_getnumber (o);
+  if (d &gt; dmax) dmax = d;
+ }
+ /* push the result to be returned */
+ lua_pushnumber (dmax);
+}</PRE></B>
+After registered with
+<B><PRE>lua_register (&quot;max&quot;, math_max);</PRE></B>
+this function is available in Lua, as follows:
+<B><PRE>i = max(4, 5, 10, -34)  -- i receives 10</PRE></B>
+<P>
+<HR>
+<B> Next:</B> <A HREF="node39.html">8.10 Calling Lua Functions </A>
+<B>Up:</B> <A HREF="node29.html">8 Some Examples</A>
+<B> Previous:</B> <A HREF="node37.html">8.8 Modules</A>
+<HR>
+</BODY>

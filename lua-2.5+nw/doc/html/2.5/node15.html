@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>5.2 Converting Values between C and Lua</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node16.html">5.3 Manipulating Lua Objects</A>
+<B>Up:</B> <A HREF="node13.html">5 The Application Program </A>
+<B> Previous:</B> <A HREF="node14.html">5.1 Executing Lua Code</A>
+<HR>
+<H2><A NAME="S520">5.2 Converting Values between C and Lua</A></H2>
+ <A NAME="valuesCLua"></A>
+Because Lua has no static type system,
+all values passed between Lua and C have type
+<TT><B>lua_Object</B></TT><A NAME="806"></A>,
+which works like an abstract type in C that can hold any Lua value.
+Values of type <TT><B>lua_Object</B></TT> have no meaning outside Lua;
+for instance,
+the comparisson of two <code>SPMquot</code>lua_Object's&quot; is of no significance.
+<P>
+Because Lua has automatic memory management and garbage collection,
+a <TT><B>lua_Object</B></TT> has a limited scope,
+and is only valid inside the <I>block</I> where it was created.
+A C function called from Lua is a block,
+and its parameters are valid only until its end.
+A good programming practice is to convert Lua objects to C values
+as soon as they are available,
+and never to store <TT><B>lua_Object</B></TT>s in C global variables.
+<P>
+When C code calls Lua repeatedly, as in a loop,
+objects returned by these calls accumulate,
+and may create a memory problem.
+To avoid this,
+nested blocks can be defined with the functions:
+<B><PRE>void           lua_beginblock           (void);
+void           lua_endblock             (void);</PRE></B>
+After the end of the block,
+all <TT><B>lua_Object</B></TT>'s created inside it are released.
+<P>
+To check the type of a <TT><B>lua_Object</B></TT>,
+the following function is available:
+<A NAME="807"></A>
+<B><PRE>int            lua_type                 (lua_Object object);</PRE></B>
+plus the following macros and functions:
+<A NAME="808"></A><A NAME="809"></A><A NAME="810"></A>
+<A NAME="811"></A><A NAME="812"></A><A NAME="813"></A>
+<A NAME="814"></A>
+<B><PRE>int            lua_isnil                (lua_Object object);
+int            lua_isnumber             (lua_Object object);
+int            lua_isstring             (lua_Object object);
+int            lua_istable              (lua_Object object);
+int            lua_isfunction           (lua_Object object);
+int            lua_iscfunction          (lua_Object object);
+int            lua_isuserdata           (lua_Object object);</PRE></B>
+All macros return 1 if the object is compatible with the given type,
+and 0 otherwise.
+The function <TT><B>lua_isnumber</B></TT> accepts numbers and numerical strings,
+<TT><B>lua_isstring</B></TT> accepts strings and numbers (see Section&nbsp;<A HREF="node6.html#coercion">4.2</A>),
+and <TT><B>lua_isfunction</B></TT> accepts Lua and C functions.
+The function <TT><B>lua_type</B></TT> can be used to distinguish between
+different kinds of user data.
+<P>
+To translate a value from type <TT><B>lua_Object</B></TT> to a specific C type,
+the programmer can use:
+<A NAME="816"></A><A NAME="817"></A>
+<A NAME="818"></A><A NAME="819"></A>
+<B><PRE>double         lua_getnumber            (lua_Object object);
+char          *lua_getstring            (lua_Object object);
+lua_CFunction  lua_getcfunction         (lua_Object object);
+void          *lua_getuserdata          (lua_Object object);</PRE></B>
+<TT><B>lua_getnumber</B></TT> converts a <TT><B>lua_Object</B></TT> to a float.
+This <TT><B>lua_Object</B></TT> must be a number or a string convertible to number
+(see Section&nbsp;<A HREF="node6.html#coercion">4.2</A>); otherwise, the function returns 0.
+<P>
+<TT><B>lua_getstring</B></TT> converts a <TT><B>lua_Object</B></TT> to a string (<TT><B>char *</B></TT>).
+This <TT><B>lua_Object</B></TT> must be a string or a number;
+otherwise, the function returns 0 (the null pointer).
+This function does not create a new string, but returns a pointer to
+a string inside the Lua environment.
+Because Lua has garbage collection, there is no guarantee that such
+pointer will be valid after the block ends.
+<P>
+<TT><B>lua_getcfunction</B></TT> converts a <TT><B>lua_Object</B></TT> to a C function.
+This <TT><B>lua_Object</B></TT> must have type <I>CFunction</I>;
+otherwise, the function returns 0 (the null pointer).
+The type <TT><B>lua_CFunction</B></TT> is explained in Section&nbsp;<A HREF="node18.html#LuacallC">5.5</A>.
+<P>
+<TT><B>lua_getuserdata</B></TT> converts a <TT><B>lua_Object</B></TT> to <TT><B>void*</B></TT>.
+This <TT><B>lua_Object</B></TT> must have type <I>userdata</I>;
+otherwise, the function returns 0 (the null pointer).
+<P>
+The reverse process, that is, passing a specific C value to Lua,
+is done by using the following functions:
+<A NAME="821"></A><A NAME="822"></A>
+<A NAME="823"></A><A NAME="824"></A>
+<A NAME="825"></A>
+<B><PRE>void           lua_pushnumber           (double n);
+void           lua_pushstring           (char *s);
+void           lua_pushcfunction        (lua_CFunction f);
+void           lua_pushusertag          (void *u, int tag);</PRE></B>
+plus the macro:
+<B><PRE>void           lua_pushuserdata         (void *u);</PRE></B>
+All of them receive a C value,
+convert it to a corresponding <TT><B>lua_Object</B></TT>,
+and leave the result on the top of the Lua stack,
+where it can be assigned to a Lua variable,
+passed as parameter to a Lua function, etc. <A NAME="pushing"></A>
+<P>
+User data can have different tags,
+whose semantics are defined by the host program.
+Any positive integer can be used to tag a user datum.
+When a user datum is retrieved,
+the function <TT><B>lua_type</B></TT> can be used to get its tag.
+<P>
+To complete the set,
+the value <B>nil</B> or a <TT><B>lua_Object</B></TT> can also be pushed onto the stack,
+with:
+<A NAME="827"></A><A NAME="828"></A>
+<B><PRE>void           lua_pushnil              (void);
+void           lua_pushobject           (lua_Object object);</PRE></B>
+<P>
+<HR>
+<B> Next:</B> <A HREF="node16.html">5.3 Manipulating Lua Objects</A>
+<B>Up:</B> <A HREF="node13.html">5 The Application Program </A>
+<B> Previous:</B> <A HREF="node14.html">5.1 Executing Lua Code</A>
+<HR>
+</BODY>

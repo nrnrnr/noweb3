@@ -1,0 +1,185 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>6.4 I/O Facilities</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node25.html">7 The Debugger Interface</A>
+<B>Up:</B> <A HREF="node20.html">6 Predefined Functions and </A>
+<B> Previous:</B> <A HREF="node23.html">6.3 Mathematical Functions</A>
+<HR>
+<H2><A NAME="S640">6.4 I/O Facilities</A></H2>
+ <A NAME="libio"></A>
+<P>
+All I/O operations in Lua are done over two <I>current</I> files:
+one for reading and one for writing.
+Initially, the current input file is <TT><B>stdin</B></TT>,
+and the current output file is <TT><B>stdout</B></TT>.
+<P>
+Unless otherwise stated,
+all I/O functions return <B>nil</B> on failure and
+some value different from <B>nil</B> on success.
+<P>
+<H3><A NAME="S641"><TT><B>readfrom (filename)</B></TT></A></H3>
+<A NAME="922"></A>
+<P>
+This function may be called in three ways.
+When called with a file name,
+it opens the named file,
+sets it as the <I>current</I> input file,
+and returns a <I>handle</I> to the file
+(this handle is a user data containing the file stream <TT><B>FILE *</B></TT>).
+When called with a file handle, returned by a previous call,
+it restores the file as the current input.
+When called without parameters,
+it closes the current input file,
+and restores <TT><B>stdin</B></TT> as the current input file.
+<P>
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+<I>System dependent:</I> if <TT><B>filename</B></TT> starts with a <TT><B>|</B></TT>,
+then a piped input<A NAME="924"></A> is open, via function <TT><B>popen</B></TT><A NAME="926"></A>.
+<P>
+<H3><A NAME="S642"><TT><B>writeto (filename)</B></TT></A></H3>
+<A NAME="927"></A>
+<P>
+This function may be called in three ways.
+When called with a file name,
+it opens the named file,
+sets it as the <I>current</I> output file,
+and returns a <I>handle</I> to the file
+(this handle is a user data containing the file stream <TT><B>FILE *</B></TT>).
+Notice that, if the file already exists,
+it will be <I>completely erased</I> with this operation.
+When called with a file handle, returned by a previous call,
+it restores the file as the current output.
+When called without parameters,
+this function closes the current output file,
+and restores <TT><B>stdout</B></TT> as the current output file.
+<A NAME="493"></A>
+<P>
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+<I>System dependent:</I> if <TT><B>filename</B></TT> starts with a <TT><B>|</B></TT>,
+then a piped output<A NAME="929"></A> is open, via function <TT><B>popen</B></TT><A NAME="931"></A>.
+<P>
+<H3><A NAME="S643"><TT><B>appendto (filename)</B></TT></A></H3>
+<A NAME="932"></A>
+<P>
+This function opens a file named <TT><B>filename</B></TT> and sets it as the
+<I>current</I> output file.
+It returns the file handle,
+or <B>nil</B> in case of error.
+Unlike the <TT><B>writeto</B></TT> operation,
+this function does not erase any previous content of the file.
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+Notice that function <TT><B>writeto</B></TT> is available to close a file.
+<P>
+<H3><A NAME="S644"><TT><B>remove (filename)</B></TT></A></H3>
+<A NAME="935"></A>
+<P>
+This function deletes the file with the given name.
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+<H3><A NAME="S645"><TT><B>rename (name1, name2)</B></TT></A></H3>
+<A NAME="937"></A>
+<P>
+This function renames file <TT><B>name1</B></TT> to <TT><B>name2</B></TT>.
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+<H3><A NAME="S646"><TT><B>tmpname ()</B></TT></A></H3>
+<A NAME="939"></A>
+<P>
+This function returns a string with a file name that can safely
+be used for a temporary file.
+<P>
+<H3><A NAME="S647"><TT><B>read ([readpattern])</B></TT></A></H3>
+<A NAME="940"></A>
+<P>
+This function reads the current input
+according to a read pattern, that specifies how much to read;
+characters are read from the current input file until
+the read pattern fails or ends.
+The function <TT><B>read</B></TT> returns a string with the characters read,
+or <B>nil</B> if the read pattern fails <I>and</I>
+the result string would be empty.
+When called without parameters,
+it uses a default pattern that reads the next line
+(see below).
+<P>
+A <I>read pattern</I><A NAME="943"></A> is a sequence of read pattern items.
+An item may be a single character class
+or a character class followed by <TT><B>?</B></TT> or by <TT><B>*</B></TT>.
+A single character class reads the next character from the input
+if it belongs to the class, otherwise it fails.
+A character class followed by <TT><B>?</B></TT> reads the next character
+from the input if it belongs to the class;
+it never fails.
+A character class followed by <TT><B>*</B></TT> reads until a character that
+does not belong to the class, or end of file;
+since it can match a sequence of zero characteres, it never fails.<A HREF="footnode.html#674">*</A>
+<P>
+A pattern item may contain sub-patterns enclosed in curly brackets,
+that describe <I>skips</I><A NAME="945"></A>.
+Characters matching a skip are read,
+but are not included in the resulting string.
+<P>
+Following are some examples of read patterns and their meanings:
+<UL><LI> <TT><B>"."</B></TT> returns the next character, or <B>nil</B> on end of file.<LI> <TT><B>".*"</B></TT> reads the whole file.<LI> <TT><B>"[^\n]*{\n}"</B></TT> returns the next line
+(skipping the end of line), or <B>nil</B> on end of file.
+This is the default pattern.<LI> <TT><B>"{%s*}%S%S*"</B></TT> returns the next word
+(maximal sequence of non white-space characters),
+or <B>nil</B> on end of file.<LI> <TT><B>"{%s*}[+-]?%d%d*"</B></TT> returns the next integer
+or <B>nil</B> if the next characters do not conform to an integer format.
+</UL><H3><A NAME="S648"><TT><B>write (value1, ...)</B></TT></A></H3>
+<A NAME="950"></A>
+<P>
+This function writes the value of each of its arguments to the
+current output file.
+The arguments must be strings or numbers.
+If this function fails, it returns <B>nil</B>,
+plus a string describing the error.
+<P>
+<H3><A NAME="S649"><TT><B>date ([format])</B></TT></A></H3>
+<A NAME="952"></A>
+<P>
+This function returns a string containing date and time
+formatted according to the given string <TT><B>format</B></TT>,
+following the same rules of the ANSI C function <TT><B>strftime</B></TT>.
+When called without arguments,
+it returns a reasonable date and time representation.
+<P>
+<H3><A NAME="S6410"><TT><B>exit ([code])</B></TT></A></H3>
+<A NAME="953"></A>
+<P>
+This function calls the C function <TT><B>exit</B></TT>,
+with an optional <TT><B>code</B></TT>,
+to terminate the program.
+<P>
+<H3><A NAME="S6411"><TT><B>getenv (varname)</B></TT></A></H3>
+<A NAME="954"></A>
+<P>
+Returns the value of the environment variable <TT><B>varname</B></TT>,
+or <B>nil</B> if the variable is not defined.
+<P>
+<H3><A NAME="S6412"><TT><B>execute (command)</B></TT></A></H3>
+<A NAME="956"></A>
+<P>
+This function is equivalent to the C function <TT><B>system</B></TT>.
+It passes <TT><B>command</B></TT> to be executed by an Operating System Shell.
+It returns an error code, which is implementation-defined.
+<P>
+<HR>
+<B> Next:</B> <A HREF="node25.html">7 The Debugger Interface</A>
+<B>Up:</B> <A HREF="node20.html">6 Predefined Functions and </A>
+<B> Previous:</B> <A HREF="node23.html">6.3 Mathematical Functions</A>
+<HR>
+</BODY>

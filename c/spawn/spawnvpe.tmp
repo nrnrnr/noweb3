@@ -1,0 +1,430 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{noweb}
+\usepackage{times}
+\usepackage{fancyhdr}
+\usepackage{graphics}
+\usepackage{latexsym}
+\pagestyle{noweb}
+\noweboptions{}
+\begin{document}
+\pagestyle{headings}
+
+@
+\title{\_spawnvpe, \_spwanvp}
+	\author{Kai Uwe Karl Baumbach\\
+	Email: baumbach@kabece.com}
+	
+\maketitle
+
+\tableofcontents
+
+% spawnvpe.nw
+% June 2000 by Kai Uwe Karl Baumbach, baumbach@kabece.com
+@
+\section {Introduction}
+
+Why should one want a [[spawn()]] function for Unix when a 
+[[fork()]]/[[exec()]] combination is much more flexible and
+powerful? In a large amount of cases you simply want to run a
+different program from scratch and you don't want to rely
+on [[system()]] which may be dangerous and doesn't provide
+much control.
+
+If you're trying to port an application to systems where 
+processes can't be forked and continue in the midst of
+execution (i.e. MS-Windows or AS/400) your program's 
+logic is easier to understand if you can use just one 
+function call and keep the rest in a separate library.
+
+This one-function-library gives you a [[_spawnvpe()]] according to the 
+Micro\-soft\copyright{} specification but keeping GCC (DJGPP) 
+in mind. It doesn't implement the mode flag [[P_OVERLAY]] 
+because I can't see any use in calling spawn when I really 
+mean exec.
+
+\subsection {Synopsis}
+
+{\tt\# include "nwprocess.h"\\[2ex]
+int \_spawnvpe (\\
+\hspace*{1em}int mode,\\ 
+\hspace*{1em}const char *filename,\\
+\hspace*{1em}char *const argv[],\\
+\hspace*{1em}char *const envp[]);\\[2ex]
+int \_spawnvp (\\
+\hspace*{1em}int mode,\\ 
+\hspace*{1em}const char *filename,\\
+\hspace*{1em}char *const argv[]);}\\[2ex]
+\textbf{Note:} [[_spawnvp()]] is implemented as a macro.\\
+Please also note that the parameter declaration is taken from GCC. 
+Microsoft\copyright{} uses
+\begin {quote}
+	[[const char *const *argv]]
+\end {quote}
+which is even more weird. They both deserve an award for the
+most useless use of [[const]].
+
+\subsection {Description}
+
+[[_spawnvpe]] creates and executes a process. It searches
+the PATH for the new process' image. For details on this,
+please have a look at your system's documentation of the
+[[execvp()]] function.
+
+\subsubsection {Function parameters}
+[[_spawnvpe]] takes the following arguments:
+\begin{itemize}
+	\item{[[mode]]---the mode flag may be:
+		\begin {itemize}
+			\item{[[P_WAIT]] and [[_P_WAIT]]---wait until the child
+				process has finished and return it's return value.}
+			\item{[[P_NOWAIT]], [[_P_NOWAIT]] and [[_P_NOWAITO]]---return
+				immediately with the child's PID as the return value.}
+		\end {itemize}
+	}
+	\item{[[filename]]---a pointer to a string containing the name of
+		the child's executable image. If it is in the PATH, no path 
+		information is necessary.
+		
+		[[filename]] must be identical to [[argv[0]]], giving you the chance
+			for an additional error.}
+	\item{[[argv]]---an array of pointers to strings containing the
+		command line arguments of the called process. This array shall 
+		be terminated with the null-pointer constant NULL.
+		
+		As a very wise decision in interface design [[argv[0]]] has to be
+		the same as [[filename]].}
+	\item{[[envp]]---an array of pointers to environment variables. This, too,
+		has to be terminated with NULL.
+		
+		[[spawnvp]] doesn't take this argument---it just uses the default 
+		environment of the caller.}
+\end{itemize}
+
+You'll find examples of calls to [[_spawnvpe()]] on p. \pageref{test}. 
+
+\subsection {Return value}
+\subsubsection {From synchronous [[_spawnvpe()]]}
+
+The return value from a synchronous [[_spawnvpe()]]
+(when [[_P_WAIT]] was specified for mode) is the exit 
+status of the new process. Please see [[man 2 waitpid]]
+for details on Unix systems.\\[2ex]
+\textbf{Important:} GNU-[[spawnvpe]] is identical to
+the Unix-Versions of [[exec]] and returns the exit code of the child 
+process in the lower 8 bits of the return value which
+our version does not.
+
+\subsubsection {From asynchronous [[_spawnvpe()]]}
+When [[_P_NOWAIT]] or [[_P_NOWAITO]] are specified for [[mode]]
+the return value from [[_spawnvpe()]] is the process id
+of the child process.\\[2ex]
+On error [[_spawnvpe()]] returns -1 and [[errno]] is set. Please
+refer to the man pages of your system for possible error
+values. For asynchronous [[spawn]] you'll find these in the
+the documentation to [[fork()]] for synchronous [[spawn]] you'll
+have to look at [[fork()]] and [[execvp()]].
+
+\section {The main file [[spawnvpe.c]]}
+
+[[WIN32]] is a standard define in Microsoft's 32 bit ML. We won't
+have anything to do then.
+<<spawnvpe.c>>=
+#ifndef WIN32
+<<The include files in [[spawnvpe.c]]>>
+int 
+_spawnvpe (
+	int mode, 
+	const char *filename, 
+	char *const argv[], 
+	char *const envp[] )
+{
+	extern char **environ;
+	pid_t pid;
+	<<Assert yourself>>
+	pid = fork();
+	if (mode == P_WAIT)
+	{
+		<<Exec and wait for child process>>
+	}
+	else
+	{
+		<<Exec without waiting for child process>>
+	}
+	return -1;
+}
+#endif
+<<Assert yourself>>=
+assert (filename != NULL);
+assert (argv != NULL);
+assert (argv[0] != NULL);
+assert (envp != NULL);
+<<Exec and wait for child process>>=
+int status;
+if (pid == 0)
+{
+	<<Redirect the environment pointer>>
+	execvp (filename, argv);
+}
+else
+{
+	pid = waitpid (pid, &status, 0);
+	if (pid == -1)
+	{
+		return pid;
+	}
+	if (WIFEXITED (status))
+	{
+		return ((signed char)WEXITSTATUS (status));
+	}
+	else
+	{
+		return 0;
+	}
+}
+<<Exec without waiting for child process>>=
+if (pid == 0)
+{
+	<<Redirect the environment pointer>>
+	execvp (filename, argv);
+}
+else
+{
+	return pid;
+}
+@
+This one is dirty for two reasons:
+\begin {enumerate}
+	\item {One must never ever cast away a [[const]]-specifier. On the
+		other hand a [[const]] in a prototype in C isn't very much more
+		than a promise not to change the caller's pointers---but
+		we don't and the child can't.}
+	\item {I don't know if it really works everywhere. 
+		I've looked in several UNIX	man pages 
+		(Linux, BSD, Solaris, HPUX) but there seems to be
+		no standard method to get the [[PATH]] for [[execvp()]]---it may 
+		in the worst case only search `[[/bin:/usr/bin]]' after this 
+		redirect of	[[environ]]. So it may be wise to include the [[PATH]]
+		in [[envp]] before the call to [[_spawnvpe()]].
+		
+		To get the full functionality MS-Windows\texttrademark{} has in 
+		this respect, one would have to search the [[PATH]] first, store
+		the pathname of the found executable in a buffer and only after
+		that assign [[environ]] and call [[execv()]].}
+\end {enumerate}
+<<Redirect the environment pointer>>=
+environ = (char **) envp;
+<<The include files in [[spawnvpe.c]]>>=
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <assert.h>
+#include "nwprocess.h"
+@
+\section {The header file [[nwprocess.h]]}
+
+This file must be included to use our Unix-version of [[_spawnvpe]].
+On Microsoft\copyright{} Windows\texttrademark{} systems it only
+includes [[process.h]].
+
+<<nwprocess.h>>=
+#ifndef NWPROCESS_INCLUDED
+#define NWPROCESS_INCLUDED
+	#ifdef WIN32
+		#include <process.h>
+	#else
+		<<[[spawnvpe()]] prototype and macros>>
+		<<[[spawnvpe()]] constants>>
+	#endif
+#endif
+@
+\subsection {Prototype and macros}
+<<[[spawnvpe()]] prototype and macros>>=
+int _spawnvpe (
+	int mode, 
+	const char *filename, 
+	char * const argv[], 
+	char *const envp[] );
+
+#define spawnvpe _spawnvpe
+#define _spawnvp(mode, filename, argvect) \
+	_spawnvpe ((mode), (filename), (argvect), environ);
+#define spawnvp(mode, filename, argvect) \
+	_spawnvpe ((mode), (filename), (argvect), environ);
+@ %def _spawnvpe spawnvpe _spawnvp spawnvp
+
+@ 
+\subsection {Constants}
+Please note that DJGPP defines [[P_WAIT]] as 1 and [[P_NOWAIT]] as 2. 
+The following values conform to the Microsoft\copyright{} [[process.h]].
+<<[[spawnvpe()]] constants>>=
+#ifndef _P_WAIT
+	#define _P_WAIT 0
+#endif
+#ifndef P_WAIT
+	#define P_WAIT _P_WAIT
+#endif
+
+#ifndef _P_NOWAIT
+	#define _P_NOWAIT 1
+#endif
+#ifndef P_NOWAIT
+	#define P_NOWAIT _P_NOWAIT
+#endif
+
+#ifndef _P_NOWAITO
+	#define _P_NOWAITO 3
+#endif
+@ %def _P_WAIT P_WAIT _P_NOWAIT P_NOWAIT _P_NOWAITO
+
+% spawntest.nw
+% June 2000 by Kai Uwe Karl Baumbach, baumbach@kabece.com
+@
+\section {A small test suite} \label{test}
+
+This `test suite' requires GNU GCC. Basically one should write
+a test routine for every piece of code. This one may also serve as 
+an example for the usage of [[spawnvpe()]].
+
+\subsection {[[spawntest.exe]]}
+<<spawntest.c>>=
+#include <stdlib.h> 
+#include <stdio.h> 
+#include <errno.h>
+#include <string.h>
+#include "nwprocess.h"
+
+int 
+main (void)
+{
+	char *environment[] = {
+		"THIS=is",
+		"THE=environment",
+		"TO=be",
+		"PASSED=to",
+		"THE=child",
+		"PROCESS=end",
+		NULL
+	};
+	char *argvector[] = {
+		"spawnchild.exe",
+		"First Parameter",
+		"Second Parameter",
+		"Third Parameter",
+		NULL
+	};
+	int retval;
+	int wait_mode;
+	char *program_name;
+	
+	program_name = "spawnchild.exe";
+
+	wait_mode = P_NOWAIT;
+	<<Spawn a child process and display the results>>
+	wait_mode = P_WAIT;
+	<<Spawn a child process and display the results>> 
+
+	program_name = "ls";
+	argvector[0] = program_name;
+	argvector[1] = "-Flias";
+	argvector[2] = NULL;
+	
+	wait_mode = _P_NOWAITO;
+	<<Spawn a child process and display the results>>
+	wait_mode = P_WAIT;
+	<<Spawn a child process and display the results>> 
+
+	program_name = "program_with_a_silly_name";
+	argvector[0] = program_name;
+	argvector[1] = NULL;
+	
+	wait_mode = _P_WAIT;
+	<<Spawn a child process and display the results>> 
+	
+	program_name = "sh";
+    argvector[0] = program_name;
+    argvector[1] = "-c";
+    argvector[2] = "set";
+    argvector[3] = NULL;
+
+    wait_mode = _P_WAIT;
+    <<Spawn a child process and display the results>>
+	
+	return EXIT_SUCCESS;
+}
+@ %def main
+<<Spawn a child process and display the results>>=
+printf (
+	"Spawning %s in mode _P_%sWAIT:\n",
+	program_name,
+	wait_mode == P_WAIT ? "" : "NO" );
+retval = _spawnvpe (
+	wait_mode,
+	program_name,
+	argvector,
+	environment);
+printf ("The return value was %d.\n",
+	retval);
+if (retval == -1)
+{
+	printf (
+		"errno = %d: %s.\n", 
+		errno,
+		strerror (errno));
+}
+@
+\subsection {[[spawnchild.exe]]}
+
+Note that the definition of [[main()]] in this program is not ISO-C
+and is deprecated even on systems where it is available. It nevertheless
+is a nice test to see, if [[environ = envp]] before the call to [[execvp()]]
+really works.
+<<spawnchild.c>>=
+#include <stdlib.h> 
+#include <stdio.h> 
+#ifndef WIN32
+	#include <unistd.h> 
+#else
+	#define sleep(x) (void)0
+#endif
+
+int 
+main (int argc, char *argv[], char *envp[])
+{
+	sleep (1);
+	puts ("Environment in spawnchild.exe:");
+	<<Print the process environment>>
+	puts ("\nParameters in spawnchild.exe:");
+	<<Print the process parameters>>
+	puts ("\nVariable \"THIS\" in spwanchild:");
+	printf ("%s\n", getenv ("THIS"));
+	return EXIT_SUCCESS;
+}
+@ %def main
+<<Print the process parameters>>=
+while (*argv)
+{
+	printf ( "%s\n", *argv);
+	argv++;
+}
+<<Print the process environment>>=
+while (*envp)
+{
+	printf ( "%s\n", *envp);
+	envp++;
+}
+<<spawntest.mak>>=
+CC=gcc -Wall -pedantic
+
+all:
+	${CC} -o spawntest.exe spawnvpe.c spawntest.c
+	${CC} -o spawnchild.exe spawnchild.c
+	./spawntest.exe
+
+
+@
+\section {Index}
+\subsection {Chunks}
+\nowebchunks{}
+\subsection{Identifiers}
+\nowebindex{}
+\end{document}

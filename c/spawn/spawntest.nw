@@ -1,0 +1,143 @@
+% spawntest.nw
+% June 2000 by Kai Uwe Karl Baumbach, baumbach@kabece.com
+@
+\section {A small test suite} \label{test}
+
+This ``test suite'' requires GNU GCC. Basically one should write
+a test routine for every piece of code. This one may also serve as 
+an example for the usage of [[spawnvpe()]].
+
+\subsection {[[spawntest.exe]]}
+<<spawntest.c>>=
+#include <stdlib.h> 
+#include <stdio.h> 
+#include <errno.h>
+#include <string.h>
+#include "nwprocess.h"
+
+int 
+main (void)
+{
+	char *environment[] = {
+		"THIS=is",
+		"THE=environment",
+		"TO=be",
+		"PASSED=to",
+		"THE=child",
+		"PROCESS=end",
+		NULL
+	};
+	char *argvector[] = {
+		"spawnchild.exe",
+		"First Parameter",
+		"Second Parameter",
+		"Third Parameter",
+		NULL
+	};
+	int retval;
+	int wait_mode;
+	char *program_name;
+	
+	program_name = "spawnchild.exe";
+
+	wait_mode = P_NOWAIT;
+	<<Spawn a child process and display the results>>
+	wait_mode = P_WAIT;
+	<<Spawn a child process and display the results>> 
+
+	program_name = "ls";
+	argvector[0] = program_name;
+	argvector[1] = "-Flias";
+	argvector[2] = NULL;
+	
+	wait_mode = _P_NOWAITO;
+	<<Spawn a child process and display the results>>
+	wait_mode = P_WAIT;
+	<<Spawn a child process and display the results>> 
+
+	program_name = "program_with_a_silly_name";
+	argvector[0] = program_name;
+	argvector[1] = NULL;
+	
+	wait_mode = _P_WAIT;
+	<<Spawn a child process and display the results>> 
+	
+	program_name = "sh";
+    argvector[0] = program_name;
+    argvector[1] = "-c";
+    argvector[2] = "set";
+    argvector[3] = NULL;
+
+    wait_mode = _P_WAIT;
+    <<Spawn a child process and display the results>>
+	
+	return EXIT_SUCCESS;
+}
+@ %def main
+<<Spawn a child process and display the results>>=
+printf (
+	"Spawning %s in mode _P_%sWAIT:\n",
+	program_name,
+	wait_mode == P_WAIT ? "" : "NO" );
+retval = _spawnvpe (
+	wait_mode,
+	program_name,
+	argvector,
+	environment);
+printf ("The return value was %d.\n",
+	retval);
+if (retval == -1)
+{
+	printf (
+		"errno = %d: %s.\n", 
+		errno,
+		strerror (errno));
+}
+@
+\subsection {[[spawnchild.exe]]}
+
+Note that the definition of [[main()]] in this program is not ISO-C
+and is deprecated even on systems where it is available. It nevertheless
+is a nice test to see, if [[environ = envp]] before the call to [[execvp()]]
+really works.
+<<spawnchild.c>>=
+#include <stdlib.h> 
+#include <stdio.h> 
+#ifndef WIN32
+	#include <unistd.h> 
+#else
+	#define sleep(x) (void)0
+#endif
+
+int 
+main (int argc, char *argv[], char *envp[])
+{
+	sleep (1);
+	puts ("Environment in spawnchild.exe:");
+	<<Print the process environment>>
+	puts ("\nParameters in spawnchild.exe:");
+	<<Print the process parameters>>
+	puts ("\nVariable \"THIS\" in spwanchild:");
+	printf ("%s\n", getenv ("THIS"));
+	return EXIT_SUCCESS;
+}
+@ %def main
+<<Print the process parameters>>=
+while (*argv)
+{
+	printf ( "%s\n", *argv);
+	argv++;
+}
+<<Print the process environment>>=
+while (*envp)
+{
+	printf ( "%s\n", *envp);
+	envp++;
+}
+<<spawntest.mak>>=
+CC=gcc -Wall -pedantic
+
+all:
+	${CC} -o spawntest.exe spawnvpe.c spawntest.c
+	${CC} -o spawnchild.exe spawnchild.c
+	./spawntest.exe

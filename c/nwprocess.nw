@@ -1,0 +1,184 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode; tab-width: 4; c-indent-level: 4 -*-
+
+\section{Process support for Unix and Microsoft platforms}
+
+\subsection{Interface}
+If we're on Unix, we roll our own [[spawnvpe]].
+Otherwise, we use [[<process.h>]].
+<<header>>=
+#ifndef NWPROCESS_INCLUDED
+#define NWPROCESS_INCLUDED
+	#if defined(WIN32) || defined(DOS)
+		#include <process.h>
+	#else
+		<<[[spawnvpe()]] prototype and macros>>
+		<<[[spawnvpe()]] constants>>
+	#endif
+#endif
+@
+\subsection {Prototype and macros}
+<<[[spawnvpe()]] prototype and macros>>=
+int _spawnvpe ( int mode               /* P_WAIT or P_NOWAIT */
+              , const char *filename   /* program to execute */
+              , char * const argv[]    /* arguments */
+              , char *const envp[]     /* environment */
+              );
+
+#define spawnvpe _spawnvpe
+#define _spawnvp(mode, filename, argvect) \
+	_spawnvpe ((mode), (filename), (argvect), environ);
+#define spawnvp(mode, filename, argvect) \
+	_spawnvpe ((mode), (filename), (argvect), environ);
+<<faux exported values>>=
+enum mode { P_WAIT, P_NOWAIT }; 
+@ 
+
+[[_spawnvpe]] creates and executes a process. It searches
+the PATH for the new process' image. For details on this,
+try your system's documentation of the
+[[execve()]] function.
+
+[[_spawnvpe]] takes the following arguments:
+\begin{itemize}
+\item
+[[mode]]---the mode flag may be:
+\begin {itemize}
+	\item{[[P_WAIT]] and [[_P_WAIT]]---wait until the child
+		process has finished and return it's return value.}
+	\item{[[P_NOWAIT]], [[_P_NOWAIT]] and [[_P_NOWAITO]]---return
+		immediately with the child's PID as the return value.}
+\end {itemize}
+\item
+[[filename]]---a pointer to a string containing the name of
+the child's executable image. If it is in the PATH, no path 
+information is necessary.
+
+It is an unchecked run-time error for
+[[filename]] to differ from [[argv[0]]].
+\item
+[[argv]]---an array of pointers to strings containing the
+command line arguments of the called process. This array shall 
+be terminated with the null-pointer constant NULL.
+
+It is an unchecked run-time error for
+[[argv[0]]] to differ from [[filename]].
+\item
+[[envp]]---an array of pointers to environment variables. This, too,
+has to be terminated with NULL.
+
+[[spawnvp]] doesn't take this argument---it just uses the default 
+environment of the caller.
+\end{itemize}
+
+The return value from a synchronous [[_spawnvpe()]]
+(when [[_P_WAIT]] was specified for mode) is the exit 
+status of the new process. Please see [[man 2 waitpid]]
+for details on Unix systems.\\[2ex]
+\textbf{Important:} GNU-[[spawnvpe]] is identical to
+the Unix-Versions of [[exec]] and returns the exit code of the child 
+process in the lower 8 bits of the return value, which
+our version does not.
+
+When [[_P_NOWAIT]] or [[_P_NOWAITO]] are specified for [[mode]]
+the return value from [[_spawnvpe()]] is the process id
+of the child process.\\[2ex]
+On error [[_spawnvpe()]] returns -1 and [[errno]] is set. Please
+refer to the man pages of your system for possible error
+values. For asynchronous [[spawn]] you'll find these in the
+the documentation to [[fork()]] for synchronous [[spawn]] you'll
+have to look at [[fork()]] and [[execve()]].
+@
+\section{Implementation}
+
+
+Although DJGPP defines [[P_WAIT]] as~1 and [[P_NOWAIT]] as~2. 
+The following values conform to the Microsoft interface [[process.h]].
+<<[[spawnvpe()]] constants>>=
+#ifndef _P_WAIT
+	#define _P_WAIT 0
+#endif
+#ifndef P_WAIT
+	#define P_WAIT _P_WAIT
+#endif
+
+#ifndef _P_NOWAIT
+	#define _P_NOWAIT 1
+#endif
+#ifndef P_NOWAIT
+	#define P_NOWAIT _P_NOWAIT
+#endif
+
+#ifndef _P_NOWAITO
+	#define _P_NOWAITO 3
+#endif
+@ 
+
+[[WIN32]] is a standard define in Microsoft's 32 bit ML. We won't
+have anything to do then.
+<<*>>=
+#if !defined(WIN32) && !defined(DOS)
+<<The include files in [[spawnvpe.c]]>>
+int _spawnvpe (int mode, const char *filename, char *const argv[], char *const envp[])
+{
+	extern char **environ;
+	pid_t pid;
+
+    assert (filename && argv && argv[0] && envp);
+    assert (filename == argv[0]);
+
+	pid = fork();
+	if (mode == P_WAIT) {
+		<<Exec and wait for child process>>
+	} else {
+		<<Exec without waiting for child process>>
+	}
+    assert(0);
+    return 0; /* not reached */
+}
+#endif
+<<Exec and wait for child process>>=
+int status;
+if (pid == 0) {
+	execve (filename, argv, envp);
+} else {
+	pid = waitpid (pid, &status, 0);
+	if (pid == -1)
+		return pid;
+	else if (WIFEXITED (status))
+		return ((signed char)WEXITSTATUS (status));
+	else
+		return 0;
+}
+<<Exec without waiting for child process>>=
+if (pid == 0) {
+	execve (filename, argv, envp);
+} else {
+	return pid;
+}
+@
+This one is dirty for two reasons:
+\begin {enumerate}
+	\item {One must never ever cast away a [[const]]-specifier. On the
+		other hand a [[const]] in a prototype in C isn't very much more
+		than a promise not to change the caller's pointers---but
+		we don't and the child can't.}
+	\item {I don't know if it really works everywhere. 
+		I've looked in several UNIX	man pages 
+		(Linux, BSD, Solaris, HPUX) but there seems to be
+		no standard method to get the [[PATH]] for [[execvp()]]---it may 
+		in the worst case only search ``[[/bin:/usr/bin]]'' after this 
+		redirect of	[[environ]]. So it may be wise to include the [[PATH]]
+		in [[envp]] before the call to [[_spawnvpe()]].
+		
+		To get the full functionality MS-Windows\texttrademark{} has in 
+		this respect, one would have to search the [[PATH]] first, store
+		the pathname of the found executable in a buffer and only after
+		that assign [[environ]] and call [[execv()]].}
+\end {enumerate}
+<<The include files in [[spawnvpe.c]]>>=
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <assert.h>
+#include "nwprocess.h"
+@

@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>7.1 Stack and Function Information</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node27.html">7.2 Manipulating Local Variables</A>
+<B>Up:</B> <A HREF="node25.html">7 The Debugger Interface</A>
+<B> Previous:</B> <A HREF="node25.html">7 The Debugger Interface</A>
+<HR>
+<H2><A NAME="S710">7.1 Stack and Function Information</A></H2>
+<P>
+The main function to get information about the interpreter stack
+is
+<B><PRE>lua_Function lua_stackedfunction (int level);</PRE></B>
+It returns a handle (<TT><B>lua_Function</B></TT>) to the <I>activation record</I>
+of the function executing at a given level.
+Level 0 is the current running function,
+while level <I>n</I>+1 is the function that has called level <I>n</I>.
+When called with a level greater than the stack depth,
+<TT><B>lua_stackedfunction</B></TT> returns <TT><B>LUA_NOOBJECT</B></TT>.
+<P>
+The type <TT><B>lua_Function</B></TT> is just another name
+to <TT><B>lua_Object</B></TT>.
+Although, in this library,
+a <TT><B>lua_Function</B></TT> can be used wherever a <TT><B>lua_Object</B></TT> is required,
+a parameter <TT><B>lua_Function</B></TT> accepts only a handle returned by
+<TT><B>lua_stackedfunction</B></TT>.
+<P>
+Three other functions produce extra information about a function:
+<B><PRE>void lua_funcinfo (lua_Object func, char **filename, int *linedefined);
+int lua_currentline (lua_Function func);
+char *lua_getobjname (lua_Object o, char **name);</PRE></B>
+<TT><B>lua_funcinfo</B></TT> gives the file name and the line where the
+given function has been defined.
+If the ``function'' is in fact the main code of a chunk,
+then <TT><B>linedefined</B></TT> is 0.
+If the function is a C function,
+then <TT><B>linedefined</B></TT> is -1, and <TT><B>filename</B></TT> is <TT><B>"(C)"</B></TT>.
+<P>
+The function <TT><B>lua_currentline</B></TT> gives the current line where
+a given function is executing.
+It only works if the function has been pre-compiled with debug
+information (see Section&nbsp;<A HREF="node12.html#pragma">4.8</A>).
+When no line information is available, it returns -1.
+<P>
+Function <TT><B>lua_getobjname</B></TT> tries to find a reasonable name for
+a given function.
+Because functions in Lua are first class values,
+they do not have a fixed name.
+Some functions may be the value of many global variables,
+while others may be stored only in a table field.
+Function <TT><B>lua_getobjname</B></TT> first checks whether the given
+function is a fallback.
+If so, it returns the string <TT><B>"fallback"</B></TT>,
+and <TT><B>name</B></TT> is set to point to the fallback name.
+Otherwise, if the given function is the value of a global variable,
+then <TT><B>lua_getobjname</B></TT> returns the string <TT><B>"global"</B></TT>,
+while <TT><B>name</B></TT> points to the variable name.
+If the given function is neither a fallback nor a global variable,
+then <TT><B>lua_getobjname</B></TT> returns the empty string,
+and <TT><B>name</B></TT> is set to <TT><B>NULL</B></TT>.
+<P>
+<HR>
+<B> Next:</B> <A HREF="node27.html">7.2 Manipulating Local Variables</A>
+<B>Up:</B> <A HREF="node25.html">7 The Debugger Interface</A>
+<B> Previous:</B> <A HREF="node25.html">7 The Debugger Interface</A>
+<HR>
+</BODY>

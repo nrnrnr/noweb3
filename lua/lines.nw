@@ -1,0 +1,78 @@
+\section{Filters for removing and altering text lines}
+
+[[Lines.strfind]] extends [[strfind]] to lists.
+<<*>>=
+Lines = Lines or { }
+
+function Lines.matchany(s, pats, n)
+  -- precondition: if non-nil n == List.length(pats)
+  n = n or List.length(pats)
+  local i = 1
+  while i < n do 
+    local x, y = strfind(s, pats[i])
+    if x then return x, y end
+    i = i + 1
+  end
+  return nil
+end
+
+@ 
+[[Stages.droptext]] removes texts that match any pattern in the
+argument.
+Argument may be a pattern or a list of patterns.
+<<*>>=
+-- remove texts containing the evil string
+function Stages.droptext(inbuf, outbuf, evil)
+  if type(evil) == "string" then evil = List.new({evil}) end
+  local n = List.length(evil)
+  local r = NWB.reader(inbuf)
+  local key, arg = NWB.read(r)
+  while key do
+    if key == NW_TEXT and Lines.strfind(arg, evil, n) then
+      -- do nothing; drop this text
+    else
+      NWB.put(outbuf, key, arg)
+    end
+    key, arg = NWB.read(r)
+  end
+  return 0
+end
+@ 
+[[Stages.eattext]] replaces matching texts with a literal [[\eatline]].
+<<*>>=
+-- remove texts containing the evil string
+function Stages.eattext(inbuf, outbuf, evil)
+  if type(evil) == "string" then evil = List.new({evil}) end
+  local n = List.length(evil)
+  local r = NWB.reader(inbuf)
+  local key, arg = NWB.read(r)
+  while key do
+    if key == NW_TEXT and Lines.strfind(arg, evil, n) then
+      NWB.put(outbuf, "literal", "\\eatline")
+    else
+      NWB.put(outbuf, key, arg)
+    end
+    key, arg = NWB.read(r)
+  end
+  return 0
+end
+<<hackers: subsubsections for internal filters>>=
+\subsubsection{The filters \texttt{Stages.droptext} and \texttt{Stages.eattext}}
+The filters \texttt{Stages.droptext} and \texttt{Stages.eattext}
+remove text fragments chunks from a stream.
+They are normally used early in the pipeline so as to remove whole lines.
+For both filters, the arbitrary argument is either a single string or 
+a list of strings.
+Each string is a Lua string pattern, as documented on page~19 of the 
+Lua~2.5$+$nw manual.
+\texttt{Stages.droptext} simply removes text parts matching the pattern.
+Because it preserves newlines, it can be used to ``blank out'' 
+(replace with an empty line) code that is not wanted when tangling.
+\texttt{Stages.eattext} replaces the matching text with
+\verb+\eatline+.
+It is useful for making lines disappear during weaving, without throwing off the 
+line numbers in the \TeX\ file.
+These filters exist only because they preserve newlines; otherwise, 
+it would be simpler to use \texttt{grep~-v}.
+@ 
+

@@ -1,0 +1,73 @@
+This is an alpha version of Noweb 3.  Alpha versions are numbered by
+date; for example, the first version to tangle and weave itself was
+alpha980616.  This alpha version is being release to allow people to
+play with Noweb 3 and in the hopes the Noweb users will fill in some
+of the holes.
+
+
+To get some idea of what is going on with Noweb 3, look at the revised
+Hacker's Guide.
+
+To build Noweb 3, you need a working Noweb 2, plus a C compiler.  See
+http://www.cs.virginia.edu/~nr/noweb for Noweb 2.
+The distribution includes:
+
+  lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
+  cii	       CII, from Dave Hanson, stripped down to Noweb's needs only.
+  c            C source code for Noweb
+  lua          Lua source code for Noweb commands and pipeline stages
+  nocond       A filter to help build Noweb 3 from sources.
+  xdoc         Documentation, especially the revised Hacker's Guide
+
+Lua-2.5+nw and CII are used by permission.
+
+To build Noweb 3:
+
+  1) Edit lua-2.5/config according to the directions.
+
+  2) Get nocond onto your path.
+
+  3) Set these variables in the Makefile:
+       CC         the name of an ANSI C compiler
+       MAXALIGN   as is for Linux (Slackware 3.3), otherwise
+		  see cii/install.html for more info (this is a wart)
+     And define the following directories:
+       BIN        on $PATH, will hold no
+       LIB2       where Noweb 2 put markup, nt, noxref, ...
+       LIB3       where Noweb 3 Lua code will go
+     BIN and LIB3 are *outputs*, where noweb will place
+     binaries and scripts that are customized for your installation.
+     Therefore you should:
+       - make sure you have write permission to these directories.
+       - refrain from making them point into the noweb source distribution.
+     LIB2 is an input, so version 3 can find the pieces from version 2
+     that it needs to bootstrap itself.
+
+  3bis) If you know a full pathname for test, put it in lua/config.nw
+
+  4) Fasten your seat belt and type `make all install'.  
+     The system should build with only these warnings:
+       - whining about parser.c in the Lua sources
+       - whining about const in c/util.nw
+     It takes under two minutes on my 133MHz Linux box.
+
+  5) You can clean up by typing `make clean', or more likely, 
+     `make clobber'.
+
+Noweb 3 uses a new style of invocation
+
+  no weave ...
+  no tangle ...
+
+Start hacking and send in some code!  The web page has a list of what
+needs to be done, but it's not complete.  If you think it's useful,
+send it in.  Also, if you have questions about what is going on, send
+those too, and I can use them to help me improve the documentation.
+
+Noweb 3 would not have been possible without the efforts of Garret
+Prestwood.
+
+
+Do send feedback to nr@cs.virginia.edu!
+
+Norman Ramsey

@@ -1,0 +1,139 @@
+This is TeX, Version 3.14159 (Web2C 7.3.1) (format=latex 1999.9.25)  31 JUL 2000 17:38
+**spawnvpe
+(spawnvpe.tex
+LaTeX2e <1998/12/01> patch level 1
+Babel <v3.6x> and hyphenation patterns for american, french, german, ngerman, i
+talian, nohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 1999/01/07 v1.4a Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size11.clo
+File: size11.clo 1999/01/07 v1.4a Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texmf/tex/latex/local/noweb.sty
+\nwmarginglue=\dimen103
+\codehsize=\dimen104
+\codemargin=\dimen105
+\nwdefspace=\dimen106
+\equivbox=\box26
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <10.95> on input line 76.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 76.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 76.
+\plusequivbox=\box27
+\nwcodetopsep=\skip43
+\nwcodepenalty=\count87
+\@original@textwidth=\dimen107
+\nwcodecommentsep=\skip44
+\@nwlopage=\count88
+\@nwhipage=\count89
+\@nwlosub=\count90
+\@nwhisub=\count91
+\@nwpagetemp=\count92
+\@nwpagecount=\count93
+\sub@page=\count94
+\@nwalph@n=\count95
+\nw@chunkcount=\count96
+\@commacount=\count97
+\nwix@counter=\count98
+)
+(/usr/share/texmf/tex/latex/psnfss/times.sty
+Package: times 1999/03/29 PSNFSS v.7.2 Times font as default roman : S Rahtz
+)
+(/usr/share/texmf/tex/latex/fancyhdr/fancyhdr.sty
+\headwidth=\dimen108
+)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+Package: graphics 1999/02/16 v1.0l Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/share/texmf/tex/latex/config/graphics.cfg)
+Package graphics Info: Driver file: dvips.def on input line 80.
+
+(/usr/share/texmf/tex/latex/graphics/dvips.def
+File: dvips.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+))
+(/usr/share/texmf/tex/latex/base/latexsym.sty
+Package: latexsym 1998/08/17 v2.2e Standard LaTeX package (lasy symbols)
+\symlasy=\mathgroup4
+LaTeX Font Info:    Overwriting symbol font `lasy' in version `bold'
+(Font)                  U/lasy/m/n --> U/lasy/b/n on input line 29.
+) (spawnvpe.aux)
+\openout1 = `spawnvpe.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 9.
+LaTeX Font Info:    ... okay on input line 9.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 9.
+
+(/usr/share/texmf/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 1998/07/06 Fontinst v1.800 font definitions for OT1/ptm.
+)
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 17.
+LaTeX Font Info:    Try loading font information for U+lasy on input line 17.
+
+(/usr/share/texmf/tex/latex/base/ulasy.fd
+File: ulasy.fd 1998/08/17 v2.2eLaTeX symbol font definitions
+)
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 19.
+ (spawnvpe.toc
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.95> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 6.
+
+(/usr/share/texmf/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 1998/07/06 Fontinst v1.800 font definitions for OT1/pcr.
+))
+\tf@toc=\write3
+\openout3 = `spawnvpe.toc'.
+
+ [1
+
+]
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 40.
+
+(/usr/share/texmf/tex/latex/psnfss/omsptm.fd
+File: omsptm.fd 
+)
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <10.95> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 40.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 45.
+ [2] [3] [4] [5] [6] [7] [8]
+[9] [10] [11] [12] [13] (spawnvpe.aux) ) 
+Here is how much of TeX's memory you used:
+ 961 strings out of 10898
+ 11237 string characters out of 96881
+ 63236 words of memory out of 263001
+ 3919 multiletter control sequences out of 10000+0
+ 14972 words of font info for 47 fonts, out of 400000 for 1000
+ 14 hyphenation exceptions out of 1000
+ 25i,6n,40p,863b,459s stack positions out of 300i,100n,500p,50000b,4000s
+
+Output written on spawnvpe.dvi (13 pages, 22900 bytes).

@@ -1,0 +1,49 @@
+  better error message in case waitfor() or waitfor2() is surprised
+  don't use the word `prepend' in xpipe.nw, to avoid offending sensitive readers
+
+alpha000715
+  bugfix: failed to atomize argument when building list for external pipeline
+  considerably improved -v by registering printers for internal stages
+  wrote fallback to use .. to build pipelines from lua
+
+alpha000714
+  fixed bug; lua_funname destroyed arguments on some platforms
+
+alpha000713
+  fixed tangle -v
+  added -ifilter to tangle and weave
+  added filters Stages.xchunks, Stages.stripconds
+  fixed some other bugs
+  changed lua makefiles to help plan9 make (can't handle include $(LUA)/config)
+  fixed vicious order-of-evaluation bug in internal pipeline
+     (no guaranteed order when evaluating e1 | e2)
+  added nocond to c to help with bare install
+  added lua_funname to capture function name in MPipe.{filter,source,sink}
+  
+
+alpha000209
+  Added writetox to return current output file, so you can return to it.
+  fixed weave to put verbose stuff on stderr
+  fixed show to write('nil') instead of print(nil) [gets onto stderr]
+  fixed noidx to put chunk log in the right place
+
+
+alpha980722
+  Don't use isalnum(), which is broken on some linux systems
+  Fix a number of bugs in fromascii, which prevented -index from working
+  Corrected some bad code in totex that got tickled by -index
+
+alpha980701
+
+  Repaired a memory error in lua-2.5+nw that caused failures on some machines
+	(Barry Gaunt)
+  Trimmed unused code from mpipe.nw
+  Implemented IPipe_free.
+
+alpha980523
+
+  Make sure to include the .sty file so people can build the Guide
+
+alpha980616
+
+  Noweb 3 tangles itself for the first time.

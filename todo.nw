@@ -1,0 +1,125 @@
+\section{Things to be done for noweb 3}
+
+\begin{center}
+Last serious update: July, 2000
+\end{center}
+
+Noweb 3 is almost ready to come out of alpha and become beta software.
+The essential things are to get \emph{new manual pages} and
+\emph{better configuration}.
+
+To volunteer for one of these tasks, or for something else you think
+needs doing, send mail to
+\begin{rawhtml}
+<a href=mailto:nr@eecs.harvard.edu>nr@eecs.harvard.edu</a>.
+\end{rawhtml}
+The tasks are in rough order of priority.
+
+\begin{tabularx}{\textwidth}{l|l|l|X}
+What&Who&Status&Details\\
+\hline
+\multicolumn4{c}{\textbf{Top-priority items}}\\
+man&&&
+Write man pages, especially documenting new options and filters.\\
+config&&&
+Improve configuration.  Ideally, bundle scripts in binary.\\
+winmake&&&
+Come up with Makefiles that work on Windows.\\
+port&&&Write porting instructions.\\
+Mac&&&Do a Mac port.\\
+DOS&&&Do a DOS port.\\
+Win32&&&Do a Win32 port (Windows 95/98/NT).\\
+sort&&&
+Come up with a sorting method that is consistent with noweb 2.9\\
+\\
+\hline
+\multicolumn4{c}{\textbf{Medium-priority items}}\\
+\hline
+untangle&&incomplete&
+Replace nw2 nountangle script with docs2comments filter in Lua, taking
+ideas from unreleased Icon docs2comments filter.
+Begun but not finished.\\
+autodefs&&&
+Rewrite the autodefs machinery in Lua, plus a couple of
+language-specific filters.\\
+Rat&N. Ramsey&&
+Write rationale and overview for Hacker's Guide.\\
+Ints&&&
+Document Lua interfaces for pipeline, buffer.
+How to use interfaces to build a pipeline.
+How to use interfaces to write a stage.\\
+Stages&&&
+Document Lua functions for standard stages.\\
+count&&&
+Rewrite nocount in Lua to serve as an example for Hacker's Guide
+(also for distribution).\\
+stdfil&&&
+Develop an army of standard filters, to include, e.g., nocond, nwdate,
+the stupid C header trick, etc.\\
+\multicolumn4{c}{\textbf{Low-priority items}}\\
+\hline
+order&NR&ugh&Get the order of arguments for stages straight once and
+for all.  Closure args should come last so they can be optional.\\
+Mcomb&&&
+Merge markup.nw into markparse.nw.
+Trim redundant code.
+Try to control mutation so that
+strsave is not needed. (possibly use Str or Atom)\\
+unmarkup&&&
+Test the converted unmarkup pipeline stage.
+\\
+Lua$+$nw&&&
+Document the \texttt{case} and \texttt{globmatch} extensions to
+Lua~2.5\\
+Basis&&&
+Document the ``initial basis'' of stuff available for people writing
+Lua code for noweb (lists, environments, others\ldots).\\
+filman&&&
+Write man page for users of noweb filters (as opposed to Hacker's
+Guide).
+For example, a filter should replace the \texttt{nountangle} command.\\
+sys&&&
+Figure out how to reorganize the C~code to minimize and isolate system
+dependencies.\\
+clean&&&
+Find ways to rationalize, reorganize, and reduce the code.
+Figure out how to exploit the presence of CII.\\
+strip&&&
+Strip exceptions out of CII.\\
+perf&&&
+Do performance studies and figure out how to make things run blazingly
+fast.\\
+man&&&
+Revise the Version 2 man pages.
+Look for features to eliminate.\\
+fileglob&&&
+Find a way of doing globbing expansion of file names (need a list of
+files in a given directory). 
+(Needed to support -showautodefs).
+NR has some old Unix code from a course he taught years ago.\\
+ifdef&&&
+Use the new stupid noweb trick to insert [[#ifdef]] in headers automatically.\\
+Str&&&
+Create Lua bindings for Hanson's string scanning, which should
+simplify porting old Icon code.\\
+\end{tabularx}
+
+
+
+
+\section{Things that have actually been done}
+\begin{tabularx}{\textwidth}{l|l|l|X}
+What&Who&Status&Details\\
+Pipe&nr&DONE!&
+Eliminate source and sink types from MPipe, IPipe (but keeping dynamic
+type distinction for Lua code).
+Seek dramatic reduction in sizes of implementations.\\
+totex&nr&done &
+Convert totex from Icon to Lua.\\
+tohtml&NR&done&
+Convert tohtml from Icon to Lua.\\
+noidx&NR&done&
+Convert noidx from Icon to Lua.
+\\
+\end{tabularx}
+

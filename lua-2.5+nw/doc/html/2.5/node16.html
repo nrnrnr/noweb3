@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>5.3 Manipulating Lua Objects</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node17.html">5.4 Calling Lua Functions</A>
+<B>Up:</B> <A HREF="node13.html">5 The Application Program </A>
+<B> Previous:</B> <A HREF="node15.html">5.2 Converting Values between </A>
+<HR>
+<H2><A NAME="S530">5.3 Manipulating Lua Objects</A></H2>
+<P>
+To read the value of any global Lua variable,
+one uses the function:
+<A NAME="829"></A>
+<B><PRE>lua_Object     lua_getglobal            (char *varname);</PRE></B>
+As in Lua, if the value of the global is <B>nil</B>,
+then the ``getglobal'' fallback is called.
+<P>
+To store a value previously pushed onto the stack in a global variable,
+there is the function:
+<A NAME="831"></A>
+<B><PRE>void           lua_storeglobal          (char *varname);</PRE></B>
+<P>
+Tables can also be manipulated via the API.
+The function
+<A NAME="832"></A>
+<B><PRE>lua_Object     lua_getsubscript         (void);</PRE></B>
+expects on the stack a table and an index,
+and returns the contents of the table at that index.
+As in Lua, if the first object is not a table,
+or the index is not present in the table,
+the corresponding fallback is called.
+<P>
+To store a value in an index,
+the program must push onto the stack the table, the index,
+and the value,
+and then call the function:
+<A NAME="833"></A>
+<B><PRE>void lua_storesubscript (void);</PRE></B>
+Again, the corresponding fallback is called if needed.
+<P>
+Finally, the function
+<A NAME="834"></A>
+<B><PRE>lua_Object     lua_createtable          (void);</PRE></B>
+creates and returns a new table.
+<P>
+<I>Please Notice:</I>
+Most functions from the Lua library receive parameters through Lua's stack.
+Because other functions also use this stack,
+it is important that these
+parameters be pushed just before the corresponding call,
+without intermediate calls to the Lua library.
+For instance, suppose the user wants the value of <TT><B>a[i]</B></TT>.
+A simplistic solution would be:
+<B><PRE>  /* Warning: WRONG CODE */
+  lua_Object result;
+  lua_pushobject(lua_getglobal(&quot;a&quot;));  /* push table */
+  lua_pushobject(lua_getglobal(&quot;i&quot;));  /* push index */
+  result = lua_getsubscript();</PRE></B>
+However, the call <TT><B>lua_getglobal("i")</B></TT> modifies the stack,
+and invalidates the previous pushed value.
+A correct solution could be:
+<B><PRE>  lua_Object result;
+  lua_Object index = lua_getglobal(&quot;i&quot;);
+  lua_pushobject(lua_getglobal(&quot;a&quot;));  /* push table */
+  lua_pushobject(index);               /* push index */
+  result = lua_getsubscript();</PRE></B>
+The functions <TT><B>lua_getnumber</B></TT>, <TT><B>lua_getstring</B></TT>,
+ <TT><B>lua_getuserdata</B></TT>, and <TT><B>lua_getcfunction</B></TT>,
+plus the family <TT><B>lua_is*</B></TT>,
+are safe to be called without modifying the stack.
+<P>
+<HR>
+<B> Next:</B> <A HREF="node17.html">5.4 Calling Lua Functions</A>
+<B>Up:</B> <A HREF="node13.html">5 The Application Program </A>
+<B> Previous:</B> <A HREF="node15.html">5.2 Converting Values between </A>
+<HR>
+</BODY>

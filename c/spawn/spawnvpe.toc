@@ -1,0 +1,17 @@
+\contentsline {section}{\numberline {1}Introduction}{2}
+\contentsline {subsection}{\numberline {1.1}Synopsis}{2}
+\contentsline {subsection}{\numberline {1.2}Description}{2}
+\contentsline {subsubsection}{\numberline {1.2.1}Function parameters}{3}
+\contentsline {subsection}{\numberline {1.3}Return value}{3}
+\contentsline {subsubsection}{\numberline {1.3.1}From synchronous {\normalfont \tt {}\unhbox \voidb@x {{\_}spawnvpe}()}}{3}
+\contentsline {subsubsection}{\numberline {1.3.2}From asynchronous {\normalfont \tt {}\unhbox \voidb@x {{\_}spawnvpe}()}}{3}
+\contentsline {section}{\numberline {2}The main file {\normalfont \tt {}\unhbox \voidb@x {spawnvpe}.c}}{4}
+\contentsline {section}{\numberline {3}The header file {\normalfont \tt {}nwprocess.h}}{6}
+\contentsline {subsection}{\numberline {3.1}Prototype and macros}{7}
+\contentsline {subsection}{\numberline {3.2}Constants}{8}
+\contentsline {section}{\numberline {4}A small test suite}{9}
+\contentsline {subsection}{\numberline {4.1}{\normalfont \tt {}spawntest.exe}}{9}
+\contentsline {subsection}{\numberline {4.2}{\normalfont \tt {}spawnchild.exe}}{12}
+\contentsline {section}{\numberline {5}Index}{13}
+\contentsline {subsection}{\numberline {5.1}Chunks}{13}
+\contentsline {subsection}{\numberline {5.2}Identifiers}{13}

@@ -1,0 +1,44 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>8.2 The Functions next and nextvar</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node32.html">8.3 Manipulating Strings</A>
+<B>Up:</B> <A HREF="node29.html">8 Some Examples</A>
+<B> Previous:</B> <A HREF="node30.html">8.1 Data Structures</A>
+<HR>
+<H2><A NAME="S820">8.2 The Functions <TT><B>next</B></TT> and <TT><B>nextvar</B></TT></A></H2>
+ <A NAME="exnext"></A>
+<A NAME="963"></A><A NAME="964"></A>
+This example shows how to use the function <TT><B>next</B></TT> to iterate
+over the fields of a table.
+Function <TT><B>clone</B></TT><A NAME="966"></A> receives any table and returns a clone of it.
+<B><PRE>function clone (t)           -- t is a table
+  local new_t = {}           -- create a new table
+  local i, v = next(t, nil)  -- i is an index of t, v = t[i]
+  while i do
+    new_t[i] = v
+    i, v = next(t, i)        -- get next index
+  end
+  return new_t
+end</PRE></B>
+<P>
+The next example prints the names of all global variables
+in the system with non nil values:
+<B><PRE>function printGlobalVariables ()
+  local i, v = nextvar(nil)
+  while i do
+    print(i)
+    i, v = nextvar(i)
+  end
+end</PRE></B>
+<P>
+<HR>
+<B> Next:</B> <A HREF="node32.html">8.3 Manipulating Strings</A>
+<B>Up:</B> <A HREF="node29.html">8 Some Examples</A>
+<B> Previous:</B> <A HREF="node30.html">8.1 Data Structures</A>
+<HR>
+</BODY>

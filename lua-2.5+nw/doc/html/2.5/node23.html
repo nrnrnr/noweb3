@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>6.3 Mathematical Functions</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node24.html">6.4 I/O Facilities</A>
+<B>Up:</B> <A HREF="node20.html">6 Predefined Functions and </A>
+<B> Previous:</B> <A HREF="node22.html">6.2 String Manipulation</A>
+<HR>
+<H2><A NAME="S630">6.3 Mathematical Functions</A></H2>
+ <A NAME="mathlib"></A>
+<P>
+This library is an interface to some functions of the standard C math library.
+Moreover, it registers a fallback for the binary operator <TT><B>^</B></TT> which,
+when applied to numbers <TT><B>x^y</B></TT>, returns <I>x^y</I>.
+<P>
+The library provides the following functions:
+<A NAME="902"></A><A NAME="903"></A><A NAME="904"></A><A NAME="905"></A>
+<A NAME="906"></A><A NAME="907"></A><A NAME="908"></A><A NAME="909"></A>
+<A NAME="910"></A><A NAME="911"></A><A NAME="912"></A><A NAME="913"></A>
+<A NAME="914"></A><A NAME="915"></A><A NAME="916"></A><A NAME="917"></A>
+<A NAME="918"></A><A NAME="919"></A>
+<B><PRE>abs acos asin atan atan2 ceil cos floor log log10
+max min  mod  sin  sqrt tan random randomseed</PRE></B>
+Most of them
+are only interfaces to the homonymous functions in the C library,
+except that, for the trigonometric functions,
+all angles are expressed in degrees, not radians.
+<P>
+The function <TT><B>max</B></TT> returns the maximum
+value of its numeric arguments.
+Similarly, <TT><B>min</B></TT> computes the minimum.
+Both can be used with an unlimited number of arguments.
+<P>
+The functions <TT><B>random</B></TT> and <TT><B>randomseed</B></TT> are interfaces to
+the simple random generator functions <TT><B>rand</B></TT> and <TT><B>srand</B></TT>,
+provided by ANSI C.
+The function <TT><B>random</B></TT> returns pseudo-random numbers in the range
+[0,1).
+<P>
+<HR>
+<B> Next:</B> <A HREF="node24.html">6.4 I/O Facilities</A>
+<B>Up:</B> <A HREF="node20.html">6 Predefined Functions and </A>
+<B> Previous:</B> <A HREF="node22.html">6.2 String Manipulation</A>
+<HR>
+</BODY>

@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>4.1 Lexical Conventions</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node6.html">4.2 Coercion</A>
+<B>Up:</B> <A HREF="node4.html">4 The Language</A>
+<B> Previous:</B> <A HREF="node4.html">4 The Language</A>
+<HR>
+<H2><A NAME="S410">4.1 Lexical Conventions</A></H2>
+ <A NAME="lexical"></A>
+<P>
+Lua is a case sensitive language.
+Identifiers<A NAME="740"></A> can be any string of letters, digits, and underscores,
+not beginning with a digit.
+The following words are reserved, and cannot be used as identifiers:
+<A NAME="86"></A>
+<B><PRE>      and       do        else      elseif
+      end       function  if        local
+      nil       not       or        repeat
+      return    then      until     while</PRE></B>
+<P>
+The following strings denote other tokens<A NAME="741"></A>:
+<B><PRE>         ~=  &lt;=  &gt;=  &lt;   &gt;   ==  =   ..  +   -   *   /
+         %   (   )   {   }   [   ]   ;   ,   .</PRE></B>
+<P>
+Literal strings<A NAME="742"></A> can be delimited by matching single or double quotes,
+and can contain the C-like escape sequences
+<TT><B>'\n'</B></TT>, <TT><B>'\t'</B></TT> and <TT><B>'\r'</B></TT>.
+Literal strings can also be delimited by matching <TT><B>[[ ... ]]</B></TT>.
+Literals in this bracketed form may run for several lines,
+may contain nested <TT><B>[[ ... ]]</B></TT> pairs,
+and do not interpret escape sequences.
+<P>
+Comments<A NAME="743"></A> start anywhere outside a string with a
+double hyphen (<TT><B>--</B></TT>) and run until the end of the line.
+Moreover, if the first line of a chunk file starts with <TT><B>#</B></TT>,
+this line is skipped<A HREF="footnode.html#90">*</A>.
+<P>
+Numerical constants<A NAME="744"></A> may be written with an optional decimal part,
+and an optional decimal exponent.
+Examples of valid numerical constants are:
+<B><PRE>       4     4.0     0.4     4.57e-3     0.3e12</PRE></B>
+<P>
+<HR>
+<B> Next:</B> <A HREF="node6.html">4.2 Coercion</A>
+<B>Up:</B> <A HREF="node4.html">4 The Language</A>
+<B> Previous:</B> <A HREF="node4.html">4 The Language</A>
+<HR>
+</BODY>

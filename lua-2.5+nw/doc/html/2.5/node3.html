@@ -1,0 +1,71 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>3 Types</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node4.html">4 The Language</A>
+<B>Up:</B> <A HREF="manual.html">Reference Manual of the </A>
+<B> Previous:</B> <A HREF="node2.html">2 Environment and Chunks</A>
+<HR>
+<A NAME="716"></A><H1><A NAME="S300">3 Types</A></H1>
+ <A NAME="TypesSec"></A>
+<P>
+Lua is a dynamically typed language.
+Variables do not have types; only values do.
+All values carry their own type.
+Therefore, there are no type definitions in the language.
+<P>
+There are seven basic types<A NAME="717"></A> in Lua: <I>nil</I><A NAME="719"></A>, <I>number</I><A NAME="721"></A>,
+<I>string</I><A NAME="723"></A>, <I>function</I><A NAME="725"></A>, <I>CFunction</I><A NAME="727"></A>, <I>userdata</I><A NAME="729"></A>,
+and <I>table</I><A NAME="731"></A>.
+<I>Nil</I> is the type of the value <B>nil</B>,
+whose main property is to be different from any other value.
+<I>Number</I> represents real (floating point) numbers,
+while <I>string</I> has the usual meaning.
+<P>
+Functions are considered first-class values in Lua.
+This means that functions can be stored in variables,
+passed as arguments to other functions and returned as results.
+When a function is defined in Lua, its body is compiled and stored
+in a given variable.
+Lua can call (and manipulate) functions written in Lua and
+functions written in C; the latter have type <I>CFunction</I>.
+<P>
+The type <I>userdata</I> is provided to allow
+arbitrary C pointers<A NAME="733"></A> to be stored in Lua variables.
+It corresponds to <TT><B>void*</B></TT> and has no pre-defined operations in Lua,
+besides assignment and equality test.
+However, by using fallbacks, the programmer may define operations
+for <I>userdata</I> values; see Section&nbsp;<A HREF="node11.html#fallback">4.7</A>.
+<P>
+The type <I>table</I> implements associative arrays<A NAME="735"></A>,
+that is, arrays<A NAME="736"></A> that can be indexed not only with numbers,
+but with any value (except <B>nil</B>).
+Therefore, this type may be used not only to represent ordinary arrays,
+but also symbol tables, sets, records, etc.
+To represent records<A NAME="738"></A>, Lua uses the field name as an index.
+The language supports this representation by
+providing <TT><B>a.name</B></TT> as syntactic sugar for <TT><B>a["name"]</B></TT>.
+Tables may also carry methods.
+Because functions are first class values,
+table fields may contain functions.
+The form <TT><B>t:f(x)</B></TT> is syntactic sugar for <TT><B>t.f(t,x)</B></TT>,
+which calls the method <TT><B>f</B></TT> from the table <TT><B>t</B></TT> passing
+itself as the first parameter.
+<P>
+It is important to notice that tables are objects, and not values.
+Variables cannot contain tables, only references to them.
+Assignment, parameter passing and returns always manipulate references
+to tables, and do not imply any kind of copy.
+Moreover, tables must be explicitly created before used
+(see Section&nbsp;<A HREF="node9.html#tableconstructor">4.5.7</A>).
+<P>
+<HR>
+<B> Next:</B> <A HREF="node4.html">4 The Language</A>
+<B>Up:</B> <A HREF="manual.html">Reference Manual of the </A>
+<B> Previous:</B> <A HREF="node2.html">2 Environment and Chunks</A>
+<HR>
+</BODY>

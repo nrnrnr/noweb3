@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>4.6 Function Definitions</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node11.html">4.7 Fallbacks</A>
+<B>Up:</B> <A HREF="node4.html">4 The Language</A>
+<B> Previous:</B> <A HREF="node9.html">4.5 Expressions</A>
+<HR>
+<A NAME="790"></A><H2><A NAME="S460">4.6 Function Definitions</A></H2>
+<P>
+Functions in Lua can be defined anywhere in the global level of a chunk.
+The syntax for function definition is:
+<B><PRE>
+functionfunction var ( parlist1 )
+  block end
+</PRE></B>
+<P>
+When Lua pre-compiles a chunk,
+all its function bodies are pre-compiled, too.
+Then, when Lua ``executes'' the function definition,
+its body is stored, with type <I>function</I>,
+into the variable <TT><B>var</B></TT>.
+<P>
+Parameters act as local variables,
+initialized with the argument values.
+<B><PRE>
+parlist1name , name
+</PRE></B>
+<P>
+Results are returned using the <TT><B>return</B></TT> statement (see Section&nbsp;<A HREF="node8.html#return">4.4.3</A>).
+If control reaches the end of a function without a return instruction,
+then the function returns with no results.
+<P>
+There is a special syntax for defining methods<A NAME="792"></A>,
+that is, functions that have an extra parameter <I>self</I><A NAME="794"></A>.
+<B><PRE>
+functionfunction var : name ( parlist1
+  ) block end
+</PRE></B>Thus, a declaration like
+<B><PRE>function v:f (...)
+  ...
+end</PRE></B>
+is equivalent to
+<B><PRE>function v.f (self, ...)
+  ...
+end</PRE></B>
+that is, the function gets an extra formal parameter called <TT><B>self</B></TT>.
+Notice that
+the variable <TT><B>v</B></TT> must have been previously initialized with a table value.
+<P>
+<HR>
+<B> Next:</B> <A HREF="node11.html">4.7 Fallbacks</A>
+<B>Up:</B> <A HREF="node4.html">4 The Language</A>
+<B> Previous:</B> <A HREF="node9.html">4.5 Expressions</A>
+<HR>
+</BODY>

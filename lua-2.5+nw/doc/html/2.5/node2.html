@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<!--Converted with LaTeX2HTML 96.1 (Feb 5, 1996) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds -->
+<HTML>
+<HEAD>
+<TITLE>2 Environment and Chunks</TITLE>
+</HEAD>
+<BODY LANG="EN">
+ <HR>
+<B> Next:</B> <A HREF="node3.html">3 Types</A>
+<B>Up:</B> <A HREF="manual.html">Reference Manual of the </A>
+<B> Previous:</B> <A HREF="node1.html">1 Introduction</A>
+<HR>
+<H1><A NAME="S200">2 Environment and Chunks</A></H1>
+<P>
+All statements in Lua are executed in a <I>global environment</I><A NAME="706"></A>.
+This environment, which keeps all global variables and functions,
+is initialized at the beginning of the embedding program and
+persists until its end.
+<P>
+The global environment can be manipulated by Lua code or
+by the embedding program,
+which can read and write global variables
+using functions in the library that implements Lua.
+<P>
+Global variables<A NAME="707"></A> do not need declaration.
+Any variable is assumed to be global unless explicitly declared local
+(see Section&nbsp;<A HREF="node8.html#localvar">4.4.5</A>).
+Before the first assignment, the value of a global variable is <B>nil</B>.
+<P>
+The unit of execution of Lua is called a <I>chunk</I><A NAME="711"></A>.
+The syntax<A HREF="footnode.html#694">*</A>
+for chunks is:
+<B><PRE>
+chunkstatement function ret
+</PRE></B>A chunk may contain statements and function definitions,
+and may be in a file or in a string inside the host program.
+A chunk may optionally ends with a return statement (see Section&nbsp;<A HREF="node8.html#return">4.4.3</A>).
+When a chunk is executed, first all its functions and statements are compiled,
+then the statements are executed in sequential order.
+All modifications a chunk effects on the global environment persist
+after its end.
+Those include modifications to global variables and definitions
+of new functions<A HREF="footnode.html#605">*</A>.
+<P>
+Chunks may be pre-compiled; see program <TT><B>luac</B></TT><A NAME="715"></A> for details.
+Text files with chunks and their binary pre-compiled forms
+are interchangeable.
+Lua automatically detects the file type and acts accordingly.
+<A NAME="58"></A>
+<P>
+<HR>
+<B> Next:</B> <A HREF="node3.html">3 Types</A>
+<B>Up:</B> <A HREF="manual.html">Reference Manual of the </A>
+<B> Previous:</B> <A HREF="node1.html">1 Introduction</A>
+<HR>
+</BODY>

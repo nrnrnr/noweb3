@@ -1,0 +1,1506 @@
+Reference Manual of the Programming Language Lua 2.5
+Roberto Ierusalimschy Luiz Henrique de Figueiredo Waldemar Celes
+lua@icad.puc≠rio.br
+TeC Graf --- Departamento de Inform'atica --- PUC≠Rio
+Date: 1996/11/18 14:27:42
+Abstract
+Lua is an extension programming language designed to be used as a configuration language
+for any program that needs one. This document describes version 2.5 of the Lua programming
+language and the API that allows interaction between Lua programs and their host C programs.
+The document also presents some examples of using the main features of the system.
+Sum'ario
+Lua 'e uma linguagem de extens~ao projetada para ser usada como linguagem de configura∏c~ao em
+qualquer programa que precise de uma. Este documento descreve a vers~ao 2.5 da linguagem de
+programa∏c~ao Lua e a Interface de Programa∏c~ao (API) que permite a intera∏c~ao entre programas
+Lua e programas C hospedeiros. O documento tamb'em apresenta alguns exemplos de uso das
+principais caracter'isticas do sistema.
+1 Introduction
+Lua is an extension programming language designed to support general procedural programming
+features with data description facilities. It is intended to be used as a configuration language for
+any program that needs one. Lua has been designed and implemented by W. Celes, L. H. de
+Figueiredo and R. Ierusalimschy.
+Lua is implemented as a library, written in C. Being an extension language, Lua has no notion of
+a ``main'' program: it only works embedded in a host client, called the embedding program. This host
+program can invoke functions to execute a piece of code in Lua, can write and read Lua variables,
+and can register C functions to be called by Lua code. Through the use of C functions, Lua can be
+augmented to cope with rather different domains, thus creating customized programming languages
+sharing a syntactical framework.
+Lua is free≠distribution software, and provided as usual with no guarantees. The implementation
+described in this manual is available at the following URL's:
+http://www.inf.puc≠rio.br/~roberto/lua.html
+ftp://ftp.icad.puc≠rio.br/pub/lua/lua.tar.gz
+1
+
+2 Environment and Chunks
+All statements in Lua are executed in a global environment. This environment, which keeps all global
+variables and functions, is initialized at the beginning of the embedding program and persists until
+its end.
+The global environment can be manipulated by Lua code or by the embedding program, which
+can read and write global variables using functions in the library that implements Lua.
+Global variables do not need declaration. Any variable is assumed to be global unless explicitly
+declared local (see Section 4.4.5). Before the first assignment, the value of a global variable is nil.
+The unit of execution of Lua is called a chunk. The syntax 1 for chunks is:
+chunk ! fstatement j functiong [ret ]
+A chunk may contain statements and function definitions, and may be in a file or in a string inside
+the host program. A chunk may optionally ends with a return statement (see Section 4.4.3). When
+a chunk is executed, first all its functions and statements are compiled, then the statements are
+executed in sequential order. All modifications a chunk effects on the global environment persist
+after its end. Those include modifications to global variables and definitions of new functions 2 .
+Chunks may be pre≠compiled; see program luac for details. Text files with chunks and their
+binary pre≠compiled forms are interchangeable. Lua automatically detects the file type and acts
+accordingly.
+3 Types
+Lua is a dynamically typed language. Variables do not have types; only values do. All values carry
+their own type. Therefore, there are no type definitions in the language.
+There are seven basic types in Lua: nil, number, string, function, CFunction, userdata, and
+table. Nil is the type of the value nil, whose main property is to be different from any other value.
+Number represents real (floating point) numbers, while string has the usual meaning.
+Functions are considered first≠class values in Lua. This means that functions can be stored
+in variables, passed as arguments to other functions and returned as results. When a function is
+defined in Lua, its body is compiled and stored in a given variable. Lua can call (and manipulate)
+functions written in Lua and functions written in C; the latter have type CFunction.
+The type userdata is provided to allow arbitrary C pointers to be stored in Lua variables. It
+corresponds to void* and has no pre≠defined operations in Lua, besides assignment and equality
+test. However, by using fallbacks, the programmer may define operations for userdata values; see
+Section 4.7.
+The type table implements associative arrays, that is, arrays that can be indexed not only with
+numbers, but with any value (except nil). Therefore, this type may be used not only to represent
+ordinary arrays, but also symbol tables, sets, records, etc. To represent records, Lua uses the field
+name as an index. The language supports this representation by providing a.name as syntactic
+sugar for a[''name'']. Tables may also carry methods. Because functions are first class values,
+table fields may contain functions. The form t:f(x) is syntactic sugar for t.f(t,x), which calls
+the method f from the table t passing itself as the first parameter.
+It is important to notice that tables are objects, and not values. Variables cannot contain tables,
+only references to them. Assignment, parameter passing and returns always manipulate references
+1 As usual, fag means 0 or more a's, [a] means an optional a and fag
++ means one or more a's.
+2 Actually, a function definition is an assignment to a global variable; see Section 3.
+2
+
+to tables, and do not imply any kind of copy. Moreover, tables must be explicitly created before
+used (see Section 4.5.7).
+4 The Language
+This section describes the lexis, the syntax and the semantics of Lua.
+4.1 Lexical Conventions
+Lua is a case sensitive language. Identifiers can be any string of letters, digits, and underscores,
+not beginning with a digit. The following words are reserved, and cannot be used as identifiers:
+and do else elseif
+end function if local
+nil not or repeat
+return then until while
+The following strings denote other tokens:
+~= != ?= ! ? == = .. + ≠ * /
+% ( ) -- ù [ ] ; , .
+Literal strings can be delimited by matching single or double quotes, and can contain the
+C≠like escape sequences '``n', '``t' and '``r'. Literal strings can also be delimited by matching
+[[ ... ]]. Literals in this bracketed form may run for several lines, may contain nested [[ ... ]]
+pairs, and do not interpret escape sequences.
+Comments start anywhere outside a string with a double hyphen (≠≠) and run until the end of
+the line. Moreover, if the first line of a chunk file starts with #, this line is skipped 3 .
+Numerical constants may be written with an optional decimal part, and an optional decimal
+exponent. Examples of valid numerical constants are:
+4 4.0 0.4 4.57e≠3 0.3e12
+4.2 Coercion
+Lua provides some automatic conversions. Any arithmetic operation applied to a string tries to
+convert that string to a number, following the usual rules. Conversely, whenever a number is used
+when a string is expected, that number is converted to a string, according to the following rule: if
+the number is an integer, it is written without exponent or decimal point; otherwise, it is formatted
+following the %g conversion specification of the printf function in the standard C library.
+4.3 Adjustment
+Functions in Lua can return many values. Because there are no type declarations, the system does
+not know how many values a function will return, or how many parameters it needs. Therefore,
+sometimes, a list of values must be adjusted , at run time, to a given length. If there are more values
+than are needed, then the last values are thrown away. If there are more needs than values, then
+the list is extended with as many nil's as needed. Adjustment occurs in multiple assignment and
+function calls.
+3 This facility allows the use of Lua as a script interpreter in Unix systems.
+3
+
+4.4 Statements
+Lua supports an almost conventional set of statements. The conventional commands include as≠
+signment, control structures and procedure calls. Non≠conventional commands include table con≠
+structors (Section 4.5.7), and local variable declarations (Section 4.4.5).
+4.4.1 Blocks
+A block is a list of statements, which is executed sequentially. Any statement can be optionally
+followed by a semicolon:
+block ! fstat scg [ret ]
+sc ! [';']
+For syntactic reasons, a return statement can only be written as the last statement of a block.
+This restriction also avoids some ``statement not reached'' errors.
+4.4.2 Assignment
+The language allows multiple assignment. Therefore, the syntax defines a list of variables on the
+left side, and a list of expressions on the right side. Both lists have their elements separated by
+commas:
+stat ! varlist1 '=' explist1
+varlist1 ! var f',' varg
+This statement first evaluates all values on the right side and eventual indices on the left side, and
+then makes the assignments. Therefore, it can be used to exchange two values, as in
+x, y = y, x
+Before the assignment, the list of values is adjusted to the length of the list of variables (see
+Section 4.3).
+A single name can denote a global or a local variable, or a formal parameter:
+var ! name
+Square brackets are used to index a table:
+var ! var '[' exp1 ']'
+If var results in a table value, the field indexed by the expression value gets the assigned value.
+Otherwise, the fallback settable is called, with three parameters: the value of var, the value of
+expression, and the value being assigned to it; see Section 4.7.
+The syntax var.NAME is just syntactic sugar for var[''NAME''].
+var ! var '.' name
+4.4.3 Control Structures
+The condition expression of a control structure can return any value. All values different from nil
+are considered true; nil is considered false. if's, while's and repeat's have the usual meaning.
+stat ! while exp1 do block end
+j repeat block until exp1
+j if exp1 then block felseif g [else block ] end
+elseif ! elseif exp1 then block
+4
+
+A return is used to return values from a function or a chunk. Because they may return more
+than one value, the syntax for a return statement is:
+ret ! return explist [sc]
+4.4.4 Function Calls as Statements
+Because of possible side≠effects, function calls can be executed as statements:
+stat ! functioncall
+Eventual returned values are thrown away. Function calls are explained in Section 4.5.8.
+4.4.5 Local Declarations
+Local variables can be declared anywhere inside a block. Their scope begins after the declaration
+and lasts until the end of the block. The declaration may include an initial assignment:
+stat ! local declist [init ]
+declist ! name f',' nameg
+init ! '=' explist1
+If present, an initial assignment has the same semantics of a multiple assignment. Otherwise, all
+variables are initialized with nil.
+4.5 Expressions
+4.5.1 Simple Expressions
+Simple expressions are:
+exp ! '(' exp ')'
+exp ! nil
+exp ! 'number'
+exp ! 'literal'
+exp ! var
+Numbers (numerical constants) and string literals are explained in Section 4.1. Variables are
+explained in Section 4.4.2.
+4.5.2 Arithmetic Operators
+Lua supports the usual arithmetic operators. These operators are the binary +, ≠, *, / and ì
+(exponentiation), and the unary ≠. If the operands are numbers, or strings that can be converted
+to numbers, according to the rules given in Section 4.2, then all operations but exponentiation have
+the usual meaning. Otherwise, the fallback ``arith'' is called (see Section 4.7). An exponentiation
+always calls this fallback. The standard mathematical library redefines this fallback, giving the
+expected meaning to exponentiation (see Section 6.3).
+4.5.3 Relational Operators
+Lua provides the following relational operators:
+5
+
+! ? != ?= ~= ==
+All these return nil as false and a value different from nil (actually the number 1) as true.
+Equality first compares the types of its operands. If they are different, then the result is nil.
+Otherwise, their values are compared. Numbers and strings are compared in the usual way. Tables,
+CFunctions, and functions are compared by reference, that is, two tables are considered equal only
+if they are the same table. The operator ~= is exactly the negation of equality (==).
+The other operators work as follows. If both arguments are numbers, then they are compared
+as such. Otherwise, if both arguments can be converted to strings, their values are compared using
+lexicographical order. Otherwise, the ``order'' fallback is called (see Section 4.7).
+4.5.4 Logical Operators
+Like control structures, all logical operators consider nil as false and anything else as true. The
+logical operators are:
+and or not
+The operator and returns nil if its first argument is nil; otherwise it returns its second argument.
+The operator or returns its first argument if it is different from nil; otherwise it returns its second
+argument. Both and and or use short≠cut evaluation, that is, the second operand is evaluated only
+if necessary.
+4.5.5 Concatenation
+Lua offers a string concatenation operator, denoted by ``..''. If operands are strings or numbers,
+then they are converted to strings according to the rules in Section 4.2. Otherwise, the fallback
+``concat'' is called (see Section 4.7).
+4.5.6 Precedence
+Operator precedence follows the table below, from the lower to the higher priority:
+and or
+! ? != ?= ~= ==
+..
++ ≠
+* /
+not ≠ (unary)
+ì
+All binary operators are left associative, except for ì (exponentiation), which is right associative.
+4.5.7 Table Constructors
+Table constructors are expressions that create tables; every time a constructor is evaluated, a new
+table is created. Constructors can be used to create empty tables, or to create a table and initialize
+some fields.
+The general syntax for constructors is:
+6
+
+tableconstructor ! 'f' fieldlist 'g'
+fieldlist ! lfieldlist j ffieldlist j lfieldlist ';' ffieldlist
+lfieldlist ! [lfieldlist1 ]
+ffieldlist ! [ffieldlist1 ]
+The form lfieldlist1 is used to initialize lists.
+lfieldlist1 ! exp f',' expg [',']
+The expressions in the list are assigned to consecutive numerical indexes, starting with 1. For
+example:
+a = --''v1'', ''v2'', 34ù
+is roughly equivalent to:
+temp = --ù
+temp[1] = ''v1''
+temp[2] = ''v2''
+temp[3] = 34
+a = temp
+The next form initializes named fields in a table:
+ffieldlist1 ! ffield f',' ffieldg [',']
+ffield ! name '=' exp
+For example:
+a = --x = 1, y = 3ù
+is roughly equivalent to:
+temp = --ù
+temp.x = 1 ≠≠ or temp[''x''] = 1
+temp.y = 3 ≠≠ or temp[''y''] = 3
+a = temp
+4.5.8 Function Calls
+A function call has the following syntax:
+functioncall ! var realParams
+Here, var can be any variable (global, local, indexed, etc). If its value has type function or
+CFunction, then this function is called. Otherwise, the ``function'' fallback is called, having as first
+parameter the value of var, and then the original call parameters.
+The form:
+functioncall ! var ':' name realParams
+can be used to call ``methods''. A call var:name(...) is syntactic sugar for
+var.name(var, ...)
+7
+
+except that var is evaluated only once.
+realParams ! '(' [explist1 ] ')'
+realParams ! tableconstructor
+explist1 ! exp1 f',' exp1g
+All argument expressions are evaluated before the call; then the list of arguments is adjusted to
+the length of the list of parameters (see Section 4.3); finally, this list is assigned to the formal
+parameters. A call of the form f--...ù is syntactic sugar for f(--...ù), that is, the parameter list
+is a single new table.
+Because a function can return any number of results (see Section 4.4.3), the number of results
+must be adjusted before used. If the function is called as a statement (see Section 4.4.4), its return
+list is adjusted to 0. If the function is called in a place that needs a single value (syntactically
+denoted by the non≠terminal exp1), then its return list is adjusted to 1. If the function is called
+in a place that can hold many values (syntactically denoted by the non≠terminal exp), then no
+adjustment is made.
+4.6 Function Definitions
+Functions in Lua can be defined anywhere in the global level of a chunk. The syntax for function
+definition is:
+function ! function var '(' [parlist1 ] ')' block end
+When Lua pre≠compiles a chunk, all its function bodies are pre≠compiled, too. Then, when Lua
+``executes'' the function definition, its body is stored, with type function, into the variable var.
+Parameters act as local variables, initialized with the argument values.
+parlist1 ! name f',' nameg
+Results are returned using the return statement (see Section 4.4.3). If control reaches the end
+of a function without a return instruction, then the function returns with no results.
+There is a special syntax for defining methods, that is, functions that have an extra parameter
+self.
+function ! function var ':' name '(' [parlist1 ] ')' block end
+Thus, a declaration like
+function v:f (...)
+...
+end
+is equivalent to
+function v.f (self, ...)
+...
+end
+that is, the function gets an extra formal parameter called self. Notice that the variable v must
+have been previously initialized with a table value.
+8
+
+4.7 Fallbacks
+Lua provides a powerful mechanism to extend its semantics, called fallbacks. A fallback is a pro≠
+grammer defined function that is called whenever Lua does not know how to proceed.
+Lua supports the following fallbacks, identified by the given strings:
+``arith'': called when an arithmetic operation is applied to non numerical operands, or when the
+binary ì operation is called. It receives three arguments: the two operands (the second one
+is nil when the operation is unary minus) and one of the following strings describing the
+offended operator:
+add sub mul div pow unm
+Its return value is the final result of the arithmetic operation. The default handler issues an
+error.
+``order'': called when an order comparison is applied to non numerical or non string operands. It
+receives three arguments: the two operands and one of the following strings describing the
+offended operator:
+lt gt le ge
+Its return value is the final result of the comparison operation. The default handler issues an
+error.
+``concat'': called when a concatenation is applied to non string operands. It receives the two
+operands as arguments. Its return value is the final result of the concatenation operation.
+The default handler issues an error.
+``index'': called when Lua tries to retrieve the value of an index not present in a table. It receives
+as arguments the table and the index. Its return value is the final result of the indexing
+operation. The default handler returns nil.
+``getglobal'': called when Lua tries to retrieve the value of a global variable which has a nil value
+(or which has not been initialized). It receives as argument the name of the variable. Its
+return value is the final result of the expression. The default handler returns nil.
+``gettable'': called when Lua tries to index a non table value. It receives as arguments the non
+table value and the index. Its return value is the final result of the indexing operation. The
+default handler issues an error.
+``settable'': called when Lua tries to assign indexed a non table value. It receives as arguments
+the non table value, the index, and the assigned value. The default handler issues an error.
+``function'': called when Lua tries to call a non function value. It receives as arguments the non
+function value and the arguments given in the original call. Its return values are the final
+results of the call operation. The default handler issues an error.
+``gc'': called during garbage collection. It receives as argument the table being collected. After
+each run of the collector this function is called with argument nil. Because this function
+operates during garbage collection, it must be used with great care, and programmers should
+avoid the creation of new objects (tables or strings) in this function. The default handler
+does nothing.
+9
+
+``error'': called when an error occurs. It receives as argument a string describing the error. The
+default handler prints the message on the standard error output.
+The function setfallback is used to change a fallback handler. Its first argument is the name
+of a fallback condition, and the second argument is the new function to be called. It returns the
+old handler function for the given fallback.
+Section 8.6 shows an example of the use of fallbacks.
+4.8 Error Handling
+Because Lua is an extension language, all Lua actions start from C code calling a function from
+the Lua library. Whenever an error occurs during Lua compilation or execution, an ``error''
+fallback function is called, and then the corresponding function from the library (luaódofile,
+luaódostring, luaócall, or luaócallfunction) is terminated returning an error condition.
+The only argument to the ``error'' fallback function is a string describing the error. The standard
+I/O library redefines this fallback, using the debug facilities (see Section 7), in order to print some
+extra information, like the call stack. For more information about an error, the Lua program can
+include the compilation pragma $debug. This pragma must be written in a line by itself. When
+an error occurs in a program compiled with this option, the error routine is able to print also the
+lines where the calls (and the error) were made. If needed, it is possible to change the ``error''
+fallback handler (see Section 4.7).
+Lua code can explicitly generate an error by calling the built≠in function error (see Section 6.1).
+5 The Application Program Interface
+This section describes the API for Lua, that is, the set of C functions available to the host program
+to communicate with the library. The API functions can be classified in the following categories:
+1. executing Lua code;
+2. converting values between C and Lua;
+3. manipulating (reading and writing) Lua objects;
+4. calling Lua functions;
+5. C functions to be called by Lua;
+6. references to Lua Objects.
+All API functions are declared in the header file lua.h.
+5.1 Executing Lua Code
+A host program can execute Lua chunks written in a file or in a string, using the following functions:
+int luaódofile (char *filename);
+int luaódostring (char *string);
+10
+
+Both functions return an error code: 0, in case of success; non zero, in case of errors. More specifi≠
+cally, luaódofile returns 2 if for any reason it could not open the file. The function luaódofile,
+if called with argument NULL (0), executes the stdin stream. Function luaódofile is also able to
+execute pre≠compiled chunks. It automatically detects whether the file is text or binary, and loads
+it accordingly (see program luac).
+5.2 Converting Values between C and Lua
+Because Lua has no static type system, all values passed between Lua and C have type luaóObject,
+which works like an abstract type in C that can hold any Lua value. Values of type luaóObject have
+no meaning outside Lua; for instance, the comparisson of two luaóObject's is of no significance.
+Because Lua has automatic memory management and garbage collection, a luaóObject has a
+limited scope, and is only valid inside the block where it was created. A C function called from
+Lua is a block, and its parameters are valid only until its end. A good programming practice is to
+convert Lua objects to C values as soon as they are available, and never to store luaóObjects in
+C global variables.
+When C code calls Lua repeatedly, as in a loop, objects returned by these calls accumulate, and
+may create a memory problem. To avoid this, nested blocks can be defined with the functions:
+void luaóbeginblock (void);
+void luaóendblock (void);
+After the end of the block, all luaóObject's created inside it are released.
+To check the type of a luaóObject, the following function is available:
+int luaótype (luaóObject object);
+plus the following macros and functions:
+int luaóisnil (luaóObject object);
+int luaóisnumber (luaóObject object);
+int luaóisstring (luaóObject object);
+int luaóistable (luaóObject object);
+int luaóisfunction (luaóObject object);
+int luaóiscfunction (luaóObject object);
+int luaóisuserdata (luaóObject object);
+All macros return 1 if the object is compatible with the given type, and 0 otherwise. The function
+luaóisnumber accepts numbers and numerical strings, luaóisstring accepts strings and numbers
+(see Section 4.2), and luaóisfunction accepts Lua and C functions. The function luaótype can
+be used to distinguish between different kinds of user data.
+To translate a value from type luaóObject to a specific C type, the programmer can use:
+double luaógetnumber (luaóObject object);
+char *luaógetstring (luaóObject object);
+luaóCFunction luaógetcfunction (luaóObject object);
+void *luaógetuserdata (luaóObject object);
+luaógetnumber converts a luaóObject to a float. This luaóObject must be a number or a string
+convertible to number (see Section 4.2); otherwise, the function returns 0.
+11
+
+luaógetstring converts a luaóObject to a string (char *). This luaóObject must be a string
+or a number; otherwise, the function returns 0 (the null pointer). This function does not create a
+new string, but returns a pointer to a string inside the Lua environment. Because Lua has garbage
+collection, there is no guarantee that such pointer will be valid after the block ends.
+luaógetcfunction converts a luaóObject to a C function. This luaóObject must have type
+CFunction; otherwise, the function returns 0 (the null pointer). The type luaóCFunction is ex≠
+plained in Section 5.5.
+luaógetuserdata converts a luaóObject to void*. This luaóObject must have type userdata;
+otherwise, the function returns 0 (the null pointer).
+The reverse process, that is, passing a specific C value to Lua, is done by using the following
+functions:
+void luaópushnumber (double n);
+void luaópushstring (char *s);
+void luaópushcfunction (luaóCFunction f);
+void luaópushusertag (void *u, int tag);
+plus the macro:
+void luaópushuserdata (void *u);
+All of them receive a C value, convert it to a corresponding luaóObject, and leave the result on
+the top of the Lua stack, where it can be assigned to a Lua variable, passed as parameter to a Lua
+function, etc.
+User data can have different tags, whose semantics are defined by the host program. Any
+positive integer can be used to tag a user datum. When a user datum is retrieved, the function
+luaótype can be used to get its tag.
+To complete the set, the value nil or a luaóObject can also be pushed onto the stack, with:
+void luaópushnil (void);
+void luaópushobject (luaóObject object);
+5.3 Manipulating Lua Objects
+To read the value of any global Lua variable, one uses the function:
+luaóObject luaógetglobal (char *varname);
+As in Lua, if the value of the global is nil, then the ``getglobal'' fallback is called.
+To store a value previously pushed onto the stack in a global variable, there is the function:
+void luaóstoreglobal (char *varname);
+Tables can also be manipulated via the API. The function
+luaóObject luaógetsubscript (void);
+expects on the stack a table and an index, and returns the contents of the table at that index. As
+in Lua, if the first object is not a table, or the index is not present in the table, the corresponding
+fallback is called.
+To store a value in an index, the program must push onto the stack the table, the index, and
+the value, and then call the function:
+12
+
+void luaóstoresubscript (void);
+Again, the corresponding fallback is called if needed.
+Finally, the function
+luaóObject luaócreatetable (void);
+creates and returns a new table.
+Please Notice: Most functions from the Lua library receive parameters through Lua's stack.
+Because other functions also use this stack, it is important that these parameters be pushed just
+before the corresponding call, without intermediate calls to the Lua library. For instance, suppose
+the user wants the value of a[i]. A simplistic solution would be:
+/* Warning: WRONG CODE */
+luaóObject result;
+luaópushobject(luaógetglobal(''a'')); /* push table */
+luaópushobject(luaógetglobal(''i'')); /* push index */
+result = luaógetsubscript();
+However, the call luaógetglobal(''i'') modifies the stack, and invalidates the previous pushed
+value. A correct solution could be:
+luaóObject result;
+luaóObject index = luaógetglobal(''i'');
+luaópushobject(luaógetglobal(''a'')); /* push table */
+luaópushobject(index); /* push index */
+result = luaógetsubscript();
+The functions luaógetnumber, luaógetstring, luaógetuserdata, and luaógetcfunction, plus
+the family luaóis*, are safe to be called without modifying the stack.
+5.4 Calling Lua Functions
+Functions defined in Lua by a chunk executed with dofile or dostring can be called from the
+host program. This is done using the following protocol: first, the arguments to the function are
+pushed onto the Lua stack (see Section 5.2), in direct order, i.e., the first argument is pushed first.
+Again, it is important to emphasize that, during this phase, no other Lua function can be called.
+Then, the function is called using
+int luaócall (char *functionname);
+or
+int luaócallfunction (luaóObject function);
+Both functions return an error code: 0, in case of success; non zero, in case of errors. Finally, the
+returned values (a Lua function may return many values) can be retrieved with the macro
+luaóObject luaógetresult (int number);
+where number is the order of the result, starting with 1. When called with a number larger than
+the actual number of results, this function returns LUAóNOOBJECT.
+Two special Lua functions have exclusive interfaces: error and setfallback. A C function
+can generate a Lua error calling the function
+13
+
+void luaóerror (char *message);
+This function never returns. If the C function has been called from Lua, the corresponding Lua
+execution terminates, as if an error had occurred inside Lua code. Otherwise, the whole program
+terminates.
+Fallbacks can be changed with:
+luaóObject luaósetfallback (char *name, luaóCFunction fallback);
+The first parameter is the fallback name, and the second a CFunction to be used as the new fallback.
+This function returns a luaóObject, which is the old fallback value, or nil on fail (invalid fallback
+name). This old value can be used for chaining fallbacks.
+An example of C code calling a Lua function is shown in Section 8.10.
+5.5 C Functions
+To register a C function to Lua, there is the following macro:
+#define luaóregister(n,f) (luaópushcfunction(f), luaóstoreglobal(n))
+/* char *n; */
+/* luaóCFunction f; */
+which receives the name the function will have in Lua, and a pointer to the function. This pointer
+must have type luaóCFunction, which is defined as
+typedef void (*luaóCFunction) (void);
+that is, a pointer to a function with no parameters and no results.
+In order to communicate properly with Lua, a C function must follow a protocol, which defines
+the way parameters and results are passed.
+To access its arguments, a C function calls:
+luaóObject luaógetparam (int number);
+where number starts with 1 to get the first argument. When called with a number larger than the
+actual number of arguments, this function returns LUAóNOOBJECT. In this way, it is possible to write
+functions that work with a variable number of parameters.
+To return values, a C function just pushes them onto the stack, in direct order (see Section 5.2).
+Like a Lua function, a C function called by Lua can also return many results.
+Section 8.9 presents an example of a CFunction.
+5.6 References to Lua Objects
+As noted in Section 5.5, luaóObjects are volatile. If the C code needs to keep a luaóObject outside
+block boundaries, it must create a reference to the object. The routines to manipulate references
+are the following:
+int luaóref (int lock);
+luaóObject luaógetref (int ref);
+void luaópushref (int ref);
+void luaóunref (int ref);
+14
+
+The function luaóref creates a reference to the object that is on the top of the stack, and returns
+this reference. If lock is true, the object is locked: that means the object will not be garbage
+collected. Notice that an unlocked reference may be garbage collected. Whenever the referenced
+object is needed, a call to luaógetref returns a handle to it, whereas luaópushref pushes the
+object on the stack. If the object has been collected, then luaógetref returns LUAóNOOBJECT, and
+luaópushobject issues an error.
+When a reference is no longer needed, it can be freed with a call to luaóunref.
+6 Predefined Functions and Libraries
+The set of predefined functions in Lua is small but powerful. Most of them provide features that
+allows some degree of reflexivity in the language. Some of these features cannot be simulated with
+the rest of the Language nor with the standard Lua API. Others are just convenient interfaces to
+common API functions.
+The libraries, on the other hand, provide useful routines that are implemented directly through
+the standard API. Therefore, they are not necessary to the language, and are provided as separated
+C modules. Currently there are three standard libraries:
+ffl string manipulation;
+ffl mathematical functions (sin, cos, etc);
+ffl input and output (plus some system facilities).
+In order to have access to these libraries, the host program must call the functions strlibóopen,
+mathlibóopen, and iolibóopen, declared in lualib.h.
+6.1 Predefined Functions
+ffl dofile (filename)
+This function receives a file name, opens it, and executes its contents as a Lua chunk, or as pre≠
+compiled chunks. When called without arguments, it executes the contents of the standard input
+(stdin). If there is any error executing the file, it returns nil. Otherwise, it returns the values
+returned by the chunk, or a non nil value if the chunk returns no values. It issues an error when
+called with a non string argument.
+ffl dostring (string)
+This function executes a given string as a Lua chunk. If there is any error executing the string, it
+returns nil. Otherwise, it returns the values returned by the chunk, or a non nil value if the chunk
+returns no values.
+ffl next (table, index)
+This function allows a program to traverse all fields of a table. Its first argument is a table and
+its second argument is an index in this table. It returns the next index of the table and the value
+associated with the index. When called with nil as its second argument, the function returns the
+first index of the table (and its associated value). When called with the last index, or with nil in
+an empty table, it returns nil.
+15
+
+In Lua there is no declaration of fields; semantically, there is no difference between a field not
+present in a table or a field with value nil. Therefore, the function only considers fields with non
+nil values. The order the indices are enumerated is not specified, even for numeric indices.
+See Section 8.2 for an example of the use of this function.
+ffl nextvar (name)
+This function is similar to the function next, but iterates over the global variables. Its single
+argument is the name of a global variable, or nil to get a first name. Similarly to next, it returns
+the name of another variable and its value, or nil if there are no more variables. See Section 8.2
+for an example of the use of this function.
+ffl tostring (e)
+This function receives an argument of any type and converts it to a string in a reasonable format.
+ffl print (e1, e2, ...)
+This function receives any number of arguments, and prints their values in a reasonable format.
+Each value is printed in a new line. This function is not intended for formatted output, but as
+a quick way to show a value, for instance for error messages or debugging. See Section 6.4 for
+functions for formatted output.
+ffl tonumber (e)
+This function receives one argument, and tries to convert it to a number. If the argument is already a
+number or a string convertible to a number (see Section 4.2), then it returns that number; otherwise,
+it returns nil.
+ffl type (v)
+This function allows Lua to test the type of a value. It receives one argument, and returns its type,
+coded as a string. The possible results of this function are ''nil'' (a string, not the value nil),
+''number'', ''string'', ''table'', ''function'' (returned both for C functions and Lua functions),
+and ''userdata''.
+Besides this string, the function returns a second result, which is the tag of the value. This tag
+can be used to distinguish between user data with different tags, and between C functions and Lua
+functions.
+ffl assert (v)
+This function issues an ``assertion failed!'' error when its argument is nil.
+ffl error (message)
+This function issues an error message and terminates the last called function from the library
+(luaódofile, luaódostring, . . . ). It never returns.
+16
+
+ffl setglobal (name, value)
+This function assigns the given value to a global variable. The string name does not need to be
+a syntactically valid variable name. Therefore, this function can set global variables with strange
+names like `m v 1' or 34. It returns the value of its second argument.
+ffl getglobal (name)
+This function retrieves the value of a global variable. The string name does not need to be a
+syntactically valid variable name.
+ffl setfallback (fallbackname, newfallback)
+This function sets a new fallback function to the given fallback. It returns the old fallback function.
+6.2 String Manipulation
+This library provides generic functions for string manipulation, such as finding and extracting sub≠
+strings and pattern matching. When indexing a string, the first character has position 1. See
+Page 19 for an explanation about patterns, and Section 8.3 for some examples on string manipula≠
+tion in Lua.
+ffl strfind (str, pattern [, init [, plain]])
+This function looks for the first match of pattern in str. If it finds one, it returns the indexes
+on str where this occurence starts and ends; otherwise, it returns nil. If the pattern specifies
+captures, the captured strings are returned as extra results. A third optional numerical argument
+specifies where to start the search; its default value is 1. A value of 1 as a forth optional argument
+turns off the pattern matching facilities, so the function does a plain ``find substring'' operation.
+ffl strlen (s)
+Receives a string and returns its length.
+ffl strsub (s, i [, j])
+Returns another string, which is a substring of s, starting at i and runing until j. If j is absent,
+it is assumed to be equal to the length of s. In particular, the call strsub(s,1,j) returns a prefix
+of s with length j, whereas the call strsub(s,i) returns a suffix of s, starting at i.
+ffl strlower (s)
+Receives a string and returns a copy of that string with all upper case letters changed to lower case.
+All other characters are left unchanged.
+ffl strupper (s)
+Receives a string and returns a copy of that string with all lower case letters changed to upper case.
+All other characters are left unchanged.
+17
+
+ffl strrep (s, n)
+Returns a string which is the concatenation of n copies of the string s.
+ffl ascii (s [, i])
+Returns the ascii code of the character s[i]. If i is absent, then it is assumed to be 1.
+ffl format (formatstring, e1, e2, ...)
+This function returns a formated version of its variable number of arguments following the descrip≠
+tion given in its first argument (which must be a string). The format string follows the same rules
+as the printf family of standard C functions. The only differences are that the options/modifiers
+*, l, L, n, p, and h are not supported, and there is an extra option, q. This option formats a
+string in a form suitable to be safely read back by the Lua interpreter; that is, the string is written
+between double quotes, and all double quotes, returns and backslashes in the string are correctly
+escaped when written. For instance, the call
+format('%q', 'a string with ''quotes'' and ``n new line')
+will produce the string:
+''a string with ``''quotes``'' and ``
+new line''
+The options c, d, E, e, f, g i, o, u, X, and x all expect a number as argument, whereas q and s
+expect a string.
+ffl gsub (s, pat, repl [, n])
+Returns a copy of s, where all occurrences of the pattern pat have been replaced by a replace≠
+ment string specified by repl. This function also returns, as a second value, the total number of
+substitutions made.
+If repl is a string, its value is used for replacement. Any sequence in repl of the form %n with
+n between 1 and 9 stands for the value of the n≠th captured substring.
+If repl is a function, this function is called every time a match occurs, with all captured
+substrings as parameters. If the value returned by this function is a string, it is used as the
+replacement string; otherwise, the replacement string is the empty string.
+An optional parameter n limits the maximum number of substitutions to occur. For instance,
+when n is 1 only the first occurrence of pat is replaced.
+As an example, in the following expression each occurrence of the form $name$ calls the function
+getenv, passing name as argument (because only this part of the pattern is captured). The value
+returned by getenv will replace the pattern. Therefore, the whole expression:
+gsub(''home = $HOME$, user = $USER$'', ''$(%w%w*)$'', getenv)
+may return the string:
+home = /home/roberto, user = roberto
+18
+
+Patterns
+Character Class: a character class is used to represent a set of characters. The following
+combinations are allowed in describing a character class:
+x (where x is any character not in the list ()%.[*?) --- represents the character x itself.
+. --- represents all characters.
+%a --- represents all letters.
+%A --- represents all non letter characters.
+%d --- represents all digits.
+%D --- represents all non digits.
+%l --- represents all lower case letters.
+%L --- represents all non lower case letter characters.
+%s --- represents all space characters.
+%S --- represents all non space characters.
+%u --- represents all upper case letters.
+%U --- represents all non upper case letter characters.
+%w --- represents all alphanumeric characters.
+%W --- represents all non alphanumeric characters.
+%x (where x is any non alphanumeric character) --- represents the character x.
+[char≠set] --- Represents the class which is the union of all characters in char≠set. To include a ]
+in char≠set, it must be the first character. A range of characters may be specified by separating
+the end characters of the range with a ≠; e.g., A≠Z specifies the upper case characters. If ≠
+appears as the first or last character of char≠set, then it represents itself. All classes %x
+described above can also be used as components in a char≠set. All other characters in char≠
+set represent themselves.
+[ìchar≠set] --- represents the complement of char≠set, where char≠set is interpreted as above.
+Pattern Item: a pattern item may be a single character class, or a character class followed by
+* or by ?. A single character class matches any single character in the class. A character class
+followed by * matches 0 or more repetitions of characters in the class. A character class followed
+by ? matches 0 or one occurrence of a character in the class. A pattern item may also has the form
+%n, for n between 1 and 9; such item matches a sub≠string equal to the n≠th captured string.
+19
+
+Pattern: a pattern is a sequence of pattern items. Any repetition item (*) inside a pattern will
+always match the longest possible sequence. A ì at the beginning of a pattern anchors the match
+at the beginning of the subject string. A $ at the end of a pattern anchors the match at the end
+of the subject string.
+A pattern may contain sub≠patterns enclosed in parentheses, that describe captures. When a
+match succeeds, the sub≠strings of the subject string that match captures are captured for future
+use. Captures are numbered according to their left parentheses.
+6.3 Mathematical Functions
+This library is an interface to some functions of the standard C math library. Moreover, it registers
+a fallback for the binary operator ì which, when applied to numbers xìy, returns x y .
+The library provides the following functions:
+abs acos asin atan atan2 ceil cos floor log log10
+max min mod sin sqrt tan random randomseed
+Most of them are only interfaces to the homonymous functions in the C library, except that, for
+the trigonometric functions, all angles are expressed in degrees, not radians.
+The function max returns the maximum value of its numeric arguments. Similarly, min computes
+the minimum. Both can be used with an unlimited number of arguments.
+The functions random and randomseed are interfaces to the simple random generator functions
+rand and srand, provided by ANSI C. The function random returns pseudo≠random numbers in
+the range [0; 1).
+6.4 I/O Facilities
+All I/O operations in Lua are done over two current files: one for reading and one for writing.
+Initially, the current input file is stdin, and the current output file is stdout.
+Unless otherwise stated, all I/O functions return nil on failure and some value different from
+nil on success.
+ffl readfrom (filename)
+This function may be called in three ways. When called with a file name, it opens the named file,
+sets it as the current input file, and returns a handle to the file (this handle is a user data containing
+the file stream FILE *). When called with a file handle, returned by a previous call, it restores
+the file as the current input. When called without parameters, it closes the current input file, and
+restores stdin as the current input file.
+If this function fails, it returns nil, plus a string describing the error.
+System dependent: if filename starts with a ---, then a piped input is open, via function popen.
+ffl writeto (filename)
+This function may be called in three ways. When called with a file name, it opens the named
+file, sets it as the current output file, and returns a handle to the file (this handle is a user data
+containing the file stream FILE *). Notice that, if the file already exists, it will be completely erased
+with this operation. When called with a file handle, returned by a previous call, it restores the file
+20
+
+as the current output. When called without parameters, this function closes the current output
+file, and restores stdout as the current output file.
+If this function fails, it returns nil, plus a string describing the error.
+System dependent: if filename starts with a ---, then a piped output is open, via function popen.
+ffl appendto (filename)
+This function opens a file named filename and sets it as the current output file. It returns the
+file handle, or nil in case of error. Unlike the writeto operation, this function does not erase any
+previous content of the file. If this function fails, it returns nil, plus a string describing the error.
+Notice that function writeto is available to close a file.
+ffl remove (filename)
+This function deletes the file with the given name. If this function fails, it returns nil, plus a string
+describing the error.
+ffl rename (name1, name2)
+This function renames file name1 to name2. If this function fails, it returns nil, plus a string
+describing the error.
+ffl tmpname ()
+This function returns a string with a file name that can safely be used for a temporary file.
+ffl read ([readpattern])
+This function reads the current input according to a read pattern, that specifies how much to read;
+characters are read from the current input file until the read pattern fails or ends. The function
+read returns a string with the characters read, or nil if the read pattern fails and the result string
+would be empty. When called without parameters, it uses a default pattern that reads the next
+line (see below).
+A read pattern is a sequence of read pattern items. An item may be a single character class
+or a character class followed by ? or by *. A single character class reads the next character from
+the input if it belongs to the class, otherwise it fails. A character class followed by ? reads the
+next character from the input if it belongs to the class; it never fails. A character class followed
+by * reads until a character that does not belong to the class, or end of file; since it can match a
+sequence of zero characteres, it never fails. 4
+A pattern item may contain sub≠patterns enclosed in curly brackets, that describe skips. Char≠
+acters matching a skip are read, but are not included in the resulting string.
+Following are some examples of read patterns and their meanings:
+ffl ''.'' returns the next character, or nil on end of file.
+ffl ''.*'' reads the whole file.
+4 Notice that this behaviour is different from regular pattern matching, where a * expands to the maximum length
+such that the rest of the pattern does not fail.
+21
+
+ffl ''[ì``n]*--``nù'' returns the next line (skipping the end of line), or nil on end of file. This is
+the default pattern.
+ffl ''--%s*ù%S%S*'' returns the next word (maximal sequence of non white≠space characters), or
+nil on end of file.
+ffl ''--%s*ù[+≠]?%d%d*'' returns the next integer or nil if the next characters do not conform to
+an integer format.
+ffl write (value1, ...)
+This function writes the value of each of its arguments to the current output file. The arguments
+must be strings or numbers. If this function fails, it returns nil, plus a string describing the error.
+ffl date ([format])
+This function returns a string containing date and time formatted according to the given string
+format, following the same rules of the ANSI C function strftime. When called without argu≠
+ments, it returns a reasonable date and time representation.
+ffl exit ([code])
+This function calls the C function exit, with an optional code, to terminate the program.
+ffl getenv (varname)
+Returns the value of the environment variable varname, or nil if the variable is not defined.
+ffl execute (command)
+This function is equivalent to the C function system. It passes command to be executed by an
+Operating System Shell. It returns an error code, which is implementation≠defined.
+7 The Debugger Interface
+Lua has no built≠in debugger facilities. Instead, it offers a special interface, by means of functions
+and hooks, which allows the construction of different kinds of debuggers, profilers, and other tools
+that need ``inside information'' from the interpreter. This interface is declared in the header file
+luadebug.h.
+7.1 Stack and Function Information
+The main function to get information about the interpreter stack is
+luaóFunction luaóstackedfunction (int level);
+It returns a handle (luaóFunction) to the activation record of the function executing at a given
+level. Level 0 is the current running function, while level n + 1 is the function that has called
+level n. When called with a level greater than the stack depth, luaóstackedfunction returns
+LUAóNOOBJECT.
+22
+
+The type luaóFunction is just another name to luaóObject. Although, in this library, a
+luaóFunction can be used wherever a luaóObject is required, a parameter luaóFunction accepts
+only a handle returned by luaóstackedfunction.
+Three other functions produce extra information about a function:
+void luaófuncinfo (luaóObject func, char **filename, int *linedefined);
+int luaócurrentline (luaóFunction func);
+char *luaógetobjname (luaóObject o, char **name);
+luaófuncinfo gives the file name and the line where the given function has been defined. If the
+``function'' is in fact the main code of a chunk, then linedefined is 0. If the function is a C
+function, then linedefined is ≠1, and filename is ''(C)''.
+The function luaócurrentline gives the current line where a given function is executing. It
+only works if the function has been pre≠compiled with debug information (see Section 4.8). When
+no line information is available, it returns ≠1.
+Function luaógetobjname tries to find a reasonable name for a given function. Because func≠
+tions in Lua are first class values, they do not have a fixed name. Some functions may be the value of
+many global variables, while others may be stored only in a table field. Function luaógetobjname
+first checks whether the given function is a fallback. If so, it returns the string ''fallback'', and
+name is set to point to the fallback name. Otherwise, if the given function is the value of a global
+variable, then luaógetobjname returns the string ''global'', while name points to the variable name.
+If the given function is neither a fallback nor a global variable, then luaógetobjname returns the
+empty string, and name is set to NULL.
+7.2 Manipulating Local Variables
+The following functions allow the manipulation of the local variables of a given activation record.
+They only work if the function has been pre≠compiled with debug information (see Section 4.8).
+luaóObject luaógetlocal (luaóFunction func, int localónumber, char **name);
+int luaósetlocal (luaóFunction func, int localónumber);
+The first one returns the value of a local variable, and sets name to point to the variable name.
+localónumber is an index for local variables. The first parameter has index 1, and so on, until
+the last active local variable. When called with a localónumber greater than the number of
+active local variables, or if the activation record has no debug information, luaógetlocal returns
+LUAóNOOBJECT.
+The function luaósetlocal sets the local variable localónumber to the value previously pushed
+on the stack (see Section 5.2). If the function succeeds, then it returns 1. If localónumber is greater
+than the number of active local variables, or if the activation record has no debug information, then
+this function fails and returns 0.
+7.3 Hooks
+The Lua interpreter offers two hooks for debugging purposes:
+typedef void (*luaóCHFunction) (luaóFunction func, char *file, int line);
+extern luaóCHFunction luaócallhook;
+typedef void (*luaóLHFunction) (int line);
+extern luaóLHFunction luaólinehook;
+23
+
+The first one is called whenever the interpreter enters or leaves a function. When entering a
+function, its parameters are a handle to the function activation record, plus the file and the line
+where the function is defined (the same information which is provided by luaófuncinfo); when
+leaving a function, func is LUAóNOOBJECT, file is ''(return)'', and line is 0.
+The other hook is called every time the interpreter changes the line of code it is execut≠
+ing. Its only parameter is the line number (the same information which is provided by the call
+luaócurrentline(luaóstackedfunction(0))). This second hook is only called if the active func≠
+tion has been pre≠compiled with debug information (see Section 4.8).
+A hook is disabled when its value is NULL (0), which is the initial value of both hooks.
+8 Some Examples
+This section gives examples showing some features of Lua. It does not intend to cover the whole
+language, but only to illustrate some interesting uses of the system.
+8.1 Data Structures
+Tables are a strong unifying data constructor. They directly implement a multitude of data types,
+like ordinary arrays, records, sets, bags, and lists.
+Arrays need no explanations. In Lua, it is conventional to start indices from 1, but this is
+only a convention. Arrays can be indexed by 0, negative numbers, or any other value (except nil).
+Records are also trivially implemented by the syntactic sugar a.x.
+The best way to implement a set is to store its elements as indices of a table. The statement
+s = --ù creates an empty set s. The statement s[x] = 1 inserts the value of x into the set s. The
+expression s[x] is true if and only if x belongs to s. Finally, the statement s[x] = nil removes x
+from s.
+Bags can be implemented similarly to sets, but using the value associated to an element as its
+counter. So, to insert an element, the following code is enough:
+if s[x] then s[x] = s[x]+1 else s[x] = 1 end
+and to remove an element:
+if s[x] then s[x] = s[x]≠1 end
+if s[x] == 0 then s[x] = nil end
+Lisp≠like lists also have an easy implementation. The ``cons'' of two elements x and y can
+be created with the code l = --car=x, cdr=yù. The expression l.car extracts the header, while
+l.cdr extracts the tail. An alternative way is to create the list directly with l=--x,yù, and then to
+extract the header with l[1] and the tail with l[2].
+8.2 The Functions next and nextvar
+This example shows how to use the function next to iterate over the fields of a table. Function
+clone receives any table and returns a clone of it.
+function clone (t) ≠≠ t is a table
+local newót = --ù ≠≠ create a new table
+local i, v = next(t, nil) ≠≠ i is an index of t, v = t[i]
+24
+
+while i do
+newót[i] = v
+i, v = next(t, i) ≠≠ get next index
+end
+return newót
+end
+The next example prints the names of all global variables in the system with non nil values:
+function printGlobalVariables ()
+local i, v = nextvar(nil)
+while i do
+print(i)
+i, v = nextvar(i)
+end
+end
+8.3 String Manipulation
+The first example is a function to trim extra white≠spaces at the beginning and end of a string.
+function trim(s)
+local ó, i = strfind(s, 'ì *')
+local f, óó = strfind(s, ' *$')
+return strsub(s, i+1, f≠1)
+end
+The second example shows a function that eliminates all spaces of a string.
+function removeóblanks (s)
+return gsub(s, ''%s%s*'', '''')
+end
+8.4 Variable number of arguments
+Lua does not provide any explicit mechanism to deal with variable number of arguments in function
+calls. However, one can use table constructors to simulate this mechanism. As an example, suppose
+a function to concatenate all its arguments. It could be written like
+function concat (o)
+local i = 1
+local s = ''
+while o[i] do
+s = s .. o[i]
+i = i+1
+end
+return s
+end
+To call it, one uses a table constructor to join all arguments:
+x = concat--''hello '', ''john'', '' and '', ''mary''ù
+25
+
+8.5 Persistence
+Because of its reflexive facilities, persistence in Lua can be achieved within the language. This
+section shows some ways to store and retrieve values in Lua, using a text file written in the language
+itself as the storage media.
+To store a single value with a name, the following code is enough:
+function store (name, value)
+write(format('``n%s =', name))
+writeóvalue(value)
+end
+function writeóvalue (value)
+local t = type(value)
+if t == 'nil' then write('nil')
+elseif t == 'number' then write(value)
+elseif t == 'string' then write(value, 'q')
+end
+end
+In order to restore this value, a luaódofile suffices.
+Storing tables is a little more complex. Assuming that the table is a tree, and that all indices
+are identifiers (that is, the tables are being used as records), then its value can be written directly
+with table constructors. First, the function writeóvalue is changed to
+function writeóvalue (value)
+local t = type(value)
+if t == 'nil' then write('nil')
+elseif t == 'number' then write(value)
+elseif t == 'string' then write(value, 'q')
+elseif t == 'table' then writeórecord(value)
+end
+end
+The function writeórecord is:
+function writeórecord(t)
+local i, v = next(t, nil)
+write('--') ≠≠ starts constructor
+while i do
+store(i, v)
+write(', ')
+i, v = next(t, i)
+end
+write('ù') ≠≠ closes constructor
+end
+8.6 Inheritance
+The fallback for absent indices can be used to implement many kinds of inheritance in Lua. As an
+example, the following code implements single inheritance:
+26
+
+function Index (t,f)
+if f == 'parent' then ≠≠ to avoid loop
+return OldIndex(t,f)
+end
+local p = t.parent
+if type(p) == 'table' then
+return p[f]
+else
+return OldIndex(t,f)
+end
+end
+OldIndex = setfallback(''index'', Index)
+Whenever Lua attempts to access an absent field in a table, it calls the fallback function Index. If
+the table has a field parent with a table value, then Lua attempts to access the desired field in this
+parent object. This process is repeated ``upwards'' until a value for the field is found or the object
+has no parent. In the latter case, the previous fallback is called to supply a value for the field.
+When better performance is needed, the same fallback may be implemented in C, as illustrated
+in Figure 1. This code must be registered with:
+luaópushstring(''parent'');
+lockedParentName = luaóref(1);
+luaópushobject(luaósetfallback(''index'', Index));
+lockedOldIndex = luaóref(1);
+Notice how the string ''parent'' is kept locked in Lua for optimal performance.
+8.7 Programming with Classes
+There are many different ways to do object≠oriented programming in Lua. This section presents
+one possible way to implement classes, using the inheritance mechanism presented above. Please
+notice: the following examples only work with the index fallback redefined according to Section 8.6.
+As one could expect, a good way to represent a class is with a table. This table will contain all
+instance methods of the class, plus optional default values for instance variables. An instance of a
+class has its parent field pointing to the class, and so it ``inherits'' all methods.
+For instance, a class Point can be described as in Figure 2. Function create helps the creation
+of new points, adding the parent field. Function move is an example of an instance method. Finally,
+a subclass can be created as a new table, with the parent field pointing to its superclass. It is
+interesting to notice how the use of self in method create allows this method to work properly
+even when inherited by a subclass. As usual, a subclass may overwrite any inherited method with
+its own version.
+8.8 Modules
+Here we explain one possible way to simulate modules in Lua. The main idea is to use a table to
+store the module functions.
+A module should be written as a separate chunk, starting with:
+27
+
+#include ''lua.h''
+int lockedParentName; /* lock index for the string ''parent'' */
+int lockedOldIndex; /* previous fallback function */
+void callOldFallback (luaóObject table, luaóObject index)
+--
+luaóObject oldIndex = luaógetref(lockedOldIndex);
+luaópushobject(table);
+luaópushobject(index);
+luaócallfunction(oldIndex);
+if (luaógetresult(1) != LUAóNOOBJECT)
+luaópushobject(luaógetresult(1)); /* return result */
+ù
+void Index (void)
+--
+luaóObject table = luaógetparam(1);
+luaóObject index = luaógetparam(2);
+luaóObject parent;
+if (luaóisstring(index) && strcmp(luaógetstring(index), ''parent'') == 0)
+--
+callOldFallback(table, index);
+return;
+ù
+luaópushobject(table);
+luaópushref(lockedParentName);
+parent = luaógetsubscript();
+if (luaóistable(parent))
+--
+luaópushobject(parent);
+luaópushobject(index);
+/* return result from getsubscript */
+luaópushobject(luaógetsubscript());
+ù
+else
+callOldFallback(table, index);
+ù
+Figure 1: Inheritance in C.
+28
+
+Point = --x = 0, y = 0ù
+function Point:create (o)
+o.parent = self
+return o
+end
+function Point:move (p)
+self.x = self.x + p.x
+self.y = self.y + p.y
+end
+...
+≠≠
+≠≠ creating points
+≠≠
+p1 = Point:create--x = 10, y = 20ù
+p2 = Point:create--x = 10ù ≠≠ y will be inherited until it is set
+≠≠
+≠≠ example of a method invocation
+≠≠
+p1:move(p2)
+Figure 2: A Class Point.
+29
+
+function open (mod)
+local n, f = next(mod, nil)
+while n do
+setglobal(n, f)
+n, f = next(mod, n)
+end
+end
+Figure 3: Opening a module.
+if modulename then return end ≠≠ avoid loading twice the same module
+modulename = --ù ≠≠ create a table to represent the module
+After that, functions can be directly defined with the syntax
+function modulename.foo (...)
+...
+end
+Any code that needs this module has only to execute dofile(''filename''), where filename is
+the file where the module is written. After this, any function can be called with
+modulename.foo(...)
+If a module function is going to be used many times, the program can give a local name to it.
+Because functions are values, it is enough to write
+localname = modulename.foo
+Finally, a module may be opened, giving direct access to all its functions, as shown in the code in
+Figure 3.
+8.9 A CFunction
+A CFunction to compute the maximum of a variable number of arguments is shown in Figure 4.
+After registered with
+luaóregister (''max'', mathómax);
+this function is available in Lua, as follows:
+i = max(4, 5, 10, ≠34) ≠≠ i receives 10
+8.10 Calling Lua Functions
+This example illustrates how a C function can call the Lua function removeóblanks presented in
+Section 8.3.
+30
+
+void mathómax (void)
+--
+int i=1; /* number of arguments */
+double d, dmax;
+luaóObject o;
+/* the function must get at least one argument */
+if ((o = luaógetparam(i++)) == LUAóNOOBJECT)
+luaóerror (''too few arguments to function `max''');
+/* and this argument must be a number */
+if (!luaóisnumber(o))
+luaóerror (''incorrect argument to function `max''');
+dmax = luaógetnumber (o);
+/* loops until there is no more arguments */
+while ((o = luaógetparam(i++)) != LUAóNOOBJECT)
+--
+if (!luaóisnumber(o))
+luaóerror (''incorrect argument to function `max''');
+d = luaógetnumber (o);
+if (d ? dmax) dmax = d;
+ù
+/* push the result to be returned */
+luaópushnumber (dmax);
+ù
+Figure 4: C function math max.
+31
+
+void removeóblanks (char *s)
+--
+luaópushstring(s); /* prepare parameter */
+luaócall(''removeóblanks''); /* call Lua function */
+strcpy(s, luaógetstring(luaógetresult(1))); /* copy result back to 's' */
+ù
+9 Lua Stand≠alone
+Although Lua has been designed as an extension language, the language can also be used as a
+stand≠alone interpreter. An implementation of such an interpreter, called simply lua, is provided
+with the standard distribution. This program can be called with any sequence of the following
+arguments:
+≠v prints version information.
+≠ runs interactively, accepting commands from standard input until an EOF.
+≠e stat executes stat as a Lua chunk.
+var=exp executes var=exp as a Lua chunk.
+filename executes file filename as a Lua chunk.
+All arguments are handle in order. For instance, an invocation like
+$ lua ≠ a=1 prog.lua
+will first interact with the user until an EOF, then will set a to 1, and finally will run file prog.lua.
+Please notice that the interaction with the shell may lead to unintended results. For instance,
+a call like
+$ lua a=''name'' prog.lua
+will not set a to the string ''name''. Instead, the quotes will be handled by the shell, lua will get
+only a=name to run, and a will finish with nil. Instead, one should write
+$ lua 'a=''name''' prog.lua
+Acknowledgments
+The authors would like to thank CENPES/PETROBR '
+AS which, jointly with TeC Graf , used exten≠
+sively early versions of this system and gave valuable comments. The authors would also like to
+thank Carlos Henrique Levy, who found the name of the game. Lua means moon in Portuguese.
+Incompatibilities with Previous Versions
+Although great care has been taken to avoid incompatibilities with the previous public versions of
+Lua, some differences had to be introduced. Here is a list of all these incompatibilities.
+32
+
+Incompatibilities with version 2.4
+The whole I/O facilities have been rewritten. We strongly encourage programmers to addapt their
+code to this new version. However, we are keeping the old version of the libraries in the distribution,
+to allow a smooth transition. The incompatibilities between the new and the old libraries are:
+ffl The format facility of function write has been supersed by function format; therefore this
+facility has been dropped.
+ffl Function read now uses read patterns to specify what to read; this is incompatible with the
+old format options.
+ffl Function strfind now accepts patterns, so it may have a different behavior when the pattern
+includes special characteres.
+Incompatibilities with version 2.2
+ffl Functions date and time (from iolib) have been superseded by the new, more powerful
+version of function date.
+ffl Function append (from iolib) now returns 1 whenever it succeeds, whether the file is new
+or not.
+ffl Function int2str (from strlib) has been superseded by new function format, with param≠
+eter ''%c''.
+ffl The API lock mechanism has been superseded by the reference mechanism. However, lua.h
+provides compatibility macros, so there is no need to change programs.
+ffl The API function luaópushliteral now is just a macro to luaópushstring.
+Incompatibilities with version 2.1
+ffl The function type now returns the string ''function'' both for C and Lua functions. Because
+Lua functions and C functions are compatible, this behavior is usually more useful. When
+needed, the second result of function type may be used to distinguish between Lua and C
+functions.
+ffl A function definition only assigns the function value to the given variable at execution time.
+Incompatibilities with version 1.1
+ffl The equality test operator now is denoted by ==, instead of =.
+ffl The syntax for table construction has been greatly simplified. The old @(size) has been sub≠
+stituted by --ù. The list constructor (formerly @[...]) and the record constructor (formerly
+@--...ù) now are both coded like --...ù. When the construction involves a function call, like
+in @func--...ù, the new syntax does not use the @. More important, a construction function
+must now explicitly return the constructed table.
+ffl The function luaócall no longer has the parameter nparam.
+33
+
+ffl The function luaópop is no longer available, since it could lead to strange behavior. In
+particular, to access results returned from a Lua function, the new macro luaógetresult
+should be used.
+ffl The old functions luaóstorefield and luaóstoreindexed have been replaced by
+int luaóstoresubscript (void);
+with the parameters explicitly pushed on the stack.
+ffl The functionality of the function luaóerrorfunction has been replaced by the fallback mech≠
+anism (see Section 4.8).
+ffl When calling a function from the Lua library, parameters passed through the stack must be
+pushed just before the corresponding call, with no intermediate calls to Lua. Special care
+should be taken with macros like luaógetindexed and luaógetfield.
+34
+
+Index
+.. 6
+abs 20
+acos 20
+Adjustment 3
+and 6
+appendto 21
+arguments 8
+arithmetic fallback 9
+arithmetic operators 5
+arrays 2
+ascii 18
+asin 20
+assert 16
+Assignment 4
+associative arrays 2
+atan 20
+atan2 20
+basic types 2
+block 4
+C pointers 2
+captures 20
+ceil 20
+CFunction 2
+character class 19
+chunk 2
+clone 24
+closing a file 21
+Coercion 3
+Comments 3
+concatenation fallback 9
+concatenation 6
+condition expression 4
+constructors 6
+cos 20
+Data Structures 24
+date 22
+debug pragma 10
+dofile 15
+dostring 15
+error fallback 10
+error 16
+execute 22
+exit 22
+exponentiation 5
+Expressions 5
+fallbacks 9
+floor 20
+format 18
+function call 7
+Function Definitions 8
+function fallback 9
+function 2
+functions in C 30
+getenv 22
+getglobal 17
+gettable fallback 9
+global environment 2
+Global variables 2
+gsub 18
+Identifiers 3
+if≠then≠else 4
+index fallback 9
+index getglobal 9
+inheritance 26
+Literal strings 3
+Local variables 5
+log10 20
+log 20
+logical operators 6
+Lua Stand≠alone 32
+luac 11
+luac 2
+lua call 13
+lua callfunction 13
+lua CFunction 14
+lua createtable 13
+lua dofile 10
+lua dostring 10
+lua error 13
+lua getcfunction 11
+lua getglobal 12
+lua getnumber 11
+lua getparam 14
+lua getref 14
+lua getresult 13
+lua getstring 11
+lua getsubscript 12
+lua getuserdata 11
+35
+
+lua iscfunction 11
+lua isfunction 11
+lua isnil 11
+lua isnumber 11
+lua isstring 11
+lua istable 11
+lua isuserdata 11
+LUA NOOBJECT 14
+lua Object 11
+lua pushcfunction 12
+lua pushnil 12
+lua pushnumber 12
+lua pushobject 12
+lua pushref 14
+lua pushstring 12
+lua pushuserdata 12
+lua pushusertag 12
+lua ref 14
+lua register 14
+lua setfallback 14
+lua storeglobal 12
+lua storesubscript 12
+lua type 11
+lua unref 14
+max 20
+methods 8
+min 20
+mod 20
+Modules 27
+multiple assignment 4
+next 15
+next 24
+nextvar 16
+nextvar 24
+nil 2
+not 6
+number 2
+Numerical constants 3
+Operator precedence 6
+or 6
+order fallback 9
+pattern item 19
+pattern 20
+Persistence 26
+piped input 20
+piped output 21
+popen 20
+popen 21
+pre≠compilation 2
+predefined functions 15
+print 16
+Programming with Classes 27
+random 20
+randomseed 20
+read pattern 21
+read 21
+readfrom 20
+records 2
+reference 14
+reflexivity 15
+relational operators 5
+remove 21
+rename 21
+repeat≠until 4
+reserved words 3
+return statement 5
+return 4
+self 8
+setfallback 10
+setfallback 17
+setglobal 17
+settable fallback 9
+short≠cut evaluation 6
+Simple Expressions 5
+sin 20
+skips 21
+sqrt 20
+statements 4
+strfind 17
+string 2
+strlen 17
+strlower 17
+strrep 18
+strsub 17
+strupper 17
+table 2
+tag 16
+tan 20
+tmpname 21
+tokens 3
+tonumber 16
+tostring 16
+type 16
+Types 2
+36
+
+userdata 2
+Variable number of arguments 25
+version 1.1 33
+version 2.1 33
+version 2.2 33
+version 2.4 33
+while≠do 4
+write 22
+writeto 20
+37
+
+Contents
+1 Introduction 1
+2 Environment and Chunks 2
+3 Types 2
+4 The Language 3
+4.1 Lexical Conventions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.2 Coercion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.3 Adjustment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+4.4 Statements . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4.4.1 Blocks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4.4.2 Assignment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4.4.3 Control Structures . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4
+4.4.4 Function Calls as Statements . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4.4.5 Local Declarations . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4.5 Expressions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4.5.1 Simple Expressions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4.5.2 Arithmetic Operators . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4.5.3 Relational Operators . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4.5.4 Logical Operators . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+4.5.5 Concatenation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+4.5.6 Precedence . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+4.5.7 Table Constructors . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+4.5.8 Function Calls . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+4.6 Function Definitions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+4.7 Fallbacks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+4.8 Error Handling . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+5 The Application Program Interface 10
+5.1 Executing Lua Code . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+5.2 Converting Values between C and Lua . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+5.3 Manipulating Lua Objects . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+5.4 Calling Lua Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+5.5 C Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+5.6 References to Lua Objects . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+6 Predefined Functions and Libraries 15
+6.1 Predefined Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+6.2 String Manipulation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 17
+6.3 Mathematical Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+6.4 I/O Facilities . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+38
+
+7 The Debugger Interface 22
+7.1 Stack and Function Information . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+7.2 Manipulating Local Variables . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+7.3 Hooks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+8 Some Examples 24
+8.1 Data Structures . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+8.2 The Functions next and nextvar . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+8.3 String Manipulation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+8.4 Variable number of arguments . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 25
+8.5 Persistence . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+8.6 Inheritance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 26
+8.7 Programming with Classes . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+8.8 Modules . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+8.9 A CFunction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+8.10 Calling Lua Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 30
+9 Lua Stand≠alone 32
+39
+
