@@ -45,7 +45,7 @@ void new_buffers(void) {
 }
 <<C functions>>=
 char *getline (FILE *fp) {
-
+    (void) rcsid; (void) rcsname;   /* prevent warnings */
     <<if [[buf1==NULL]], allocate initial buffers>>
     
     buf1=fgets(buf1, buf_size, fp);
