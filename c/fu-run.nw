@@ -1,0 +1,27 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Finduses main program}
+
+<<*>>=
+#include <stdio.h>
+#include "nwbuffer.h"
+#include "ipipe.h"
+#include "cargs.h"
+#include "fromascii.h"
+#include <mem.h>
+
+int finduses_filter(void *arg, NowebBuffer in, NowebBuffer out);
+
+int main(int argc, char** argv) {
+  struct c_args* args = ALLOC(sizeof(struct c_args));
+  args->argc = argc;
+  args->argv = argv;
+  return IPipe_run(
+     IPipe_connect(IPipe_stage("Stages.fromascii", readascii,           stdin),
+     IPipe_connect(IPipe_stage("Stages.finduses",  finduses_filter,     args),
+                   IPipe_stage("Stages.toascii",   NowebBuffer_toascii, stdout))),
+     NULL, NULL);
+}
+@
