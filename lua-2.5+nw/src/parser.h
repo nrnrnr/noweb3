@@ -8,23 +8,27 @@
 #define DO 264
 #define REPEAT 265
 #define UNTIL 266
-#define END 267
-#define RETURN 268
-#define LOCAL 269
-#define FUNCTION 270
-#define DOTS 271
-#define NUMBER 272
-#define STRING 273
-#define NAME 274
-#define AND 275
-#define OR 276
-#define EQ 277
-#define NE 278
-#define LE 279
-#define GE 280
-#define CONC 281
-#define UNARY 282
-#define NOT 283
+#define CASE 267
+#define GLOBMATCH 268
+#define OF 269
+#define END 270
+#define RETURN 271
+#define LOCAL 272
+#define FUNCTION 273
+#define DOTS 274
+#define ARROW 275
+#define NUMBER 276
+#define STRING 277
+#define NAME 278
+#define AND 279
+#define OR 280
+#define EQ 281
+#define NE 282
+#define LE 283
+#define GE 284
+#define CONC 285
+#define UNARY 286
+#define NOT 287
 typedef union 
 {
  int   vInt;
