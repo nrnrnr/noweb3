@@ -4,27 +4,68 @@
 Missing ``{\tt @xref tag} {\it label tag},'' where {\it label} is the name of 
 a label and {\it tag} is a chunk number, page number, sub-page number, or
 other identifying mark.
+
+
+
 @
 \section{Cross-reference and index support}
 <<*>>=
+Noidx = { }
+
+<<hackers: subsubsections for internal filters>>=
+\subsubsection{The filter \texttt{Stages.noidx}}
+
+\texttt{Stages.noidx} computes all the index and cross-reference information
+represented by the \kw{index} and \kw{xref} keywords.
+Its arbitrary argument is a list of strings denoting options.
+
+The {\tt -delay}  option delays heading material until
+after the first chunk, and brings trailing material before the last
+chunk.
+In particular, it causes
+the list of chunks and the index of identifiers to be emitted before
+the last chunk.
+
+The {\tt -docanchor $n$} option sets the anchor for a code chunk.
+\begin{enumerate}
+\item
+If a documentation chunk precedes the code chunk and is $n$ or more lines long,
+ put the anchor $n$~lines from the end of that documentation chunk.
+\item
+If a documentation chunk precedes the code chunk and is fewer than $n$~lines long, 
+put the anchor at the beginning of that documentation chunk.
+\item
+If no documentation chunk precedes the code chunk, 
+put the anchor at the beginning of
+the code chunk, just as if {\tt -docanchor} had not been used.
+\end{enumerate}
+This option is used to create anchors suitable for the HTML back end.
+Its effect  is to jump the documentation preceding a code chunk 
+rather than to the code chunk itself.
+
+<<*>>=
 function Stages.noidx(sourcebuf, sinkbuf, args)
 --global lines		# all the input lines
---global delay		# non-null if markup should be delayed past the first chunk 
+  local delay		-- non-null if markup should be delayed past the first chunk 
 --global anchordist	# max distance before code chunk to place defining @xref label
+
+  local theseuses, thesedefns, thischunk
 
   <<initialization>>
   delay = nil
   <<swallow [[args]]>>
   r = NWB.reader(sourcebuf)
+  local newbuf = NWB.new()
   key, arg = NWB.read(r)
   while key do
     case key of
     <<cases for pass 1>>
     end
+    NWB.put(newbuf, key, arg)
     key, arg = NWB.read(r)
   end
 
-  r = NWB.reader(sourcebuf)
+  r = NWB.reader(newbuf)
   key, arg = NWB.read(r)
   while key do
     case key of
@@ -43,6 +84,7 @@ while List.length(args) > 0 do
   | "-delay" => delay = 1
   | "-docanchor" => anchordist = tonumber(List.get(args)) or anchordist
   else => noweb_error("unknown argument ", a)
+  end
 end
 @
 <<*>>=
@@ -65,6 +107,7 @@ allchunks = Set.new ()
 allidents = Set.new ()
 indexlabels = { }
 defanchors = { }
+Noidx.defanchors = defanchors
 uses = { }
 anchorlabel = { }
 indexanchorlabel = { }
@@ -76,47 +119,52 @@ This trick lets me avoid planting anchors in empty documentation chunks.
  --  static lastdefnlabel, thisusecount, lastanchorlabel, nonblank, textnonblank
  --  initial nonblank = ~' \t'
 
-| NW_FILE => curfile = uniqueid(arg)
-| NW_BEGIN_DOCS, NW_BEGIN_CODE => lastbegin = key; textnonblank = nil
+| NW_FILE => curfile = Noidx.uniqueid(arg)
+| NW_BEGIN_DOCS, NW_BEGIN_CODE => 
+             lastbegin = key; lastbeginarg = arg; textnonblank = nil
 | NW_END_DOCS => if anchordist and textnonblank then
                    <<insert and set [[lastanchorlabel]]>>
+                 else
+                   lastanchorlabel = nil
                  end
 | NW_END_CODE => lastanchorlabel = nil
 | NW_TEXT => textnonblank = textnonblank or strfind(arg, '[%S]')
 | NW_DEFN => 
         Set.insert(allchunks, arg)
-        lastdefnlabel = newdefnlabel(arg)
-        slipin(NW_XREF_LABEL, lastdefnlabel)
+        lastdefnlabel = Noidx.newdefnlabel(arg)
+        NWB.put(newbuf, NW_XREF_LABEL, lastdefnlabel)
         lastanchorlabel = lastanchorlabel or lastdefnlabel
         anchorlabel[arg] = anchorlabel[arg] or lastanchorlabel
-        addlabel(defanchors, arg, lastanchorlabel)
-        addud(chunkud, "defn", arg, lastanchorlabel)
+        Noidx.addlabel(defanchors, arg, lastanchorlabel)
+        Noidx.addud(chunkud, "defn", arg, lastanchorlabel)
         thisusecount = 0
 | NW_USE => 
    if lastbegin == NW_BEGIN_CODE then
           Set.insert(allchunks, arg)
           thisusecount = thisusecount + 1
-          slipin(NW_XREF_LABEL, lastdefnlabel .. "-u" .. thisusecount)
-          addlabel(uses, arg, lastanchorlabel)
-          addud(chunkud, "use", arg, lastanchorlabel)
+          NWB.put(newbuf, NW_XREF_LABEL, lastdefnlabel .. "-u" .. thisusecount)
+          Noidx.addlabel(uses, arg, lastanchorlabel)
+          Noidx.addud(chunkud, "use", arg, lastanchorlabel)
    else
-          textnonblank = textnonblank or strfind(arg, '[%S]')   -- could appear in quoted code
+          textnonblank = textnonblank or strfind(arg, '[%S]')   
+	                                   -- could appear in quoted code
    end
 | NW_INDEX_USE =>
     Set.insert(allidents, arg)
-    if lastanchorlabel then addud(indexud, "use", arg, lastanchorlabel) end
+    if lastanchorlabel then Noidx.addud(indexud, "use", arg, lastanchorlabel) end
 | NW_INDEX_DEFN, NW_INDEX_LOCALDEFN =>
     Set.insert(allidents, arg)
     if lastanchorlabel then
       l = lastanchorlabel
     else
-      l = newdocslabel()
-      slipin(NW_XREF_LABEL, l)
+      l = Noidx.newdocslabel()
+      NWB.put(newbuf, NW_XREF_LABEL, l)
     end
-    addud(indexud, "defn", arg, l)
+    Noidx.addud(indexud, "defn", arg, l)
     indexanchorlabel[arg] = indexanchorlabel[arg] or l
-    slipin(NW_XREF_REF, l) -- bug fix
-@ %def allchunks allidents indexlabels defanchors uses curfile lastbeginarg anchorlabel
+    NWB.put(newbuf, NW_XREF_REF, l) -- bug fix
+@ 
+%def allchunks allidents indexlabels defanchors uses curfile lastbeginarg anchorlabel
 The bug fix\label{multi-def-bug}
 alluded to above occurs when there are multiple definitions of an identifier.
 In this case, we can't just use [[indexanchorlabel[id]]], because that refers only to 
@@ -127,283 +175,388 @@ Because the tag for the current [[@defn]] is lost by the time pass~2
 rolls around, we have to slip it in on pass~1.
 @
 <<insert and set [[lastanchorlabel]]>>=
-t = List.new {}; n = anchordist
-lastanchorlabel = newdocslabel()
-while lines[-1] ?
-  if n = 0 | ="@begin docs" then
-     { put(lines, "@xref label " .. lastanchorlabel); lines ..|:= t; break }
-  else 
-     { if ="@nl" & pos(0) then n -:= 1; push(t, pull(lines)) }
-@
-[[slipin]] sticks something into [[lines]] just before the current (last) line.
-It makes sense only on the first pass.
+lastanchorlabel = Noidx.insertAnchor(newbuf, anchordist)
 <<*>>=
-procedure slipin(s)
-  local last
-  last = pull(lines)
-  every put(lines, s | last)
-  return s
+Noidx = Noidx or { }
+function Noidx.insertAnchor(buf, n)
+  local t = List.new {}
+  local lbl = Noidx.newdocslabel()
+  local k, v
+  k, v = NWB.pull(buf)
+  while k and n > 0 and k ~= NW_BEGIN_DOCS do
+    if k == NW_NL then n = n - 1 end
+    List.put(t, {k, v})
+    k, v = NWB.pull(buf)
+  end
+  NWB.put(buf, k, v)
+  NWB.put(buf, NW_XREF_LABEL, lbl)
+  n = List.length(t)
+  while n > 0 do
+    local p = t[n]
+    NWB.put(buf, p[1], p[2])
+    n = n - 1
+  end
+  return lbl
 end
+@ 
 <<*>>=
-procedure pass2(name, arg)
-  static thesedefns, theseuses
-  static thischunk # null for docs chunk, arg of @defn for code chunk
-  static defout		# number of definitions emitted for each chunk
-  initial defout = table(0)
-  case name of {
-    "begin" : {
-       if \delay & lastbeginarg == arg then <<write trailers if not already written>>
-       <<copy [[name]] and [[arg]] to output>>
-       every thesedefns | theseuses = set()
-       thischunk = nil
-    }
-    "defn" : { thischunk = arg; 
-               write("@xref ref " .. anchorlabel[arg])
-               <<copy [[name]] and [[arg]] to output>> 
-               <<write chunk cross-reference>>
-             }
-# must postpone index cross-reference to end of chunk because
-# the info is accumulated in [[thesdefns]] and [[theseuses]] on this pass
-    "end" :  { if match("code", arg) then {<<write index cross-reference>>}
-               <<copy [[name]] and [[arg]] to output>> 
-             }
-    "use"  : { write("@xref ref " .. (\anchorlabel[arg] | "nw@notdef")) # was "???"
-               <<copy [[name]] and [[arg]] to output>> 
-             }
-    "index" : {
-       <<shift [[name]] and [[arg]]>>
-       case name of {
-         "defn" | "localdefn" : { 
-                    insert(thesedefns, arg)
-                    # no xref ref because of bug fix
-		  }
-         "use"  : { insert(theseuses, arg)
-                    write("@xref ref ", \indexanchorlabel[arg])
-		  }
-       }
-       name = "index " .. name
-       <<copy [[name]] and [[arg]] to output>>
-    }
-    "text" : # grotesque hack! for chunks and index in HTML
-       if /thischunk then # docs mode
-         case arg of { 
-       	   "<nowebchunks>" : lognowebchunks()
-           "<nowebindex>"  : lognowebindex()
-           default : <<copy [[name]] and [[arg]] to output>>
-       	 }
-       else <<copy [[name]] and [[arg]] to output>>
-    "fatal" : { <<copy [[name]] and [[arg]] to output>>; exit(1) }
-    "trailer" : { <<write trailers if not already written>>
-                  <<copy [[name]] and [[arg]] to output>>
-                }
-    default : <<copy [[name]] and [[arg]] to output>>
-  }
-  return
-end
-@ %def thischunk thislabel thesedefns theseuses
+--  static thesedefns, theseuses
+--  static thischunk # null for docs chunk, arg of @defn for code chunk
+--  static defout		# number of definitions emitted for each chunk
+<<initialization>>=
+defout = { }   -- regrettably, can't set default to 0
+<<cases for pass 2>>=
+| NW_BEGIN_DOCS, NW_BEGIN_CODE => 
+    if delay and lastbeginarg == arg then <<write trailers if not already written>> end
+    NWB.put(sinkbuf, key, arg)
+    thesedefns = Set.new ()
+    theseuses  = Set.new ()
+    thischunk = nil
+| NW_DEFN =>
+    thischunk = arg
+    if anchorlabel[arg] then NWB.put(sinkbuf, NW_XREF_REF, anchorlabel[arg]) end
+    NWB.put(sinkbuf, key, arg)
+    <<write chunk cross-reference>>
+| NW_END_CODE => 
+    -- must postpone index cross-reference to end of chunk because
+    -- the info is accumulated in [[thesdefns]] and [[theseuses]] on this pass
+    <<write index cross-reference>>
+    NWB.put(sinkbuf, key, arg)
+| NW_USE => 
+    NWB.put(sinkbuf, NW_XREF_REF, anchorlabel[arg] or "nw@notdef") -- was "???"
+    NWB.put(sinkbuf, key, arg)
+| NW_INDEX_DEFN, NW_INDEX_LOCALDEFN =>
+    Set.insert(thesedefns, arg) -- no xref ref because of bug fix
+    NWB.put(sinkbuf, key, arg)
+| NW_INDEX_USE =>
+    Set.insert(theseuses, arg) -- no xref ref because of bug fix
+    if indexanchorlabel[arg] then
+      NWB.put(sinkbuf, NW_XREF_REF, indexanchorlabel[arg]) 
+    end
+    NWB.put(sinkbuf, key, arg)
+| NW_TEXT => -- grotesque hack! for chunks and index in HTML
+   if not thischunk then -- docs mode
+     case arg of
+     | "<nowebchunks>" => Noidx.lognowebchunks(sinkbuf)
+     | "<nowebindex>"  => Noidx.lognowebindex(sinkbuf)
+     else => NWB.put(sinkbuf, key, arg)
+     end
+   else
+    NWB.put(sinkbuf, key, arg)
+   end
+| NW_FATAL =>    NWB.put(sinkbuf, key, arg); exit(1)
+| NW_TRAILER =>  <<write trailers if not already written>>
+                 NWB.put(sinkbuf, key, arg)
+else =>
+  NWB.put(sinkbuf, key, arg)
+@ 
+%def thischunk thislabel thesedefns theseuses
 The case of the [[@index defn]] is the one case where we don't emit a
 reference, because the reference has to go in earlier.  See
 page~\pageref{multi-def-bug} for an explanation.
 @
 <<write chunk cross-reference>>=
-defout[thischunk] +:= 1
-write("@xref prevdef ", defanchors[thischunk][defout[thischunk] - 1]) # fail if first
-write("@xref nextdef ", defanchors[thischunk][defout[thischunk] + 1]) # faif if last
-if defout[thischunk] = 1 then {<<write use and def summary for chunk cross-reference>>}
+defout[thischunk] = (defout[thischunk] or 0) + 1
+if defanchors[thischunk][defout[thischunk] - 1] then -- fail if first
+  NWB.put(sinkbuf, NW_XREF_PREVDEF, defanchors[thischunk][defout[thischunk] - 1])
+end
+if defanchors[thischunk][defout[thischunk] + 1] then -- fail if last
+  NWB.put(sinkbuf, NW_XREF_NEXTDEF, defanchors[thischunk][defout[thischunk] + 1])
+end
+if defout[thischunk] == 1 then 
+  <<write use and def summary for chunk cross-reference>>
+end
 <<write index cross-reference>>=
-theseuses --:= thesedefns
-if *thesedefns > 0 then {
-  write("@index begindefs")
-  every i = !alphasort(thesedefns) do {
-    every u = !\indexud[i] do u ? if ="use " then write("@index isused ", tab(0))
-    write("@index defitem ", i)
-  }
-  write("@index enddefs")
-}
-if *theseuses > 0 then {
-  l = alphasort(theseuses)
-  write("@index beginuses")
-  every i = !alphasort(theseuses) do {
-    every d = !\indexud[i] do d ? if ="defn " then write("@index isdefined ", tab(0))
-    write("@index useitem ", i)
-  }
-  write("@index enduses")
-}
-#  every write("@literal \\nwindexuse{", TeXliteral(ident = !l), "}",
-#                          "{", indexlabels[ident], "}{", thislabel, "}")
+theseuses = Set.diff(theseuses, thesedefns)
+if Set.length(thesedefns) > 0 then
+  NWB.put(sinkbuf, NW_INDEX_BEGINDEFS)
+  local l = sort(alphacmp, Set.members(thesedefns))
+  while List.length(l) > 0 do 
+    local i = List.get(l)
+    local us = indexud[i]
+    if us then
+      local j = 1
+      local uslen = List.length(us)
+      while j <= uslen do
+        if strfind(us[j], "^use ") then
+          NWB.put(sinkbuf, NW_INDEX_ISUSED, strsub(us[j], 5))
+        end
+        j = j + 1
+      end
+    end
+    NWB.put(sinkbuf, NW_INDEX_DEFITEM, i)
+  end
+  NWB.put(sinkbuf, NW_INDEX_ENDDEFS)
+end
+if Set.length(theseuses) > 0 then 
+  l = sort(alphacmp, Set.members(theseuses))
+  NWB.put(sinkbuf, NW_INDEX_BEGINUSES)
+  while List.length(l) > 0 do 
+    i = List.get(l)
+    local ds = indexud[i]
+    if ds then
+      local dslen = List.length(ds)
+      j = 1
+      while j <= dslen do
+        if strfind(ds[j], "^defn ") then
+          NWB.put(sinkbuf, NW_INDEX_ISDEFINED, strsub(ds[j], 6))
+        end
+        j = j + 1
+      end
+    end
+    NWB.put(sinkbuf, NW_INDEX_USEITEM, i)
+  end
+  NWB.put(sinkbuf, NW_INDEX_ENDUSES)
+end
+-- this code is also commented out in the Icon version
+--  every write("@literal \\nwindexuse{", TeXliteral(ident = !l), "}",
+--                          "{", indexlabels[ident], "}{", thislabel, "}")
 <<write use and def summary for chunk cross-reference>>=
-if *defanchors[thischunk] > 1 then {
-  write("@xref begindefs")
-  every write("@xref defitem ", defanchors[thischunk][2 to *defanchors[thischunk]])
-  write("@xref enddefs")
-}
-if \uses[thischunk] then {
-  write("@xref beginuses")
-  every write("@xref useitem ", !uses[thischunk])
-  write("@xref enduses")
-} else 
-  write("@xref notused ", thischunk)
+if List.length(defanchors[thischunk]) > 1 then
+  NWB.put(sinkbuf, NW_XREF_BEGINDEFS)
+  k = 2
+  while k <= List.length(defanchors[thischunk]) do
+    NWB.put(sinkbuf, NW_XREF_DEFITEM, defanchors[thischunk][k])
+    k = k + 1
+  end
+  NWB.put(sinkbuf, NW_XREF_ENDDEFS)
+end
+if uses[thischunk] then
+  NWB.put(sinkbuf, NW_XREF_BEGINUSES)
+  k = 1
+  while k <= List.length(uses[thischunk]) do
+    NWB.put(sinkbuf, NW_XREF_USEITEM, uses[thischunk][k])
+    k = k + 1
+  end
+  NWB.put(sinkbuf, NW_XREF_ENDUSES)
+else 
+  NWB.put(sinkbuf, NW_XREF_NOTUSED, thischunk)
+end
 @
-<<shift [[name]] and [[arg]]>>=
-{ arg ? { name = tab(upto(' ')|0); arg = if =" " then tab(0) else nil } }
-<<copy [[name]] and [[arg]] to output>>=
-write("@", name, (" " .. \arg) | "")
 <<*>>=
-procedure newdefnlabel(arg)
-  /defanchors[arg] = []
-  return "NW" .. curfile .. "-" .. uniqueid(arg) .. "-" .. alphacode(1+*defanchors[arg])
+function Noidx.newdefnlabel(arg)
+  defanchors[arg] = defanchors[arg] or List.new()
+  return "NW" .. curfile .. "-" .. Noidx.uniqueid(arg) .. "-" .. 
+          alphacode(1+List.length(defanchors[arg]))
+end
+<<initialization>>=
+Noidx.docsLabelCount = 0
+<<*>>=
+function Noidx.newdocslabel()
+  Noidx.docsLabelCount = Noidx.docsLabelCount + 1
+  return "NWD" .. alphacode(Noidx.docsLabelCount)
 end
 <<*>>=
-procedure newdocslabel()
-  static count
-  initial count = 0
-  return "NWD" .. alphacode(count +:= 1)
-end
-<<*>>=
-procedure addlabel(tbl, arg, label)
-  /tbl[arg] = []
-  if tbl[arg][-1] == label then nil
-  else put(tbl[arg], label)
+function Noidx.addlabel(tbl, arg, label)
+  tbl[arg] = tbl[arg] or List.new {}
+  local n = List.length(tbl[arg])
+  if n == 0 or tbl[arg][n] ~= label then
+    List.put(tbl[arg], label)
+  end
   return label
 end
 <<*>>=      
-global chunkud, indexud
-procedure addud(udlist, name, arg, label)
-  /udlist[arg] = []
-  s = name .. " " .. label
-  return udlist[arg][-1] == s | put(udlist[arg], s)
+-- global chunkud, indexud
+function Noidx.addud(udlist, name, arg, label)
+  udlist[arg] = udlist[arg] or List.new {}
+  local s = name .. " " .. label
+  local n = List.length(udlist[arg])
+  if not (n > 0 and udlist[arg][n] == s) then
+    List.put(udlist[arg], s)
+  end
 end
 <<initialization>>=
-every chunkud | indexud = table();
+chunkud = {}
+indexud = {}
 @
 Because it's silly to have both a use and a definition point to the same chunk, 
 I strip out uses that list the same chunk as their definitions.
 <<*>>=
-procedure strip_extra_uses(udlista)
-  local old, new, item
-  old = copy(udlista)
-  new = []
-  while item = get(old) do
-    item ? 
-      if ="defn " then 
+function Noidx.strip_extra_uses(udlista)
+  local old, new, item, i, n
+  n = List.length(udlista)
+  new = List.new {}
+  newnext = 1
+  local ud_set = { }
+  i = 1
+  while i <= n do
+    ud_set[udlista[i]] = 1
+    i = i + 1
+  end
+  i = 1
+  while i <= n do  
+    item = udlista[i]
+    i = i + 1
+    if strfind(item, "^defn ") then
+      <<add item if needed>>
+    elseif strfind(item, "^use ") then
+      if not ud_set["defn " .. strsub(item, 5)] then
         <<add item if needed>>
-      else if ="use " then 
-        if "defn " .. tab(0) == !(old|new) then
-          nil # write(&errout, "Stripped extra ", item)
-        else
-          <<add item if needed>>
+      end
+    end
+  end
   return new
 end
 <<add item if needed>>=
-{ new[-1] == item | put(new, item) }
+if new[newnext-1] ~= item then 
+  List.put(new, item)
+  newnext = newnext + 1
+end
 @
 [[uniqueid]] eliminates both {\TeX} and HTML specials.
-<<*>>=      
-procedure uniqueid(name)
-  local key
-  static idtable, keycounts, badchars, badstars
-  initial { idtable = table() ; keycounts = table(0) 
-            badchars = ~ (&letters ++ &digits ++ '!$()*+,./:;=?@|')
-            badstars = repl("*", *badchars)
-          }
-
-  if not member(idtable, name) then {
-    key = make_key(map(name, badchars, badstars))
-    keycounts[key] +:= 1
-    idtable[name] = key 
-    if keycounts[key] > 1 then idtable[name] ..:= "." .. alphacode(keycounts[key])
-  }
-  return idtable[name]
-end
+<<initialization>>=
+Noidx.idtable = {}
+Noidx.keycounts = {} -- can't make 0 default
 <<*>>=
-procedure make_key(key, len)
-    static noslash
-    initial noslash = ~ '/'
+function Noidx.uniqueid(name)
+  if not Noidx.idtable[name] then
+    -- local key = Noidx.make_key(gsub(name, '[^%a%d!$%(%)%*+,%./:;=%?@|]', "*")) 
+    local key = alphacode_crc(name)
+    local c = Noidx.keycounts
+    c[key] = (c[key] or 0) + 1
+    if c[key] > 1 then
+      Noidx.idtable[name] = key .. "." .. alphacode(c[key])
+    else
+      Noidx.idtable[name] = key 
+    end
+  end
+  return Noidx.idtable[name]
+end
+<<icon>>=
+make(key, len) = 
     key ? return make_key(3(tab(upto('/')), ="/", tab(many(noslash)), pos(0)), *key) |
-                 key[1+:3] .. alphacode(\len | *key) |
-                 key .. (alphacode(\len) | "")
+                 key[1+:3] || alphacode(\len | *key) |
+                 key || (alphacode(\len) | "")
+<<icon 2>>=
+make(key, len) = 
+return if has / then
+  make_key(tail, strlen(key))
+else if has 3 then first 3 || alphacode(\len | *key)
+else key || (alphacode(\len) | "")
+<<icon 3>>=
+make(key) = 
+return if has / then
+  if *tail >= 3 then first 3 || alphacode(strlen(key))
+  else tail || alphacode(strlen(key))
+else if has 3 then first 3 || alphacode(*key)
+else key 
+<<*>>=
+function Noidx.make_key(key)
+  local answer
+  if strfind(key, "/") then
+    local coda = alphacode(strlen(key))
+    key = gsub(key, "^.*/", "")  -- use basename
+    if strlen(key) > 3 then
+      return strsub(key, 1, 3) .. coda
+    else
+      return key .. coda
+    end
+  else
+    if strlen(key) > 3 then
+      return strsub(key, 1, 3) .. alphacode(strlen(key))
+    else
+      return key
+    end
+  end
 end
 <<*>>=
-global wrote_trailers
+-- global wrote_trailers
 <<write trailers if not already written>>=
-(if /wrote_trailers then {
-   wrote_trailers = 1
-   write("@nl")
-   write("@nl")
-   lognowebchunks()
-   lognowebindex() 
-} else nil)
+if not Noidx.wrote_trailers then
+   Noidx.wrote_trailers = 1
+   NWB.put(sinkbuf, NW_NL)
+   NWB.put(sinkbuf, NW_NL)
+   Noidx.lognowebchunks(sinkbuf)
+   Noidx.lognowebindex(sinkbuf) 
+end
+<<initialization>>=
+Noidx.wrote_trailers = nil
 @
 Now, a special hack, so we can write this stuff in the right place on pass 2.
 <<*>>=
-procedure lognowebchunks(noheader)
-  static called
-  if \called then return
-  else called = 1
+function Noidx.lognowebchunks(sinkbuf)
+  if Noidx.logged_chunks then return end
+  Noidx.logged_chunks = 1
 
-  l = alphasort(allchunks)
-  write("@xref beginchunks")
-  while name = get(l) do {
-    write("@xref chunkbegin ", (\anchorlabel[name] | "nw@notdef"), " ", name)
-    every write("@xref chunk", !\chunkud[name])
-    write("@xref chunkend")
-  }
-  write("@xref endchunks")
+  local l = sort(alphacmp, Set.members(allchunks))
+  NWB.put(sinkbuf, NW_XREF_BEGINCHUNKS)
+  local n = List.length(l)
+  local i = 1
+  while i <= n do
+    local name = l[i]
+    i = i + 1
+    NWB.put(sinkbuf, NW_XREF_CHUNKBEGIN, 
+                     (anchorlabel[name] or "nw@notdef") .. " " .. name)
+    local cud = chunkud[name]
+    if cud then
+      local m = List.length(cud)
+      local j = 1
+      while j <= m do
+        local r = cud[j]
+        if strfind(r, "^defn ") then
+          NWB.put(sinkbuf, NW_XREF_CHUNKDEFN, strsub(r, 6))
+        else
+          NWB.put(sinkbuf, NW_XREF_CHUNKUSE, strsub(r, 5))
+        end
+        j = j + 1
+      end
+    end
+    NWB.put(sinkbuf, NW_XREF_CHUNKEND)
+  end
+  NWB.put(sinkbuf, NW_XREF_ENDCHUNKS)
 end
+<<initialization>>=
+Noidx.logged_chunks = nil
+Noidx.logged_index = nil
 <<*>>=
-procedure lognowebindex()
-  static called
-  if \called then return
-  else called = 1
+function Noidx.lognowebindex(sinkbuf)
+  if Noidx.logged_index then return end
+  Noidx.logged_index = 1
 
-  l = alphasort(allidents)
-  write("@index beginindex")
-  while name = get(l) do {
-    write("@index entrybegin ", (\indexanchorlabel[name] | "nw@notdef"), " ", name)
-    every write("@index entry", !strip_extra_uses(\indexud[name]))
-    write("@index entryend")
-  }
-  write("@index endindex")
+  local l = sort(alphacmp, Set.members(allidents))
+  NWB.put(sinkbuf, NW_INDEX_BEGININDEX)
+  local n = List.length(l)
+  local i = 1
+  while i <= n do
+    local name = l[i]
+    i = i + 1
+    NWB.put(sinkbuf, NW_INDEX_ENTRYBEGIN,
+                     (indexanchorlabel[name] or "nw@notdef") .. " " .. name)
+    local iud = indexud[name]
+    iud = iud and Noidx.strip_extra_uses(iud)
+    if iud then
+      local m = List.length(iud)
+      local j = 1
+      while j <= m do
+        local r = iud[j]
+        if strfind(r, "^defn ") then
+          NWB.put(sinkbuf, NW_INDEX_ENTRYDEFN, strsub(r, 6))
+        else
+          NWB.put(sinkbuf, NW_INDEX_ENTRYUSE, strsub(r, 5))
+        end
+        j = j + 1
+      end
+    end
+    NWB.put(sinkbuf, NW_INDEX_ENTRYEND)
+  end
+  NWB.put(sinkbuf, NW_INDEX_ENDINDEX)
 end
 <<*>>=
-procedure alphasort(x)
-  t = table()
-  every s = !x do t[s] = sortkey(s)
-  t = sort(t, 2)
-  l = []
-  every put(l, (!t)[1])
-  return l
-end
-<<*>>=
-procedure sortkey(s)
-  static keep
-  initial keep = &lcase ++ ' '
-  s = map(s)
-  r = ""
-  s ? while tab(upto(keep)) do r ..:= move(1)
-  return r .. "\n" .. s         # relies on \n sorting lower than other chars
-end
-@ %def sortkey
-<<*>>=
-procedure alphacode(n)
-  static codes
-  initial codes = &digits .. &letters
-  return if n < 0 then 
-           "-" .. alphacode(-n)
-         else if n >= *codes then
-           alphacode(n / *codes) .. alphacode(n % *codes)
-         else
-           codes[n+1]
+Noidx.alphacodes = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+function alphacode(n)
+  if n < 0 then 
+    return  "-" .. alphacode(-n)
+  elseif n >= 62 then -- 62 is length of alphacodes
+    local pfx = floor(n / 62)
+    return alphacode(pfx) .. alphacode(n - 62 * pfx)
+  else
+    return strsub(Noidx.alphacodes, n+1, n+1)
+  end
 end
 @ 
 <<*>>=
-procedure fatal(L[])
-  write!(["@fatal noidx "] ..| L)
-  write!([&errout, "noweb error in noidx: "] ..| L)
-  exit(1)
-end
-<<*>>=
-procedure rcsinfo () 
+function Noidx.rcsinfo () 
   return "$Id$" ..
          "$Name$"
 end
