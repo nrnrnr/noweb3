@@ -152,23 +152,9 @@ function image(x)
        else return tostring(x)
        end
   | "table" =>
-        s = "{"; pfx = " "
-        i = nil
-        n = 0
-        repeat
-          i, v = next(x, i)
-          if (i ~= nil) then
-	    s = s .. pfx 
-   	    if type(i) == "string" and strfind(i, "^[a-zA-Z][a-zA-Z_0-9]*$") then
-              s = s .. i
-            else
-              s = s .. "[" .. image(i) .. "]"
-            end
-	    s = s .. " = " .. image(v)
-          end
-          pfx = ", "
-        until (i == nil)
-        return s .. " }"
+        if List.is(x) then <<return image of list [[x]]>>
+        else               <<return image of table [[x]]>>
+        end
   | "nil" => return 'nil'
   | "userdata" => ty, tag = type(x)
                   case tag of
@@ -178,6 +164,33 @@ function image(x)
   else => return tostring(x)
   end
 end
+<<return image of table [[x]]>>=
+s = "{"; pfx = " "
+i = nil
+n = 0
+repeat
+  i, v = next(x, i)
+  if (i ~= nil) then
+    s = s .. pfx 
+    if type(i) == "string" and strfind(i, "^[a-zA-Z][a-zA-Z_0-9]*$") then
+      s = s .. i
+    else
+      s = s .. "[" .. image(i) .. "]"
+    end
+    s = s .. " = " .. image(v)
+  end
+  pfx = ", "
+until (i == nil)
+return s .. " }"
+<<return image of list [[x]]>>=
+s = "{"; pfx = " "
+i = 1
+while x[i] do
+  s = s .. pfx .. image(x[i])
+  pfx = ", "
+  i = i + 1
+end
+return s .. " }"
 @ 
 <<hackers: entries for Lua functions>>=
 image&
