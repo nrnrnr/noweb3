@@ -1,0 +1,20 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\section{Passing C-like arguments}
+
+Since many of the pipeline stages can be external programs, they use
+an [[argc]]/[[argv]] interface.
+This module contains code to help set up [[argc]] and [[argv]] from
+Lua.
+<<header>>=
+#ifndef CARGS_H
+#define CARGS_H
+
+typedef struct c_args {
+  int argc;
+  char** argv;
+} *CArgs;
+
+#endif
+@ 
+

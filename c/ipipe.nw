@@ -1,0 +1,284 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter {Noweb internal pipeline}
+
+This is the design of the Noweb internal pipeline, which will be a
+series of program stages passing binary data to and from each other
+using the unbounded NowebBuffer.  This pipeline structure will pass
+ASCII information to and from the external pipeline as well.
+
+\section {Interface}
+
+This pipeline makes use of four types of pipe stages--[[Sink]],
+[[Filter]], [[Source]], and [[IPipe]].  There are functions to build
+originating [[Sink]]s, [[Filter]]s, and [[Source]]s, as well as
+functions to extend each of these by adding a filter.  At least a
+one-stage [[Source]] and a one-stage [[Sink]] are needed to create an
+[[IPipe]].  Once created, the [[IPipe]] may be printed or executed.
+
+<<ipipe.h>>=
+#ifndef IPIPE_H
+#define IPIPE_H
+
+#include "nwbuffer.h"
+
+typedef struct Source* Source;
+typedef struct Filter* Filter;
+typedef struct Sink* Sink;
+typedef struct IPipe* IPipe;
+
+<<prototypes for basics>>
+<<identity operations>>
+<<operations on completed pipeline>>
+
+#endif
+@ 
+
+The basic create functions simply create the appropriate type when
+passed a function pointer representing the stage to run and an
+argument to pass that function.
+
+<<prototypes for basics>>=
+extern Source Source_create  (int (*stage)(void*, NowebBuffer), void* arg);
+extern Filter Filter_create  (int (*stage)(void*, NowebBuffer, NowebBuffer),
+			      void* arg);
+extern Sink   Sink_create    (int (*stage)(void*, NowebBuffer), void* arg);
+extern IPipe  IPipe_create   (Source source, Sink sink);
+@ 
+
+The identity operations return an extended version of the original
+type when a filter is added to it.
+
+<<identity operations>>=
+extern Source Source_extend  (Source source, Filter filter);
+extern Filter Filter_extend  (Filter filter1, Filter filter2);
+extern Sink   Sink_extend    (Filter filter, Sink sink);
+extern Filter identity_filter;
+@ 
+
+Once completed, a pipeline may be executed or freed from memory.
+
+<<operations on completed pipeline>>=
+extern int    IPipe_execute  (IPipe pipe);
+extern void   IPipe_free     (IPipe* pipe);
+@ 
+
+This interface requires the use of several data types mentioned
+above.  Here are their definitions.
+
+[[struct Source]] contains either a function pointer representing the pipe
+stage to run and the argument to that function, or it contains another
+[[Source]] and [[Filter]].
+
+<<type definitions>>=
+struct Source {
+  int isPair;
+  union {
+    struct {
+      NowebBuffer buf;
+      Source left;
+      Filter right;
+    } pair;
+    struct {
+      int (*stage)(void*, NowebBuffer);
+      void* arg;
+    } leaf;
+  } u;
+};
+@ 
+
+Similarly, [[struct Filter]] contains a function pointer representing
+the stage to run and the argument to that function, or it contains two
+[[Filter]]s connected by a [[NowebBuffer]].
+
+<<type definitions>>=
+struct Filter {
+  int isPair;
+  union {
+    struct {
+      NowebBuffer buf;
+      Filter left;
+      Filter right;
+    } pair;
+    struct {
+      int (*stage)(void*, NowebBuffer, NowebBuffer);
+      void* arg;
+    } leaf;
+  } u;
+};
+@ 
+
+Like [[struct Source]] and [[struct Filter]], [[struct Sink]] contains
+either a function pointer and an argument or another [[Sink]] and [[Filter]].
+
+<<type definitions>>=
+struct Sink {
+  int isPair;
+  union {
+    struct {
+      NowebBuffer buf;
+      Filter left;
+      Sink right;
+    } pair;
+    struct {
+      int (*stage)(void*, NowebBuffer);
+      void* arg;
+    } leaf;
+  } u;
+};
+@ 
+
+The connected [[IPipe]] simply contains a [[Source]] and a [[Sink]].
+Any [[Filter]]s must be connected to them.
+
+<<type definitions>>=
+struct IPipe {
+  Source source;
+  NowebBuffer buffer;
+  Sink sink;
+};
+@ 
+
+\section {Implementation}
+
+<<ipipe.c>>=
+#include "ipipe.h"
+#include "nwbuffer.h"
+#include <mem.h>
+
+<<type definitions>>
+<<functions>>
+@ 
+
+The create functions simply allocate space for the particular type and set
+the appropriate data members equal to the parameters.
+
+<<functions>>=
+Source Source_create(int (*stage)(void*, NowebBuffer), void* arg) {
+  Source new_source = ALLOC(sizeof(struct Source));
+  new_source->isPair = 0;
+  new_source->u.leaf.stage = stage;
+  new_source->u.leaf.arg = arg;
+  return new_source;
+}
+
+Filter Filter_create(int (*stage)(void*, NowebBuffer, NowebBuffer), void* arg) {
+  Filter new_filter = ALLOC(sizeof(struct Filter));
+  new_filter->isPair = 0;
+  new_filter->u.leaf.stage = stage;
+  new_filter->u.leaf.arg = arg;
+  return new_filter;
+}
+
+Sink Sink_create(int (*stage)(void*, NowebBuffer), void* arg) {
+  Sink new_sink = ALLOC(sizeof(struct Sink));
+  new_sink->isPair = 0;
+  new_sink->u.leaf.stage = stage;
+  new_sink->u.leaf.arg = arg;
+  return new_sink;
+}
+
+IPipe IPipe_create(Source source, Sink sink) {
+  IPipe new_pipe = ALLOC(sizeof(struct IPipe));
+  NowebBuffer new_buf = NowebBuffer_create();
+  new_pipe->source = source;
+  new_pipe->sink = sink;
+  new_pipe->buffer = new_buf;
+  return new_pipe;
+}
+@ 
+
+The extend functions are used to extend a Source, Filter, or Sink by adding a
+Filter to them.  Both the Filter and the object being extended must already be
+created.  A NowebBuffer is created to pass information between the two objects,
+and a new object is created which contains the buffer and the original two
+objects.  The new object then becomes a tree, with the two original objects as
+leaves.
+
+<<functions>>=
+Source Source_extend(Source source, Filter filter) {
+  Source new_source = ALLOC(sizeof(struct Source));
+  NowebBuffer new_buf = NowebBuffer_create();
+  new_source->isPair = 1;
+  new_source->u.pair.left = source;
+  new_source->u.pair.right = filter;
+  new_source->u.pair.buf = new_buf;
+  return new_source;
+}
+
+Filter Filter_extend(Filter filter1, Filter filter2) {
+  Filter new_filter = ALLOC(sizeof(struct Filter));
+  NowebBuffer new_buf = NowebBuffer_create();
+  new_filter->isPair = 1;
+  new_filter->u.pair.left = filter1;
+  new_filter->u.pair.right = filter2;
+  new_filter->u.pair.buf = new_buf;
+  return new_filter;
+}
+
+Sink Sink_extend(Filter filter, Sink sink) {
+  Sink new_sink = ALLOC(sizeof(struct Sink));
+  NowebBuffer new_buf = NowebBuffer_create();
+  new_sink->isPair = 1;
+  new_sink->u.pair.left = filter;
+  new_sink->u.pair.right = sink;
+  new_sink->u.pair.buf = new_buf;
+  return new_sink;
+}
+@ 
+
+The pipeline is executed by walking down the left side of the tree until a leaf
+is reached, executing that function and placing results into the buffer at that
+leaf, then executing the next leaf to the right, and so on until all leaf
+functions are executed.
+
+<<functions>>=
+void Filter_execute(Filter filter, NowebBuffer in, NowebBuffer out) {
+  if (filter->isPair) {
+    Filter_execute(filter->u.pair.left, in, filter->u.pair.buf);
+    Filter_execute(filter->u.pair.right, filter->u.pair.buf, out);
+  }
+  else
+    filter->u.leaf.stage(filter->u.leaf.arg, in, out);
+}
+
+void Source_execute(Source source, NowebBuffer buffer) {
+  if (source->isPair) {
+    Source_execute(source->u.pair.left, source->u.pair.buf);
+    Filter_execute(source->u.pair.right, source->u.pair.buf, buffer);
+  }
+  else
+    source->u.leaf.stage(source->u.leaf.arg, buffer);
+}
+
+void Sink_execute(Sink sink, NowebBuffer buffer) {
+  if (sink->isPair) {
+    Filter_execute(sink->u.pair.left, buffer, sink->u.pair.buf);
+    Sink_execute(sink->u.pair.right, sink->u.pair.buf);
+  }
+  else
+    sink->u.leaf.stage(sink->u.leaf.arg, buffer);
+}
+
+int IPipe_execute(IPipe pipe) {
+  Source_execute(pipe->source, pipe->buffer);
+  Sink_execute(pipe->sink, pipe->buffer);
+  return 0;
+}
+@ 
+
+NOTE: THIS FUNCTION SHOULD BE FINISHED!!!
+
+<<functions>>=
+void IPipe_free(IPipe* pipe) {
+
+
+}
+
+<<*>>=
+<<ipipe.c>>
+<<header>>=
+<<ipipe.h>>
+@

@@ -1,0 +1,78 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{getenv and setenv functions for Lua}
+
+This file contains Lua registration of the C functions [[getenv]] and
+[[putenv]].
+
+<<env-lua.c>>=
+#include <stdio.h>
+#include <stdlib.h>
+#include "lua.h"
+#include "lualib.h"
+#include "lua-help.h"
+#include "atom.h"
+
+<<getenv>>
+<<putenv>>
+<<abort>>
+<<Lua registration of functions>>
+@
+
+\section{getenv}
+
+<<getenv>>=
+static void getenv_lua(void) {
+  lua_Object var;
+  lua_get_args("System.getenv", 1, LUA_STRING, &var);
+  lua_pushstring(getenv(lua_getstring(var)));
+}
+@ 
+
+\section{putenv}
+
+Although you would think it unnecessary to declare [[putenv]], since it 
+resides in \texttt{stdlib.h}, for some unfathomable reason
+gcc complains that it is implicitly declared.
+<<putenv>>=
+extern int putenv (const char *);  /* keep gcc -Wall from complaining! */
+static void putenv_lua(void) {
+  lua_Object var;
+  lua_get_args("System.putenv", 1, LUA_STRING, &var);
+  lua_pushnumber((double)putenv(Atom_string(lua_getstring(var))));
+}
+@ 
+\section{Abort}
+
+This function will enable us to get a core dump, which may be helpful
+in diagnosing problems.
+
+<<abort>>=
+static void abort_lua(void) {
+  abort();
+}
+
+<<Lua registration of functions>>=
+int posix_open(void) {
+  lua_module_register("System", "getenv", getenv_lua);
+  lua_module_register("System", "putenv", putenv_lua);
+  lua_module_register("System", "abort",  abort_lua);
+  lua_pushuserdata(stderr);
+  lua_storeglobal("stderr");
+  return 1;
+}
+
+<<env-lua.h>>=
+#ifndef ENVLUA_H
+#define ENVLUA_H
+
+extern int posix_open(void);
+
+#endif
+<<*>>=
+<<env-lua.c>>
+<<header>>=
+<<env-lua.h>>
+@
