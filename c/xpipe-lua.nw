@@ -212,6 +212,7 @@ void XPipe_open(void) {
   lua_module_register("XPipe", "print",   XPipe_print_lua);
   lua_module_register("XPipe", "run",     XPipe_execute_lua);
   lua_module_register("XPipe", "free",    XPipe_free_lua);
+  lua_pushnumber(XPIPE);    lua_storeglobal("XPIPE");
 }
 
 <<xpipe-lua.h>>=
