@@ -134,15 +134,15 @@ for chunks is:
 \end{Produc}%
 A chunk may contain statements and function definitions,
 and may be in a file or in a string inside the host program.
-A chunk may optionally ends with a return statement (\see{return}).
+A chunk may optionally end with a return statement (\see{return}).
 When a chunk is executed, first all its functions and statements are compiled,
 then the statements are executed in sequential order.
 All modifications a chunk effects on the global environment persist
 after its end.
 Those include modifications to global variables and definitions
-of new functions%
+of new functions.%
 \footnote{Actually, a function definition is an
-assignment to a global variable; \see{TypesSec}.}.
+assignment to a global variable; \see{TypesSec}.}
 
 Chunks may be pre-compiled; see program \IndexVerb{luac} for details.
 Text files with chunks and their binary pre-compiled forms
@@ -199,7 +199,7 @@ It is important to notice that tables are objects, and not values.
 Variables cannot contain tables, only references to them.
 Assignment, parameter passing and returns always manipulate references
 to tables, and do not imply any kind of copy.
-Moreover, tables must be explicitly created before used
+Moreover, tables must be explicitly created before being used
 (\see{tableconstructor}).
 
 
@@ -242,9 +242,9 @@ and do not interpret escape sequences.
 \Index{Comments} start anywhere outside a string with a
 double hyphen (\verb'--') and run until the end of the line.
 Moreover, if the first line of a chunk file starts with \verb'#',
-this line is skipped%
+this line is skipped.%
 \footnote{This facility allows the use of Lua as a script interpreter
-in Unix systems.}.
+in Unix systems.}
 
 \Index{Numerical constants} may be written with an optional decimal part,
 and an optional decimal exponent.
@@ -298,9 +298,10 @@ Any statement can be optionally followed by a semicolon:
 \produc{block}{\rep{stat sc} \opt{ret}}
 \produc{sc}{\opt{\ter{;}}}
 \end{Produc}%
-For syntactic reasons, a \IndexVerb{return} statement can only be written
+A \IndexVerb{return} statement can only be written
 as the last statement of a block.
 This restriction also avoids some ``statement not reached'' errors.
+This rule is enforced syntactically, in the Lua parser.
 
 \subsubsection{\Index{Assignment}} \label{assignment}
 The language allows \Index{multiple assignment}.
@@ -381,14 +382,14 @@ is that version \Version\ supports \texttt{case} and
 \produc{case\_arm}{\ter{\vbar} exp1 \rep{\ter, exp1} \ter{\darrow} block}
 \end{Produc}
 The \rwd{case} statement takes the value of \emph{exp1} and tries to
-find a matchin \emph{case\_arm}.
+find a match in \emph{case\_arm}.
 A~\emph{case\_arm} matches if any of the expressions to the left of
 the arrow (\darrow) evaluates to the same value as the original
 expression immediately following \rwd{case}.
 Once a matching \emph{case\_arm} is found, the interpreter executes
 the \emph{block} on the right-hand side of that arm.
-If no arm, matches, the interpreter executes the block associated with
-\rwd{else}+\darrow, or if there is no such block, the interpreter does
+If no arm matches, the interpreter executes the block associated with
+\rwd{else} plus \darrow, or if there is no such block, the interpreter does
 nothing.
 
 The \rwd{globmatch} statement works exactly the same way as the
@@ -417,12 +418,12 @@ characters in \emph{simple-char-set}.
 To include a \verb']' in \emph{simple-char-set}, it must be the first character.
 A range of characters may be specified by
 separating the end characters of the range with a \verb'-';
-e.g., \verb'A-Z' specifies the upper case characters.
+e.g., \verb'A-Z' specifies the uppercase characters.
 If \verb'-' appears as the first or last character of \emph{simple-char-set},
 then it represents itself.
 All other characters in \emph{simple-char-set} represent themselves.
 
-N.B.~a \emph{simple-char-set} does not support the complement
+N.B.~A \emph{simple-char-set} does not support the complement
 (\verb+^+) operation or the \verb+%+ codes that are supported by the
 char-sets in the string library.
 \item
@@ -450,7 +451,7 @@ The declaration may include an initial assignment:
 \produc{init}{\ter{=} explist1}
 \end{Produc}%
 If present, an initial assignment has the same semantics
-of a multiple assignment.
+as a multiple assignment.
 Otherwise, all variables are initialized with \nil.
 
 
@@ -705,7 +706,7 @@ Lua supports the following fallbacks,
 identified by the given strings:
 \begin{description}
 \item[``arith'':]\index{arithmetic fallback}
-called when an arithmetic operation is applied to non numerical operands,
+called when an arithmetic operation is applied to non-numerical operands,
 or when the binary \verb'^' operation is called.
 It receives three arguments:
 the two operands (the second one is nil when the operation is unary minus)
@@ -716,8 +717,8 @@ and one of the following strings describing the offended operator:
 Its return value is the final result of the arithmetic operation.
 The default handler issues an error.
 \item[``order'':]\index{order fallback}
-called when an order comparison is applied to non numerical or
-non string operands.
+called when an order comparison is applied to non-numerical or
+non-string operands.
 It receives three arguments:
 the two operands and
 one of the following strings describing the offended operator:
@@ -727,7 +728,7 @@ one of the following strings describing the offended operator:
 Its return value is the final result of the comparison operation.
 The default handler issues an error.
 \item[``concat'':]\index{concatenation fallback}
-called when a concatenation is applied to non string operands.
+called when a concatenation is applied to non-string operands.
 It receives the two operands as arguments.
 Its return value is the final result of the concatenation operation.
 The default handler issues an error.
@@ -744,18 +745,18 @@ It receives as argument the name of the variable.
 Its return value is the final result of the expression.
 The default handler returns nil.
 \item[``gettable'':]\index{gettable fallback}
-called when Lua tries to index a non table value.
-It receives as arguments the non table value and the index.
+called when Lua tries to index a non-table value.
+It receives as arguments the non-table value and the index.
 Its return value is the final result of the indexing operation.
 The default handler issues an error.
 \item[``settable'':]\index{settable fallback}
-called when Lua tries to assign indexed a non table value.
-It receives as arguments the non table value,
+called when Lua tries to assign an index to a non-table value.
+It receives as arguments the non-table value,
 the index, and the assigned value.
 The default handler issues an error.
 \item[``function'':]\index{function fallback}
-called when Lua tries to call a non function value.
-It receives as arguments the non function value and the
+called when Lua tries to call a non-function value.
+It receives as arguments the non-function value and the
 arguments given in the original call.
 Its return values are the final results of the call operation.
 The default handler issues an error.
@@ -791,7 +792,7 @@ an ``error'' fallback function is called,
 and then the corresponding function from the library
 (\verb'lua_dofile', \verb'lua_dostring',
 \verb'lua_call', or \verb'lua_callfunction')
-is terminated returning an error condition.
+is terminated, returning an error condition.
 
 The only argument to the ``error'' fallback function is a string
 describing the error.
@@ -837,8 +838,8 @@ using the following functions:
 int lua_dofile   (char *filename);
 int lua_dostring (char *string);
 \end{verbatim}
-Both functions return an error code:
-0, in case of success; non zero, in case of errors.
+Both functions return a result code:
+0, in case of success; non-zero, in case of errors.
 More specifically, \verb'lua_dofile' returns 2 if for any reason
 it could not open the file.
 The function \verb'lua_dofile', if called with argument \verb'NULL' (0),
@@ -854,7 +855,7 @@ all values passed between Lua and C have type
 which works like an abstract type in C that can hold any Lua value.
 Values of type \verb'lua_Object' have no meaning outside Lua;
 for instance,
-the comparisson of two \verb"lua_Object's" is of no significance.
+the comparison of two \verb"lua_Object's" is of no significance.
 
 Because Lua has automatic memory management and garbage collection,
 a \verb'lua_Object' has a limited scope,
@@ -914,7 +915,8 @@ char          *lua_getstring            (lua_Object object);
 lua_CFunction  lua_getcfunction         (lua_Object object);
 void          *lua_getuserdata          (lua_Object object);
 \end{verbatim}
-\verb'lua_getnumber' converts a \verb'lua_Object' to a float.
+\verb'lua_getnumber' converts a \verb'lua_Object' to a double-precision floating
+point number.
 This \verb'lua_Object' must be a number or a string convertible to number
 (\see{coercion}); otherwise, the function returns 0.
 
@@ -924,7 +926,7 @@ otherwise, the function returns 0 (the null pointer).
 This function does not create a new string, but returns a pointer to
 a string inside the Lua environment.
 Because Lua has garbage collection, there is no guarantee that such
-pointer will be valid after the block ends.
+a pointer will be valid after the block ends.
 
 \verb'lua_getcfunction' converts a \verb'lua_Object' to a C function.
 This \verb'lua_Object' must have type {\em CFunction\/};
@@ -1066,8 +1068,8 @@ or
 \begin{verbatim}
 int            lua_callfunction         (lua_Object function);
 \end{verbatim}
-Both functions return an error code:
-0, in case of success; non zero, in case of errors.
+Both functions return a result code:
+0, in case of success; non-zero, in case of errors.
 Finally, the returned values (a Lua function may return many values)
 can be retrieved with the macro
 \Deffunc{lua_getresult}
@@ -1187,16 +1189,16 @@ it can be freed with a call to \verb'lua_unref'.
 \section{Predefined Functions and Libraries}
 
 The set of \Index{predefined functions} in Lua is small but powerful.
-Most of them provide features that allows some degree of
+Most of them provide features that allow some degree of
 \Index{reflexivity} in the language.
 Some of these features cannot be simulated with the rest of the
-Language nor with the standard Lua API.
+language nor with the standard Lua API.
 Others are just convenient interfaces to common API functions.
 
 The libraries, on the other hand, provide useful routines
 that are implemented directly through the standard API.
 Therefore, they are not necessary to the language,
-and are provided as separated C modules.
+and are provided as separate C modules.
 Currently there are three standard libraries:
 \begin{itemize}
 \item string manipulation;
@@ -1219,14 +1221,14 @@ When called without arguments,
 it executes the contents of the standard input (\verb'stdin').
 If there is any error executing the file, it returns \nil.
 Otherwise, it returns the values returned by the chunk,
-or a non \nil\ value if the chunk returns no values.
-It issues an error when called with a non string argument.
+or a non-\nil\ value if the chunk returns no values.
+It issues an error when called with a non-string argument.
 
 \subsubsection*{\ff{\tt dostring (string)}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
 If there is any error executing the string, it returns \nil.
 Otherwise, it returns the values returned by the chunk,
-or a non \nil\ value if the chunk returns no values.
+or a non-\nil\ value if the chunk returns no values.
 
 \subsubsection*{\ff{\tt next (table, index)}}\Deffunc{next}
 This function allows a program to traverse all fields of a table.
@@ -1243,7 +1245,7 @@ it returns \nil.
 In Lua there is no declaration of fields;
 semantically, there is no difference between a
 field not present in a table or a field with value \nil.
-Therefore, the function only considers fields with non nil values.
+Therefore, the function only considers fields with non-nil values.
 The order the indices are enumerated is not specified,
 {\em even for numeric indices}.
 
@@ -1341,7 +1343,7 @@ If the pattern specifies captures,
 the captured strings are returned as extra results.
 A third optional numerical argument specifies where to start the search;
 its default value is 1.
-A value of 1 as a forth optional argument
+A value of 1 as a fourth optional argument
 turns off the pattern matching facilities,
 so the function does a plain ``find substring'' operation.
 
@@ -1360,12 +1362,12 @@ starting at \verb'i'.
 
 \subsubsection*{\ff{\tt strlower (s)}}\Deffunc{strlower}
 Receives a string and returns a copy of that string with all
-upper case letters changed to lower case.
+uppercase letters changed to lowercase.
 All other characters are left unchanged.
 
 \subsubsection*{\ff{\tt strupper (s)}}\Deffunc{strupper}
 Receives a string and returns a copy of that string with all
-lower case letters changed to upper case.
+lowercase letters changed to uppercase.
 All other characters are left unchanged.
 
 \subsubsection*{\ff{\tt strrep (s, n)}}\Deffunc{strrep}
@@ -1373,12 +1375,12 @@ Returns a string which is the concatenation of \verb-n- copies of
 the string \verb-s-.
 
 \subsubsection*{\ff{\tt ascii (s [, i])}}\Deffunc{ascii}
-Returns the ascii code of the character \verb's[i]'.
+Returns the ASCII code of the character \verb's[i]'.
 If \verb'i' is absent, then it is assumed to be 1.
 
 \subsubsection*{\ff{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
 \label{format}
-This function returns a formated version of its variable number of arguments
+This function returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string). 
 The format string follows the same rules as the \verb'printf' family of
 standard C functions.
@@ -1454,18 +1456,18 @@ The following combinations are allowed in describing a character class:
 --- represents the character {\em x} itself.
 \item[{\tt .}] --- represents all characters.
 \item[{\tt \%a}] --- represents all letters.
-\item[{\tt \%A}] --- represents all non letter characters.
+\item[{\tt \%A}] --- represents all non-letter characters.
 \item[{\tt \%d}] --- represents all digits.
-\item[{\tt \%D}] --- represents all non digits.
-\item[{\tt \%l}] --- represents all lower case letters.
-\item[{\tt \%L}] --- represents all non lower case letter characters.
+\item[{\tt \%D}] --- represents all non-digits.
+\item[{\tt \%l}] --- represents all lowercase letters.
+\item[{\tt \%L}] --- represents all non-lowercase letter characters.
 \item[{\tt \%s}] --- represents all space characters.
-\item[{\tt \%S}] --- represents all non space characters.
-\item[{\tt \%u}] --- represents all upper case letters.
-\item[{\tt \%U}] --- represents all non upper case letter characters.
+\item[{\tt \%S}] --- represents all non-space characters.
+\item[{\tt \%u}] --- represents all uppercase letters.
+\item[{\tt \%U}] --- represents all non-uppercase letter characters.
 \item[{\tt \%w}] --- represents all alphanumeric characters.
-\item[{\tt \%W}] --- represents all non alphanumeric characters.
-\item[{\tt \%\em x}] (where {\em x} is any non alphanumeric character)  ---
+\item[{\tt \%W}] --- represents all non-alphanumeric characters.
+\item[{\tt \%\em x}] (where {\em x} is any non-alphanumeric character)  ---
 represents the character {\em x}.
 \item[{\tt [char-set]}] --- 
 Represents the class which is the union of all
@@ -1473,7 +1475,7 @@ characters in char-set.
 To include a \verb']' in char-set, it must be the first character.
 A range of characters may be specified by
 separating the end characters of the range with a \verb'-';
-e.g., \verb'A-Z' specifies the upper case characters.
+e.g., \verb'A-Z' specifies the uppercase characters.
 If \verb'-' appears as the first or last character of char-set,
 then it represents itself.
 All classes \verb'%'{\em x} described above can also be used as
@@ -1492,7 +1494,7 @@ A character class followed by \verb'*' matches 0 or more repetitions
 of characters in the class.
 A character class followed by \verb'?' matches 0 or one occurrence
 of a character in the class.
-A pattern item may also has the form \verb'%n',
+A pattern item may also have the form \verb'%n',
 for \verb-n- between 1 and 9;
 such item matches a sub-string equal to the n-th captured string.
 
@@ -1563,7 +1565,7 @@ it opens the named file,
 sets it as the {\em current} input file,
 and returns a {\em handle} to the file
 (this handle is a user data containing the file stream \verb|FILE *|).
-When called with a file handle, returned by a previous call,
+When called with a file handle returned by a previous call,
 it restores the file as the current input.
 When called without parameters,
 it closes the current input file,
@@ -1585,7 +1587,7 @@ and returns a {\em handle} to the file
 (this handle is a user data containing the file stream \verb|FILE *|).
 Notice that, if the file already exists,
 it will be {\em completely erased} with this operation.
-When called with a file handle, returned by a previous call,
+When called with a file handle returned by a previous call,
 it restores the file as the current output.
 When called without parameters,
 this function closes the current output file,
@@ -1670,7 +1672,7 @@ Following are some examples of read patterns and their meanings:
 (skipping the end of line), or \nil\ on end of file.
 This is the default pattern.
 \item \verb|"{%s*}%S%S*"| returns the next word
-(maximal sequence of non white-space characters),
+(maximal sequence of non-white-space characters),
 or \nil\ on end of file.
 \item \verb|"{%s*}[+-]?%d%d*"| returns the next integer
 or \nil\ if the next characters do not conform to an integer format.
@@ -1707,7 +1709,7 @@ or \nil\ if the variable is not defined.
 
 This function is equivalent to the C function \verb|system|.
 It passes \verb|command| to be executed by an Operating System Shell.
-It returns an error code, which is implementation-defined.
+It returns a result code, which is implementation-defined.
 
 
 \section{The Debugger Interface} \label{debugI}
@@ -1752,13 +1754,13 @@ given function has been defined.
 If the ``function'' is in fact the main code of a chunk,
 then \verb'linedefined' is 0.
 If the function is a C function,
-then \verb'linedefined' is -1, and \verb'filename' is \verb'"(C)"'.
+then \verb'linedefined' is $-$1, and \verb'filename' is \verb'"(C)"'.
 
 The function \verb'lua_currentline' gives the current line where
 a given function is executing.
 It only works if the function has been pre-compiled with debug
 information (\see{pragma}).
-When no line information is available, it returns -1.
+When no line information is available, it returns $-$1.
 
 Function \verb'lua_getobjname' tries to find a reasonable name for
 a given function.
@@ -1833,7 +1835,7 @@ Its only parameter is the line number
 This second hook is only called if the active function
 has been pre-compiled with debug information (\see{pragma}).
 
-A hook is disabled when its value is NULL (0),
+A hook is disabled when its value is \verb'NULL' (0),
 which is the initial value of both hooks.
 
 
@@ -1905,7 +1907,7 @@ end
 \end{verbatim}
 
 The next example prints the names of all global variables
-in the system with non nil values:
+in the system with non-\nil values:
 \begin{verbatim}
 function printGlobalVariables ()
   local i, v = nextvar(nil)
@@ -1943,7 +1945,7 @@ Lua does not provide any explicit mechanism to deal with
 variable number of arguments in function calls.
 However, one can use table constructors to simulate this mechanism.
 As an example, suppose a function to concatenate all its arguments.
-It could be written like 
+It could be written like this:
 \begin{verbatim}
 function concat (o)
   local i = 1
@@ -2285,7 +2287,7 @@ until an \verb|EOF|.
 \item[{\tt var=exp}] executes \verb|var=exp| as a Lua chunk.
 \item[{\tt filename}] executes file \verb|filename| as a Lua chunk.
 \end{description}
-All arguments are handle in order.
+All arguments are handled in order.
 For instance, an invocation like
 \begin{verbatim}
 $ lua - a=1 prog.lua
