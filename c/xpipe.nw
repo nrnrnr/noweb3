@@ -37,7 +37,7 @@ checked runtime error for the NULL value to be passed to [[XPipe_connect]].
 [[XPipe_print]] allows the contents of a pipeline to be displayed
 graphically using the file pointer passed to it as a parameter.
 
-[[XPipe_execute]] travels down the pipeline and executes each
+[[XPipe_run]] travels down the pipeline and executes each
 program, passing the standard output of one program into the standard
 input of the next.
 
@@ -54,14 +54,14 @@ the larger pipeline as well.
 
 #include <stdio.h>
 
-#define T XPipe
+#define T XPipe_T
 typedef struct T* T;
 
-extern T    XPipe_function     (int (*f)(void *cl), void *cl);
+extern T    XPipe_function     (int (*f)(void *cl, FILE *in, FILE *out), void *cl);
 extern T    XPipe_program      (char* path, char** argv, char** envp);
 extern T    XPipe_connect      (T left, T right);
 extern void XPipe_print        (FILE* fp, T pipeline);
-extern int  XPipe_execute      (T pipeline);
+extern int  XPipe_run      (T pipeline);
 extern void XPipe_free         (T* pipeline);
 
 #undef T
@@ -91,7 +91,7 @@ struct XPipe_Program {
   char** envp;
 };
 struct XPipe_Function {
-  int (*f)(void *);
+  int (*f)(void *, FILE *in, FILE *out);
   void *arg;
 };
 struct XPipe_Stage {
@@ -102,7 +102,7 @@ struct XPipe_Stage {
   } u;
 };
 <<definition of [[struct XPipe]]>>=
-struct XPipe {
+struct T {
   List_T stages;
 };
 @
@@ -112,7 +112,7 @@ programs, they seem to match well with this data structure.
 
 [[<<*>>]] is intended to contain all the platform-independent
 implementation of the pipeline structure; this is basically everything
-but the [[XPipe_execute]] function and its helper functions.
+but the [[XPipe_run]] function and its helper functions.
 [[<<*>>]] includes information regarding the representation,
 building, and printing of the pipeline.
 
@@ -125,7 +125,7 @@ building, and printing of the pipeline.
 #include "mem.h"
 #include "str.h"
 
-#define T XPipe
+#define T XPipe_T
 typedef struct XPipe_Stage* XPipe_Stage;
 
 <<definition of [[struct XPipe_Stage]]>>
@@ -154,7 +154,7 @@ T XPipe_program(char* path, char** argv, char** envp) {
   return new_pipeline;
 }
 <<common functions>>=
-T XPipe_function(int (*f)(void *), void *arg) {
+T XPipe_function(int (*f)(void *, FILE *in, FILE *out), void *arg) {
   XPipe_Stage new_stage;
   T new_pipeline;
   assert(f);
@@ -274,7 +274,7 @@ void XPipe_free(T* pipeline) {
 
 \section{UNIX forking for pipeline execution}
 
-The UNIX implementation of the [[Pipeline_execute]] function and its
+The UNIX implementation of the [[Pipeline_run]] function and its
 helper functions is described below.  [[<<xpipe-unx.c>>]] consists of
 UNIX-specific headers, the struct definistions, and prototypes and
 definitions for the UNIX versions of the functions that will execute
@@ -308,7 +308,7 @@ node corresponding to a program to send information to and execute),
 described below.
 
 A few helper routines have been implemented to facilitate the implementation
-of the [[XPipe_execute]] function in Unix.  Two functions are
+of the [[XPipe_run]] function in Unix.  Two functions are
 created that will wait for the specified child process or processes to
 terminate, and then return their exit status.  It is a checked runtime
 error for any other child process to terminate first.
@@ -366,7 +366,7 @@ because we want the first stage of the pipeline to read from
 [[stdin]]. The [[pipefds]] parameter is NULL because there are no file
 descriptors to close at the time of the first call to [[forkPipelineFrom]].
 <<Unix functions>>=
-int XPipe_execute(XPipe pipeline) {
+int XPipe_run(XPipe pipeline) {
   return waitfor(forkPipelineFrom(pipeline->stages, 0, (int *)0));
 }
 @
@@ -418,7 +418,7 @@ switch (stage->tag) {
   case Prog:
     { struct XPipe_Program *prog = &stage->u.prog;
       char** new_argv;
-      <<add program name to [[argv]]>>
+      <<make [[new_argv]] be [[argv]] with [[prog->path]] prepended>>
       if (Str_find(prog->path, 1, 0, Sys_dirsep))
 	execve(prog->path, new_argv, prog->envp);
       else {
@@ -428,7 +428,8 @@ switch (stage->tag) {
       return -1; /* prevents warning */
     }
   case Fun:
-    exit(stage->u.fun.f(stage->u.fun.arg));
+    assert(stage->u.fun.f);
+    exit(stage->u.fun.f(stage->u.fun.arg, stdin, stdout));
 }
 @ 
 The program name is copied from [[prog->path]] onto the front of
@@ -439,7 +440,7 @@ of arguments is allocated, then [[prog->name]] and [[prog->argv]] are
 copied onto it.  It is not necessary to free this memory because a
 call to [[execve]] will follow immediately, resulting in completion of
 the program by either successful execution or a Noweb fatal error.
-<<add program name to [[argv]]>>=
+<<make [[new_argv]] be [[argv]] with [[prog->path]] prepended>>=
 {
   int i, n;
   for (n = 0; prog->argv[n] != NULL; n++);  /* set n to length of argv */
@@ -511,3 +512,113 @@ static void close_pair(int *surplus) {
   }
 }
 @ 
+\section{Pipeline execution using temporary files}
+
+Useful on systems that can't fork.
+Also useful for debugging!
+<<* ((tmpfiles))>>=
+#include <stdio.h>
+
+<<private temporary-file prototypes>>
+<<temporary-file functions>>
+@ 
+We walk a list of stages with input and output files given.
+<<private temporary-file prototypes>>=
+static int do_stage (XPipe_Stage stage, FILE *in, FILE *out);
+static int do_stages(List_T stages, FILE *in, FILE *out);
+<<temporary-file functions>>=
+int XPipe_run(XPipe pipeline) {
+  return do_stages(pipeline->stages, stdin, stdout);
+}
+@
+<<temporary-file functions>>=
+static int forkPipelineFrom(List_T l, FILE *in, FILE *out) {
+  int n;
+  assert(l);
+  if (l->rest) {
+    FILE *tmp;
+    <<set [[tmp]] to a suitable temporary file>>
+    n = do_stage(l->first, in, tmp);   
+    if (n == 0) {
+      rewind(tmp);
+      fflush(tmp);
+      n |= do_stages(l->rest, tmp, out);
+    }
+    <<recover resources associated with [[tmp]]>>
+    return n;
+  } else {
+    return do_stage(l->first, in, out);
+  }
+@ 
+The leaf nodes are the stages of the pipeline; processes to execute
+these stages are called from within [[forkStageTo]].
+<<temporary-file functions>>=
+static int do_stage(struct XPipe_Stage *stage, FILE *in, FILE *out) {
+  switch (stage->tag) {
+    case Fun:
+      assert(stage->u.fun.f);
+      return stage->u.fun.f(stage->u.fun.arg, in, out);
+    case Prog:
+      return run_program(&stage->u.prog, in, out);
+  }
+}
+@ 
+<<temporary-file functions>>=
+static int run_program(XPipe_program prog, FILE *in, FILE *out) {
+  char** new_argv;
+  int pid;
+  if ((pid = fork()) == 0) {
+    <<make [[new_argv]] be [[argv]] with [[prog->path]] prepended>>
+    makeInput (fileno(in ));
+    makeOutput(fileno(out));
+    if (Str_find(prog->path, 1, 0, Sys_dirsep))
+      execve(prog->path, new_argv, prog->envp);
+    else {
+      <<lookup [[prog->path]] on PATH and execute>>
+    }
+    errormsg(Fatal, "Could not execute %s", prog->path);
+    exit(-1);
+    return -1; /* prevents warning */
+  } else {
+    return waitfor(pid);
+  }
+}
+@ 
+The first two helper functions, [[waitfor]] and [[waitfor2]], return the
+exit status of a child process or a pair of child processes, respectively,
+that function is to wait for.  If an unexpected process terminates before
+one of the awaited processes, then the functions return an error and abort.
+<<temporary-file functions>>=
+static int waitfor(int pid) {
+  int status;
+  assert(pid == wait(&status));
+  return WEXITSTATUS(status);
+}
+@
+[[makeInput]] and [[makeOutput]] return immediately if the parameters passed
+to them already equal [[stdin]] and [[stdout]], respectively.  Otherwise,
+they return an error if an attempt is made to turn [[stdout]] into [[stdin]]
+or vice-versa.
+<<temporary-file functions>>=
+static void makeInput(int fd) {
+  if (fd == 0) return;
+  assert(fd != 1);
+  assert(close(0) == 0);
+  assert(dup(fd) == 0);
+  return;
+}
+
+static void makeOutput(int fd) {
+  if (fd == 1) return;
+  assert(fd != 0);
+  assert(close(1) == 0);
+  assert(dup(fd) == 1);
+  return;
+}
+@ 
+Temporary files are POSIX.
+<<set [[tmp]] to a suitable temporary file>>=
+tmp = fopen(tmpnam(NULL), "w+");
+assert(tmp);
+<<recover resources associated with [[tmp]]>>=
+(void) fclose(tmp);
