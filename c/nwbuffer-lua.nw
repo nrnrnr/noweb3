@@ -47,11 +47,31 @@ static void put_lua(void) {
     NowebBuffer_put(lua_getuserdata(buf), (NowebKey)lua_getuserdata(key),
 		       lua_optstring(val));
 }
+@ 
+<<functions>>=
+static void pull_lua(void) {
+  lua_Object buf;
+  lua_get_args("NWB.pull", 1, NWBUFFER, &buf);
+  if (NowebBuffer_length(lua_getuserdata(buf)) > 0) {
+    struct NowebPair pair = NowebBuffer_pull(lua_getuserdata(buf));
+    if (pair.key == NW_XXX_STRINGKEY) {
+      lua_pushstring((char *)pair.u.alternate->key);
+      lua_pushoptstring(pair.u.alternate->value);
+    } else {
+      lua_pushusertag((void *)pair.key, NWKEY);
+      lua_pushoptstring(pair.u.value);
+    }
+  } else { 
+    lua_pushnil();
+    lua_pushnil();
+  }
+}
 <<functions>>=
 void nwbuffer_open(void) {
   lua_module_register("NWB", "reader", reader_lua);
   lua_module_register("NWB", "read",   read_lua);
   lua_module_register("NWB", "put", put_lua);
+  lua_module_register("NWB", "pull", pull_lua);
 #define xx(NAME, PRINTARGS) \
   lua_pushusertag((void*)NAME, NWKEY); lua_storeglobal(#NAME);
   <<key macros>>

@@ -20,6 +20,8 @@ from this buffer do not alter the contents of the buffer.
 [[NowebBuffer_create]] takes no parameters.  It creates a new, empty
 [[NowebBuffer]].
 
+[[NowebBuffer_length]] tells how many pairs are in a buffer.
+
 [[NowebBuffer_put]] adds the pair [[(predefined, value)]] to the end
 of [[nwbuffer]].
 
@@ -29,6 +31,10 @@ corresponding predefined key, this function may be used to add a
 string key to the buffer.  It first makes a call to
 [[NowebBuffer_put]] with [[NW_XXX_STRINGKEY]] as the predefined key
 (see description of {data-stuffing} below).
+
+[[NowebBuffer_pull]] removes a pair from the end of [[nwbuffer]],
+returning that pair.  It is a checked runtime error to attempt to
+remove a pair from an empty buffer.
 
 [[NowebBuffer_read]] returns the pair at [[loc]] in [[nwbuffer]] and
 moves [[loc]] to point to the next pair in [[nwbuffer]].
@@ -55,8 +61,10 @@ typedef struct NowebReader* NowebReader;
 <<definition of [[struct NowebPair]]>>
 
 extern T    NowebBuffer_create        (void);
+extern int  NowebBuffer_length     (T nwbuffer);
 extern T    NowebBuffer_put        (T nwbuffer, NowebKey predefined, const char* value);
 extern T    NowebBuffer_put_str    (T nwbuffer, const char* new_key, const char* value);
+struct NowebPair NowebBuffer_pull  (T nwbuffer);
 extern NowebReader NowebBuffer_reader (T);
 extern NowebPair  NowebBuffer_read    (NowebReader);
 extern void NowebBuffer_free          (T* nwbuffer);
@@ -225,6 +233,11 @@ T NowebBuffer_create() {
   return new_buffer;
 }
 @ 
+<<buffer operations>>=
+int NowebBuffer_length (T nwbuffer) {
+  return Seq_length(nwbuffer->pairs);
+}
+@ 
 [[NowebBuffer_put]] appends a [[NowebPair]] to the end of
 [[nwbuffer]].  The pair that is added must be one containing a
 predefined key; the contents of this pair are passed as the second and
@@ -251,6 +264,17 @@ T NowebBuffer_put_str(T nwbuffer, const char* new_key, const char* value) {
   new_pair->u.alternate = true;
   Seq_addhi(nwbuffer->pairs, new_pair);
   return nwbuffer;
+}
+@ 
+When we pull a pair, we free its memory.
+<<buffer operations>>=
+struct NowebPair NowebBuffer_pull(T nwbuffer) {
+  struct NowebPair pair, *p;
+  assert(NowebBuffer_length(nwbuffer) > 0);
+  p = Seq_remhi(nwbuffer->pairs);
+  pair = *p;
+  FREE(p);
+  return pair;
 }
 @ 
 The read function requires passing a pointer to the [[NowebReader]];
