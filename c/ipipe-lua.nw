@@ -1,0 +1,323 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Conversion of C Internal Pipeline functions to Lua}
+
+This is the Lua translation of the C internal pipeline functions defined in
+[[ipipe.nw]].  The interface for each function is described at the
+beginning of the section for that function; the implementation makes
+use of the lua library that allows values to be passed between Lua and
+C.
+
+<<ipipe-lua.c>>=
+#include "ipipe.h"
+#include "lua.h"
+#include "lualib.h"
+#include "lua-help.h"
+#include "list.h"
+#include "mem.h"
+#include "stdio.h"
+
+<<Source-create>>
+<<Filter-create>>
+<<Sink-create>>
+<<IPipe-create>>
+<<Source-extend>>
+<<Filter-extend>>
+<<Sink-extend>>
+<<IPipe-execute>>
+<<IPipe-free>>
+<<Lua registration of functions>>
+
+@ 
+
+\section{Lua Interfaces}
+
+\subsection{Source-create}
+
+\emph{name}[[ = Source_create(]]\emph{function}[[, ]]\emph{arg}[[)]]
+
+A function is required for the first parameter and two total parameters must
+be passed.  The result is a Lua [[Source]] placed in \emph{name}.  
+
+\subsection{Filter-create}
+
+\emph{name}[[ = Filter_create(]]\emph{function}[[, ]]\emph{arg}[[)]]
+
+Like [[Source_create]], [[Filter_create]] requires a function for the first
+parameter and two total parameters must be passed.  The result is a Lua
+[[Filter]] placed in \emph{name}.  
+
+\subsection{Sink-create}
+
+\emph{name}[[ = Sink_create(]]\emph{function}[[, ]]\emph{arg}[[)]]
+
+[[Sink_create]] also requires a function for the first parameter, and two total
+parameters must be passed.  The result is a Lua [[Sink]] placed in
+\emph{name}.  
+
+\subsection{IPipe-create}
+
+\emph{name}[[ = IPipe_create(]]\emph{Source}[[, ]]\emph{Sink}[[)]]
+
+[[IPipe_create]] requires a Lua [[Source]] for the first parameter and a Lua
+[[Sink]] for the second.  The result is a Lua [[IPipe]] placed in \emph{name}.
+
+\subsection{Source-extend}
+
+\emph{name}[[ = Source_extend(]]\emph{Source}[[, ]]\emph{Filter}[[)]]
+
+\subsection{Filter-extend}
+
+\emph{name}[[ = Filter_extend(]]\emph{Filter}[[, ]]\emph{Filter}[[)]]
+
+\subsection{Sink-extend}
+
+\emph{name}[[ = Sink_extend(]]\emph{Filter}[[, ]]\emph{Sink}[[)]]
+
+\noindent\kern-0.5in\begin{tabular}{lp{2.7in}}
+\emph{name}[[ = Source_create(]]\emph{function}[[, ]]\emph{arg}[[)]]&
+A function is required for the first parameter and two total parameters must
+be passed.  The result is a Lua [[Source]] placed in \emph{name}.
+The \emph{function} expects two arguments: \emph{arg} and a buffer to
+write to, and it returns a number that is nonzero on error.\\
+%
+\emph{name}[[ = Filter_create(]]\emph{function}[[, ]]\emph{arg}[[)]]&
+Like [[Source_create]], [[Filter_create]] requires a function for the first
+parameter and two total parameters must be passed.  The result is a Lua
+[[Filter]] placed in \emph{name}.  
+The \emph{function} expects three arguments: \emph{arg}, a buffer to
+read from, and a buffer to write to.
+ It returns a number that is nonzero on error.\\
+%
+\emph{name}[[ = Sink_create(]]\emph{function}[[, ]]\emph{arg}[[)]]&
+[[Sink_create]] also requires a function for the first parameter, and two total
+parameters must be passed.  The result is a Lua [[Sink]] placed in
+\emph{name}.\\
+%
+\emph{name}[[ = IPipe_create(]]\emph{Source}[[, ]]\emph{Sink}[[)]]&
+[[IPipe_create]] requires a Lua [[Source]] for the first parameter and a Lua
+[[Sink]] for the second.  The result is a Lua [[IPipe]] placed in \emph{name}.\\
+%
+\emph{name}[[ = Source_extend(]]\emph{Source}[[, ]]\emph{Filter}[[)]]&
+???\\
+%
+\emph{name}[[ = Filter_extend(]]\emph{Filter}[[, ]]\emph{Filter}[[)]]&
+???\\ 
+%
+\emph{name}[[ = Sink_extend(]]\emph{Filter}[[, ]]\emph{Sink}[[)]]&
+???\\
+%
+\end{tabular}
+
+
+
+\section{C Implementation}
+
+\subsection{Source-create}
+
+[[apply_source]] is the C function which will be used to execute a [[Source]]
+that consists of a Lua function.
+
+<<Source-create>>=
+int apply_source(void* app, NowebBuffer buf) {
+  struct Application* a = app;
+  lua_Object f = lua_getref(a->f);
+  lua_pushref(a->arg);
+  lua_pushusertag(buf, NWBUFFER);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+@ 
+
+This function takes the parameters to the Lua version of [[Source_create]] and
+places them in [[lua_Object]]s.  These objects are placed in a struct which is
+passed as the [[arg]] parameter to the C version of [[Source_create]].  The C
+function which will be called is [[apply_source]].
+
+<<Source-create>>=
+static void Source_create_lua(void) {
+  lua_pushusertag(Source_create(apply_source,
+				build_app_from_lua_args("Source_create")), SOURCE);
+}
+@ 
+
+\subsection{Filter-create}
+
+[[apply_filter]] is the C function which will be used to execute a [[Filter]]
+that consists of a Lua function.
+
+<<Filter-create>>=
+int apply_filter(void* app, NowebBuffer in, NowebBuffer out) {
+  struct Application* a = app;
+  lua_Object f = lua_getref(a->f);
+  lua_pushref(a->arg);
+  lua_pushusertag(in, NWBUFFER);
+  lua_pushusertag(out, NWBUFFER);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+@ 
+
+This function takes the parameters to the Lua version of [[Filter_create]] and
+places them in [[lua_Object]]s.  These objects are placed in a struct which is
+passed as the [[arg]] parameter to the C version of [[Filter_create]].  The C
+function which will be called is [[apply_filter]].
+
+<<Filter-create>>=
+static void Filter_create_lua(void) {
+  lua_pushusertag(Filter_create(apply_filter,
+				build_app_from_lua_args("Filter_create")), FILTER);
+}
+@  
+
+\subsection{Sink-create}
+
+[[apply_sink]] is the C function which will be used to execute a [[Sink]]
+that consists of a Lua function.
+
+<<Sink-create>>=
+int apply_sink(void* app, NowebBuffer buf) {
+  struct Application* a = app;
+  lua_Object f = lua_getref(a->f);
+  lua_pushref(a->arg);
+  lua_pushusertag(buf, NWBUFFER);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+@ 
+
+This function takes the parameters to the Lua version of [[Sink_create]] and
+places them in [[lua_Object]]s.  These objects are placed in a struct which is
+passed as the [[arg]] parameter to the C version of [[Sink_create]].  The C
+function which will be called is [[apply_sink]].
+
+<<Sink-create>>=
+static void Sink_create_lua(void) {
+  lua_pushusertag(Sink_create(apply_sink,
+			      build_app_from_lua_args("Sink_create")), SINK);
+}
+@  
+
+\subsection{IPipe-create}
+
+This function takes the parameters to the Lua version of [[IPipe_create]] and
+places them in [[lua_Object]]s.  The respective C versions of the parameters
+are then passed to the C version of [[IPipe_create]].
+
+<<IPipe-create>>=
+static void IPipe_create_lua(void) {
+  Source src;
+  Sink snk;
+  lua_Object source_o, sink_o;
+  lua_get_args("IPipe.create", 2, SOURCE, &source_o, SINK, &sink_o);
+  src = lua_getuserdata(source_o);
+  snk = lua_getuserdata(sink_o);
+  lua_pushusertag(IPipe_create(src, snk), IPIPE);
+}
+@  
+
+\subsection{Source-extend}
+
+This function simply takes a Lua [[Source]] and [[Filter]] and combines them
+into a single [[Source]].
+
+<<Source-extend>>=
+static void Source_extend_lua(void) {
+  Source s;
+  Filter f;
+  lua_Object source_o, filter_o;
+  lua_get_args("Source_extend", 2, SOURCE, &source_o, FILTER, &filter_o);
+  s = lua_getuserdata(source_o);
+  f = lua_getuserdata(filter_o);
+  lua_pushusertag(Source_extend(s, f), SOURCE);
+}
+@ 
+
+\subsection{Filter-extend}
+
+This function simply takes two Lua [[Filters]] and combines them into a single
+[[Filter]].
+
+<<Filter-extend>>=
+static void Filter_extend_lua(void) {
+  Filter f1, f2;
+  lua_Object filter1_o, filter2_o;
+  lua_get_args("Filter_extend", 2, FILTER, &filter1_o, FILTER, &filter2_o);
+  f1 = lua_getuserdata(filter1_o);
+  f2 = lua_getuserdata(filter2_o);
+  lua_pushusertag(Filter_extend(f1, f2), FILTER);
+}
+@ 
+
+\subsection{Sink-extend}
+
+This function simply takes a Lua [[Filter]] and [[Sink]] and combines them into a single [[Sink]].
+
+<<Sink-extend>>=
+static void Sink_extend_lua(void) {
+  Filter f;
+  Sink s;
+  lua_Object filter_o, sink_o;
+  lua_get_args("Suink_extendc", 2, FILTER, &filter_o, SINK, &sink_o);
+  f = lua_getuserdata(filter_o);
+  s = lua_getuserdata(sink_o);
+  lua_pushusertag(Sink_extend(f, s), SINK);
+}
+@ 
+
+\subsection{IPipe-execute}
+
+This function executes a Lua internal pipeline.
+
+<<IPipe-execute>>=
+static void IPipe_execute_lua(void) {
+  IPipe pipe;
+  lua_Object ipipe_o;
+  lua_get_args("Ipipe_execute", 1, IPIPE, &ipipe_o);
+  pipe = lua_getuserdata(ipipe_o);
+  lua_pushnumber((double)IPipe_execute(pipe));
+}
+@ 
+
+\subsection{IPipe-free}
+
+<<IPipe-free>>=
+static void IPipe_free_lua(void) {
+  IPipe pipe;
+  lua_Object ipipe_o;
+  lua_get_args("IPipe_free", 1, IPIPE, &ipipe_o);
+  pipe = lua_getuserdata(ipipe_o);
+  IPipe_free(&pipe);
+}
+@ 
+
+\subsection{Lua registration of functions}
+
+<<Lua registration of functions>>=
+int IPipe_open(void) {
+  lua_register("Source_create", Source_create_lua);
+  lua_register("Filter_create", Filter_create_lua);
+  lua_register("Sink_create", Sink_create_lua);
+  lua_register("IPipe_create", IPipe_create_lua);
+  lua_register("Source_extend", Source_extend_lua);
+  lua_register("Filter_extend", Filter_extend_lua);
+  lua_register("Sink_extend", Sink_extend_lua);
+  lua_register("IPipe_execute", IPipe_execute_lua);
+  lua_register("IPipe_free", IPipe_free_lua);
+  return 1;
+}
+
+<<ipipe-lua.h>>=
+#ifndef IPIPELUA_H
+#define IPIPELUA_H
+
+extern int IPipe_open(void);
+
+#endif
+<<*>>=
+<<ipipe-lua.c>>
+<<header>>=
+<<ipipe-lua.h>>
+@

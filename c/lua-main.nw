@@ -1,0 +1,106 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Lua interpreter using external pipeline commands}
+
+This is a version of the Lua interpreter that allows use of the
+external pipeline commands built in [[xpipe-lua.nw]] and [[xpipe.nw]].
+
+<<lua-main.c>>=
+#include <stdio.h>
+#include <string.h>
+
+#ifdef _POSIX_SOURCE
+#include <unistd.h>
+#else
+#define isatty(x)	(x==0) /* assume stdin is a tty */
+#endif
+
+#include "lua.h"
+#include "lualib.h"
+#include "xpipe-lua.h"
+#include "ipipe-lua.h"
+#include "mpipe-lua.h"
+#include "env-lua.h"
+#include "util.h"
+#include "noweb-lua.h"
+#include "stages.h"
+
+extern void nwbuffer_open(void);
+
+char *platform = "unix"; /* should be defined elsewhere */
+
+static int manual_input(void) {
+  if (isatty(0)) {
+    char buffer[250];
+    while ((printf("  "), fflush(stdout), fgets(buffer, sizeof(buffer), stdin) != 0)) {
+      lua_beginblock();
+      lua_dostring(buffer);
+      lua_endblock();
+    }
+    return 0;
+  }
+  else return lua_dofile(NULL);  /* executes stdin as a file */
+}
+
+int main(int argc, char* argv[]) {
+  lua_Object lua_argv;
+  int i;
+  int result = 0;
+  iolib_open();
+  strlib_open();
+  mathlib_open();
+  XPipe_open();
+  MPipe_open();
+  IPipe_open();
+  posix_open();
+  stages_open();
+  noweb_open();
+  nwbuffer_open();
+  lua_argv = lua_createtable();
+  for (i = 2; i < argc; i++) {
+    <<add [[argc[i]]] to [[lua_argv]] as element [[i-1]]>>
+  }
+  lua_pushstring(platform);
+  lua_storeglobal("PLATFORM");
+  if (load_nwfile("noweb.cfg")) {
+     fprintf(stderr, "%s: cannot find configuration file noweb.cfg - ", argv[0]);
+     perror("");
+     exit(1);
+  }
+  lua_pushobject(lua_argv);
+  lua_storeglobal("argv");
+  if (argc < 2 || strcmp(argv[1], "-") == 0)
+    return manual_input();
+  else {
+    result = load_nwfile(argv[1]);
+    if (result == 2) {
+      fprintf(stderr, "%s: cannot execute file '%s' - ", argv[0], argv[1]);
+      perror("");
+    }
+    return result;
+  }
+}
+<<add [[argc[i]]] to [[lua_argv]] as element [[i-1]]>>=
+lua_pushobject(lua_argv);
+lua_pushnumber((double)(i-1));
+lua_pushstring(argv[i]);
+lua_storesubscript();
+@ 
+<<*>>=
+<<lua-main.c>>
+<<header>>=
+@
+<<junk options>>=
+    /*******
+    else if (strcmp(argv[i], "-v") == 0)
+      printf("%s %s\n(written by %s)\n\n",
+             LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
+    else if ((strcmp(argv[i], "-e") == 0 && i++) || strchr(argv[i], '=')) {
+      if (lua_dostring(argv[i]) != 0) {
+        fprintf(stderr, "lua: error running argument '%s'\n", argv[i]);
+        return 1;
+      }
+    }
+    ***/
