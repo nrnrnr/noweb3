@@ -7,67 +7,58 @@ generated shell script.
 -- See file COPYRIGHT for more information.
 -- $Id$
 @
-Here's the organization of the source:
-<<noweave>>=
-#!/bin/sh
-LIB=|LIBDIR|
-$LIB/nosh ${1+"$@"} << EOF
-<<noweave.lua>>
-EOF
-@
 I thought it would be nice to put all the built-in stuff in a table.
 <<renaming of builtins>>=
-P = { source = Source_create, sink = Sink_create, filter = Filter_create, 
-      extendFilter = Filter_extend, extendSource = Source_Extend, 
-      pipeline = MPipe_create, show = MPipe_print,
-      run = MPipe_Execute }
+P = MPipe
 @ 
 I'm assuming we defined a [[concat]] fallback that works on lists.
-<<noweave.lua>>=
+<<*>>=
 <<copyright notice>>
 <<renaming of builtins>>
 <<utilities>>
 <<initialization>>
 <<scan options and arguments>>
+if verbose then
+  write("backopts = "); show(backopts); write("\n")
+  write("noindex = ") show(noindex) write("\n")
+  write("delay = ") show(delay) write("\n")
+  write("shortxref = ") show(shortxref) write("\n")
+end
+---- function foo (a, b)
+----   if type(b) == "table" then b = nil end
+----   return Stages.toascii(a, b)
+---- end
+---- backend = foo
 backend  = P.sink(backend, backopts .. noindex .. delay .. shortxref)
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>
-pipeline = P.pipeline(P.extendSource(src, filters), backend)
+pipeline = P.connect(P.connect(src, filters), backend)
 if verbose then
-  P.show(pipeline)
+  P.print(pipeline)
 end
-P.run(pipeline)
-@
-The first item of initialization is to locate the {\tt noweb} library.
-<<initialization>>= 
-LIB="|LIBDIR|"
-@
-<<utilities ((DOS))>>=
-function extendPath(dir, name)
-  return dir .. "\\" .. name
-end
-<<utilities ((Unix))>>=
-function extendPath(dir, name)
-  return dir .. "/" .. name
-end
+System.putenv("PATH="..LIB..":"..System.getenv("PATH"))
+exit(P.run(pipeline))
 @ 
 <<utilities>>=
-function libFile(name)
-  return extendPath(LIB, name)
-end
 <<initialization>>=
 markup = libFile("markup")  -- could be internal
 backend = libFile("totex")  -- could be internal
-backopts = {}
+Defaults = { tohtml = libFile("tohtml") }
+function internalDefaults ()
+  backend = Stages.totex
+  markup = Stages.markup
+--  Defaults.tohtml = Stages.tohtml
+end
+backopts = List.new {}
 wrapper = nil
-delay = {}
-args = {}
-markopts = {} 
+delay = List.new {}
+args = List.new {}
+markopts = List.new {} 
 noweboptions = nil
 autodefs = nil
 verbose = false
 shortxref = false
-noquote={"-noquote"}
-docanchor= {}
+noquote= List.new {"-noquote"}
+docanchor= List.new {}
 noindex="-noindex"
 filters = P.identityFilter
 @
@@ -75,21 +66,22 @@ I make two passes over the arguments so as not to require that options
 be given in a certain order.
 <<scan options and arguments>>=
 i = 1
-while i <= length(argv) do
+while i <= List.length(argv) do
   globmatch argv[i] of
+  | "-internaldefaults" => internalDefaults()
   <<first pass {\tt noweave} options>>
-  | "-"  => put(args, "-")
-  | "-*" => errormsg("Unrecognized option ", argv[i])
+  | "-"  => List.put(args, "-")
+  | "-*" => errormsg {"Unrecognized option ", argv[i]}
             <<show usage>>
             exit(1)
-  | "*"  => put(args, argv[i])
+  | "*"  => List.put(args, argv[i])
   end
   i = i + 1
 end
 <<insist first-pass options are self-consistent>>
 if wrapper == nil then wrapper = "latex" end
 i = 1
-while i <= length(argv) do
+while i <= List.length(argv) do
   globmatch argv[i] of
     <<second pass {\tt noweave} options>>
   end
@@ -105,15 +97,15 @@ end
 | "-latex" =>      if wrapper ~= "none" then wrapper = "latex" end
 | "-tex" =>        wrapper="tex"
 | "-html" =>       if wrapper ~= "none" then wrapper = "html"  end
-	           backend = libFile("tohtml")
-                   backopts = { "-localindex" }
-	           noquote = {}
-                   docanchor = {"-docanchor", "10"}
+	           backend = Defaults.tohtml
+                   backopts = List.new { "-localindex" }
+	           noquote = List.new {}
+                   docanchor = List.new {"-docanchor", "10"}
 | "-latex+html" =>  if wrapper ~= "none" then wrapper = "latex" end
-                   backend = libFile("tohtml")
-                   backopts = { "-localindex", "-raw" }
-	           noquote = {}
-                   docanchor = {"-docanchor", "10"}
+                   backend = Defaults.tohtml
+                   backopts = List.new { "-localindex", "-raw" }
+	           noquote = List.new {}
+                   docanchor = List.new {"-docanchor", "10"}
 | "-ascii" =>      wrapper= "none"; backend = libFile("toascii")
 | "-troff" =>      wrapper="mm";    backend = libFile("toroff")
 | "-n" =>          wrapper="none"
@@ -199,28 +191,29 @@ A common bug seems to be using both [[-x]] and [[-index]] on the same
 command line, so I complain about it.
 <<insist first-pass options are self-consistent>>=
 if using_xref and using_index then
-  errormsg("$0: you may not use -x with -index or -indexfrom (drop the -x)")
+  error("noweave: you may not use -x with -index or -indexfrom (drop the -x)")
   exit(1)
 end
 <<initialization>>=
 using_index=nil; using_xref=nil
 @ 
 <<first pass {\tt noweave} options>>=
-| "-filter" =>
+| "-filter" => i = i+1
 | "-x" =>                           using_xref=1 
 | "-index" =>            noindex=nil ; using_index=1
 | "-indexfrom" => i=i+1; noindex=nil ; using_index=1
 <<second pass {\tt noweave} options>>=
 | "-filter" => 
-    filters = P.extendFilter(filters, commandFilter(argv[i+1]))
+    filters = P.connect(filters, MD.stringFilter(argv[i+1]))
     i = i + 1
-| "-x" => P.extendFilter(filters, P.filter(libFile("noidx"), { docanchor, delay }))
+| "-x" => 
+    filters = P.connect(filters, P.filter(libFile("noidx"), docanchor .. delay))
 | "-index" =>  
-  P.extendFilter(filters, P.filter(libFile("finduses"), noquote))
-  P.extendFilter(filters, P.filter(libFile("noidx"), docanchor .. delay))
+  filters = P.connect(filters, P.filter(libFile("finduses"), noquote))
+  filters = P.connect(filters, P.filter(libFile("noidx"), docanchor .. delay))
 | "-indexfrom" =>
-  P.extendFilter(filters, P.filter(libFile("finduses"), noquote .. {argv[i+1]}))
-  P.extendFilter(filters, P.filter(libFile("noidx"), docanchor .. delay))
+  filters = P.connect(filters, P.filter(libFile("finduses"), noquote .. {argv[i+1]}))
+  filters = P.connect(filters, P.filter(libFile("noidx"), docanchor .. delay))
   i = i + 1
 <<option printout for usage>>=
 errormsg("-x		Use the default cross-referencer (needs LaTeX or HTML).")
@@ -320,10 +313,10 @@ do in a portable way is [[test -r]].
 <<first pass {\tt noweave} options>>=
 | "-autodefs" => 
     f = libFile("autodefs." .. argv[i+1])
-    if System.isExecutable(f) then
-      P.extendFilter(filters, P.filter(f))
+    if MD.isExecutable(f) then
+      filters = P.connect(filters, P.filter(f, {}))
     else
-      errormsg(argv0, ": don't know how to find definitions for '", argv[i+1], "'")
+      errormsg {argv0, ": don't know how to find definitions for '", argv[i+1], "'"}
       exit(1)
     end
     i = i + 1
@@ -353,8 +346,8 @@ Same note as above regarding [[test -x]] vs [[test -r]].
 foundautodefs = nil
 l = System.globFile(libFile("autodefs.*"))
 initial = strlen(libFile("autodefs."))
-while length(l) > 0 do
-  f = get(l)
+while List.length(l) > 0 do
+  f = List.get(l)
   if System.isExecutable(f) then
     write("This noweave supports -autodefs ", strsub(f, 1+initial))
     foundautodefs=f
@@ -370,8 +363,8 @@ command line, we pass something suitable to the back end, in case we're doing
 HTML.
 <<first pass {\tt noweave} options>>=
 | "-option" => newopt=argv[i+1]; i = i + 1
-         if newopt == "shortxref" then shortxref={"-shortxref"} end
-         if newopt == "longxref"  then shortxref ={"-longxref"} end
+         if newopt == "shortxref" then shortxref = List.new {"-shortxref"} end
+         if newopt == "longxref"  then shortxref = List.new {"-longxref"} end
          <<add [[$newopt]] to [[noweboptions]]>>
 <<option printout for usage>>=
 errormsg("-option opt	Add \\noweboptions{opt} to header (latex only)")
@@ -429,7 +422,7 @@ option.
 % Don't delay, put file-name and other information right after header. (Default)
 % @ \fi
 <<first pass {\tt noweave} options>>=
-| "-t*" => put(markopts, argv[i])
+| "-t*" => List.put(markopts, argv[i])
 <<option printout for usage>>=
 errormsg("-tk		Expand tab stops every k columns")
 errormsg("-t		Copy tabs to the output")
@@ -507,44 +500,73 @@ errormsg("Usage: $0 [options] [files]")
 errormsg("Options recognized are:")
 <<option printout for usage>>
 @
-To avoid inserting any extra newlines into the output, 
-I use [[@literal]]to insert headers and trailers.
-The altered [[PATH]] provides a convenience to people who want to
-use simple names to refer to filters in [[$LIB]].
+With an internal source, it's easy to supply headers and trailers.
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>=
-function internal_src (t, buf) 
+function internal_src (buf, t) 
   local rc
   case t.wrapper of
-  | "latex" => NwBuffer_append(NW_HEADER, wrapper .. " " .. noweboptions)
+  | "latex" => NWB.put(buf, NW_HEADER, wrapper .. " " .. noweboptions)
   | "none"  => 
-  else => NwBuffer_append(NW_HEADER, wrapper .. arg)
+  else => NWB.put(buf, NW_HEADER, wrapper .. " " .. List.tostring(args))
   end
-  rc = t.fun(t.arg, buf)
+  rc = t.fun(buf, t.arg)
   case t.wrapper of
   | "none"  => 
-  else => NwBuffer_append(NW_TRAILER, wrapper)
+  else => NWB.put(buf, NW_TRAILER, wrapper)
+  end
+  return rc
+end
+@
+With an external source, much harder --- I need an explicit [[fromascii]].
+
+<<using [[markup]] and [[wrapper]], make [[src]] the source>>=
+function external_src(t)
+  case t.wrapper of
+  | "latex" => write("@header ", wrapper .. " " .. noweboptions, '\n')
+  | "none"  => 
+  else => write("@header ", wrapper .. " " .. List.tostring(args), '\n')
+  end
+  System.fflush()
+  rc = XPipe.run(XPipe.stage(t.fun, t.arg))  -- probably wrong
+  case t.wrapper of 
+  | "none"  => 
+  else => write("@trailer ", wrapper, '\n')
   end
   return rc
 end
 
-function external_src(t)
-  local rc
+function external_src_wrap(t)
   case t.wrapper of
-  | "latex" => write("@header ", wrapper .. " " .. noweboptions)
+  | "latex" => NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. noweboptions)
   | "none"  => 
-  else => write("@header ", wrapper .. arg)
+  else => NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. List.tostring(args))
+     --- where is args coming from?
   end
-  rc = t.fun(t.arg)  -- probably wrong
+  local rc = Stages.fromascii(t.buf)
   case t.wrapper of
   | "none"  => 
-  else => write("@trailer ", wrapper)
+  else => NWB.put(t.buf, NW_TRAILER, t.wrapper)
   end
   return rc
 end
 
 -- this looks wrong
 if type(markup) == "string" then
-  s = P.source(external_src, {wrapper=wrapper, fun=markup, arg=markops .. arg})
+  s = P.xsource(external_src, {wrapper=wrapper, fun=markup, arg=markopts .. args})
 else 
-  s = P.source(internal_src, {wrapper=wrapper, fun=markup, arg=markops .. arg})
+  s = P.source(internal_src, {wrapper=wrapper, fun=markup, arg=markopts .. args})
 end
+
+src = s
+-- src = P.source(Stages.markup, markopts .. args)
+@ 
+<<initialization>>=
+if not Noweave then Noweave = { } end
+function Noweave.concatfallback (x, y)
+  case type(x) .. "," .. type(y) of
+  | "string,nil" => return x
+  | "nil,string" => return y
+  else => return Noweave.oldconcatfallback(x, y)
+  end
+end
+Noweave.oldconcatfallback = setfallback("concat", Noweave.concatfallback)
