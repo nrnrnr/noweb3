@@ -25,6 +25,7 @@ This is the Lua registration of the C internal pipeline stages.
 #define NULL 0
 #endif
 
+extern FILE *lua_infile, *lua_outfile; /* from lua iolib.c */
 <<stages>>
 <<Lua registration of functions>>
 @ 
@@ -35,16 +36,31 @@ static void markup_lua(void) {
   lua_Object table, buf;
   int result;
   lua_get_args("Stages.markup", 2, NWBUFFER, &buf, LUA_TABLE, &table);
-  result = markup_source(CArgs_fromtable("markup", table), lua_getuserdata(buf));
+  result = markup_source(CArgs_fromtable("markup", table), NULL, lua_getuserdata(buf));
   lua_pushnumber((double)result);
 }
+@ 
+<<hackers: subsubsections for internal sources>>=
+\subsubsection{The source \texttt{Stages.markup}}
+
+\texttt{Stages.markup} is a source (or ``front end'') that converts an
+ASCII \texttt{noweb} file into internal pipeline form.
+Its arbitrary argument is a list of file names;
+its output represents the contents of those files.
+Each file is represented by a ``{\tt @file~{\rm\it filename}}'' line,
+followed by a sequence of chunks.
+{\tt Stages.markup} numbers chunks consecutively, starting at~0.
+It also recognizes and undoes the escape sequence for double brackets,
+e.g.~converting ``{\tt @<<}'' to ``{\tt <<}''.
+The only tagging keywords found in its output are \ikw{defn} or
+\ikw{nl}; despite what's written about it, \ikw{use} never appears.
 @ 
 <<stages>>=
 static void nt_lua(void) {
   lua_Object table, buf;
   int result;
   lua_get_args("Stages.nt", 2, NWBUFFER, &buf, LUA_TABLE, &table);
-  result = notangle_sink(CArgs_fromtable("nt", table), lua_getuserdata(buf));
+  result = notangle_sink(CArgs_fromtable("nt", table), lua_getuserdata(buf), NULL);
   lua_pushnumber((double)result);
 }
 @ 
@@ -53,7 +69,7 @@ static void toascii_lua(void) {
   lua_Object arg, buf;
   lua_get_args("Stages.toascii", 2, NWBUFFER, &buf, LUA_USERDATA | LUA_NIL, &arg);
   lua_pushnumber((double)
-     NowebBuffer_toascii(lua_isnil(arg) ? stdout : lua_getuserdata(arg),
+     NowebBuffer_toascii(lua_isnil(arg) ? lua_outfile : lua_getuserdata(arg),
 			 lua_getuserdata(buf), NULL));
 }
 
@@ -61,15 +77,85 @@ static void fromascii_lua(void) {
   lua_Object arg, buf;
   lua_get_args("Stages.fromascii", 2, NWBUFFER, &buf,
 	                              LUA_USERDATA | LUA_NIL | OPTIONAL, &arg);
-  lua_pushnumber((double)readascii(lua_isnil(arg) ? stdin : lua_getuserdata(arg),
+  lua_pushnumber((double)readascii(lua_isnil(arg) ? lua_infile : lua_getuserdata(arg),
 				   NULL, lua_getuserdata(buf)));
 }
+<<hackers: subsubsections for internal sinks>>=
+\subsubsection{The sink \texttt{Stages.toascii}}
+ {\tt Stages.toascii} is a sink that converts the internal pipeline into
+the external ASCII form.
+The arbitrary argument is the file to which the ASCII should be written; if omitted, 
+it defaults to the current Lua output file.
+Most people won't need to use this stage explicitly;
+ the ``mixed pipeline'' abstraction inserts it automatically where needed.
+<<hackers: subsubsections for internal sources>>=
+\subsubsection{The source \texttt{Stages.fromascii}}
+ {\tt Stages.fromascii} is a source that reads 
+an external ASCII pipelin from a file.
+The arbitrary argument is the file from which the ASCII should be read; if omitted, 
+it defaults to the current Lua input file.
+Most people won't need to use this stage explicitly;
+ the ``mixed pipeline'' abstraction inserts it automatically where needed.
+@ 
+<<hackers: subsubsections for internal sources>>=
+\subsubsection{The filter \texttt{Stages.finduses}}
+
+Using code contributed by Preston Briggs, this filter makes two passes
+over its input.
+The first pass reads in all the \ikw{defn} and \ikw{localdefn} pairs and builds an
+Aho-Corasick recognizer for the identifiers named therein.
+The second pass copies the input, searching for these identifiers in
+each \kw{text} pair that is in code.
+When it finds an identifier, {\tt Stages.finduses} breaks the \kw{text} pair
+into pieces, inserting \ikw{use} immediately before the \kw{text}
+piece that contains the identifier just found.%
+\footnote{The behavior described would duplicate \kw{text} pieces
+whenever one identifier was a prefix of another.
+This event is rare, and probably undesirable, but it can happen if,
+for example, the C$++$ names {\tt MyClass} and {\tt MyClass::Function}
+are both considered identifiers.
+In this case, whatever identifier is found first is emitted first, and
+only the unemitted pieces of longer identifiers are emitted.}
+{\tt Stages.finduses} assumes that previous filters will not have broken
+\kw{text} lines in the middle of identifiers.
+
+The arbitrary argument is a list of strings, which include a potential
+option and a potential list of file names.
+The \verb+-noquote+  option prevents {\tt Stages.finduses} from
+searching for uses in quoted code.
+If {\tt Stages.finduses} is given additional arguments, it takes those arguments to be
+file names, and it reads lists of identifiers (one per line) from the
+files so named, rather than from its input buffer.
+This technique enables {\tt Stages.finduses} to make a single pass over its
+input; {\tt no~weave} uses it to implement the {\tt -indexfrom} option.
+
+{\tt Stages.finduses} shouldn't be run before filters which, like the {\tt
+autodefs} filters, expect one line to be represented in a single
+\kw{text} pair.
+Filters (or back ends) that have to be run late, like 
+prettyprinters, should be prepared to deal with lines broken into
+pieces and with \kw{index} and \kw{xref} tags intercalated.
+<<stages>>=
+static void fu_lua(void) {
+  extern int finduses_filter(void *arg, NowebBuffer in, NowebBuffer out);
+  lua_Object tab, src, snk;
+  int result;
+  lua_get_args("Stages.finduses", 3, NWBUFFER, &src, NWBUFFER, &snk, LUA_TABLE, &tab);
+  result = finduses_filter(CArgs_fromtable("nt", tab), lua_getuserdata(src),
+			   lua_getuserdata(snk));
+  lua_pushnumber((double)result);
+}
+
+
+
+
 <<Lua registration of functions>>=
 int stages_open(void) {
   lua_module_register("Stages", "markup", markup_lua);
   lua_module_register("Stages", "nt", nt_lua);
   lua_module_register("Stages", "toascii", toascii_lua);
   lua_module_register("Stages", "fromascii", fromascii_lua);
+  lua_module_register("Stages", "finduses", fu_lua);
   return 1;
 }
 
