@@ -601,7 +601,7 @@ int markup_source(void* arg, NowebBuffer out) {
         }
     else
         markup(stdin,out,"");
-    return errorlevel;          /* slay warning */
+    return errorrc;          /* slay warning */
 }
 @
 <<handle [[-t]]>>=

@@ -39,7 +39,7 @@ main(int argc, char **argv) {
         default:  emitfile(argv[i]);                               break;
       }
     nowebexit(NULL);
-    return errorlevel;          /* slay warning */
+    return errorrc;          /* slay warning */
 }
 @
 <<read standard input into tree>>=

@@ -49,7 +49,7 @@ main(int argc, char **argv) {
        add_use_markers(stdin, stdout);
     }
     nowebexit(NULL);
-    return errorlevel;          /* slay warning */
+    return errorrc;          /* slay warning */
 }
 @
 <<read identifiers to be defined from files named in [[argv]]>>=
