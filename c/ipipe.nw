@@ -56,6 +56,8 @@ extern IPipe_T IPipe_connect(IPipe_T, IPipe_T);
 @ 
 We provide an identity filter $\mathit{id}$; it is both a left and
 right identity for~$\con$.
+As with all filters, it is an unchecked runtime error to run a
+pipeline consisting solely of the identity.
 <<exported functions and values>>=
 extern IPipe_Filter IPipe_identity;
 @ 
@@ -74,6 +76,7 @@ Here's what the implementation looks like.
 #include "nwbuffer.h"
 #include <stdio.h>
 #include <mem.h>
+#include <assert.h>
 
 <<type definitions>>
 <<functions>>
@@ -106,9 +109,17 @@ IPipe_T IPipe_stage(char *name, int (*stage)(void*, NowebBuffer, NowebBuffer),
   p->u.leaf.arg = arg;
   return p;
 }
+@ 
+Note the identity is a flagrant cheat.
 <<functions>>=
+static struct IPipe_stage identity;
+IPipe_Filter IPipe_identity = &identity;
+
 IPipe_T IPipe_connect(IPipe_T l, IPipe_T r) {
-  IPipe_T p = ALLOC(sizeof(*p));
+  IPipe_T p;
+  if (l == IPipe_identity) return r;
+  if (r == IPipe_identity) return l;
+  NEW(p);
   p->isPair = 1;
   p->u.pair.left  = l;
   p->u.pair.right = r;
@@ -127,8 +138,10 @@ int IPipe_run(IPipe_T p, NowebBuffer in, NowebBuffer out) {
              IPipe_run(p->u.pair.right, pipe, out);
     NowebBuffer_free(&pipe);
     return rc;
-  } else
+  } else {
+    assert(p->u.leaf.stage);
     return p->u.leaf.stage(p->u.leaf.arg, in, out);
+  }
 }
 @ 
 We print a pipeline without its preceding indentation or its trailing newline.
