@@ -70,7 +70,8 @@ extern NowebPair  NowebBuffer_read    (NowebReader);
 extern void NowebBuffer_free          (T* nwbuffer);
 
 extern int  NowebBuffer_is_index(NowebKey key);
-extern int NowebBuffer_toascii(void * /*output file*/, NowebBuffer);
+extern int NowebBuffer_toascii(void * /*output file*/, NowebBuffer buf,
+			       NowebBuffer ignored);
 #undef T
 #endif
 @ 
@@ -332,7 +333,7 @@ void NowebBuffer_free(T* nwbuffer) {
 }
 @
 <<functions>>=
-int NowebBuffer_toascii(void *out /*output file*/, NowebBuffer in) {
+int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignored) {
   FILE *fp = out;
   NowebReader rdr = NowebBuffer_reader(in);
   NowebPair pair;

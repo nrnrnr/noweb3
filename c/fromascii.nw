@@ -1,7 +1,7 @@
 % -*- mode: Noweb; noweb-code-mode: c-mode -*-
 <<header>>=
 #include "nwbuffer.h"
-extern int readascii(void *infile, NowebBuffer buf);
+extern int readascii(void *infile, NowebBuffer ignored, NowebBuffer buf);
   /* infile should be FILE * */
 <<*>>=
 <<fromascii.c>>
@@ -17,7 +17,7 @@ extern int readascii(void *infile, NowebBuffer buf);
 returns that portion of the input line starting at~[[N]].
 It is used to recover the argument from keywords that take arguments.
 <<fromascii.c>>=
-int readascii(void *arg, NowebBuffer buf) {
+int readascii(void *arg, NowebBuffer ignored, NowebBuffer buf) {
   FILE *in = arg;
   char *p;
   int n;

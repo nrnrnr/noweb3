@@ -52,8 +52,9 @@ static void nt_lua(void) {
 static void toascii_lua(void) {
   lua_Object arg, buf;
   lua_get_args("Stages.toascii", 2, NWBUFFER, &buf, LUA_USERDATA | LUA_NIL, &arg);
-  lua_pushnumber((double)NowebBuffer_toascii(lua_isnil(arg) ? stdout :
-					lua_getuserdata(arg), lua_getuserdata(buf)));
+  lua_pushnumber((double)
+     NowebBuffer_toascii(lua_isnil(arg) ? stdout : lua_getuserdata(arg),
+			 lua_getuserdata(buf), NULL));
 }
 
 static void fromascii_lua(void) {
@@ -61,7 +62,7 @@ static void fromascii_lua(void) {
   lua_get_args("Stages.fromascii", 2, NWBUFFER, &buf,
 	                              LUA_USERDATA | LUA_NIL | OPTIONAL, &arg);
   lua_pushnumber((double)readascii(lua_isnil(arg) ? stdin : lua_getuserdata(arg),
-				   lua_getuserdata(buf)));
+				   NULL, lua_getuserdata(buf)));
 }
 <<Lua registration of functions>>=
 int stages_open(void) {

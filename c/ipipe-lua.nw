@@ -11,6 +11,7 @@ use of the lua library that allows values to be passed between Lua and
 C.
 
 <<ipipe-lua.c>>=
+#include <assert.h>
 #include "ipipe.h"
 #include "lua.h"
 #include "lualib.h"
@@ -23,10 +24,8 @@ C.
 <<Filter-create>>
 <<Sink-create>>
 <<IPipe-create>>
-<<Source-extend>>
-<<Filter-extend>>
-<<Sink-extend>>
-<<IPipe-execute>>
+<<functions>>
+<<IPipe-run>>
 <<IPipe-free>>
 <<Lua registration of functions>>
 
@@ -119,11 +118,11 @@ parameters must be passed.  The result is a Lua [[Sink]] placed in
 
 [[apply_source]] is the C function which will be used to execute a [[Source]]
 that consists of a Lua function.
-
 <<Source-create>>=
-int apply_source(void* app, NowebBuffer buf) {
+int apply_source(void* app, NowebBuffer ignored, NowebBuffer buf) {
   struct Application* a = app;
   lua_Object f = lua_getref(a->f);
+  assert(!ignored);
   lua_pushref(a->arg);
   lua_pushusertag(buf, NWBUFFER);
   lua_callfunction(f);
@@ -138,8 +137,8 @@ function which will be called is [[apply_source]].
 
 <<Source-create>>=
 static void Source_create_lua(void) {
-  lua_pushusertag(Source_create(apply_source,
-				build_app_from_lua_args("Source_create")), SOURCE);
+  lua_pushusertag(IPipe_stage("(source from lua)", apply_source,
+			      build_app_from_lua_args("Source_create")), SOURCE);
 }
 @ 
 
@@ -167,8 +166,8 @@ function which will be called is [[apply_filter]].
 
 <<Filter-create>>=
 static void Filter_create_lua(void) {
-  lua_pushusertag(Filter_create(apply_filter,
-				build_app_from_lua_args("Filter_create")), FILTER);
+  lua_pushusertag(IPipe_stage("(filter from lua)", apply_filter,
+			      build_app_from_lua_args("Filter_create")), FILTER);
 }
 @  
 
@@ -178,9 +177,10 @@ static void Filter_create_lua(void) {
 that consists of a Lua function.
 
 <<Sink-create>>=
-int apply_sink(void* app, NowebBuffer buf) {
+int apply_sink(void* app, NowebBuffer ignored, NowebBuffer buf) {
   struct Application* a = app;
   lua_Object f = lua_getref(a->f);
+  assert(!ignored);
   lua_pushref(a->arg);
   lua_pushusertag(buf, NWBUFFER);
   lua_callfunction(f);
@@ -195,7 +195,7 @@ function which will be called is [[apply_sink]].
 
 <<Sink-create>>=
 static void Sink_create_lua(void) {
-  lua_pushusertag(Sink_create(apply_sink,
+  lua_pushusertag(IPipe_stage("(sink from lua)", apply_sink,
 			      build_app_from_lua_args("Sink_create")), SINK);
 }
 @  
@@ -208,13 +208,12 @@ are then passed to the C version of [[IPipe_create]].
 
 <<IPipe-create>>=
 static void IPipe_create_lua(void) {
-  Source src;
-  Sink snk;
+  IPipe_T src, snk;
   lua_Object source_o, sink_o;
   lua_get_args("IPipe.create", 2, SOURCE, &source_o, SINK, &sink_o);
   src = lua_getuserdata(source_o);
   snk = lua_getuserdata(sink_o);
-  lua_pushusertag(IPipe_create(src, snk), IPIPE);
+  lua_pushusertag(IPipe_connect(src, snk), IPIPE);
 }
 @  
 
@@ -223,61 +222,33 @@ static void IPipe_create_lua(void) {
 This function simply takes a Lua [[Source]] and [[Filter]] and combines them
 into a single [[Source]].
 
-<<Source-extend>>=
-static void Source_extend_lua(void) {
-  Source s;
-  Filter f;
-  lua_Object source_o, filter_o;
-  lua_get_args("Source_extend", 2, SOURCE, &source_o, FILTER, &filter_o);
-  s = lua_getuserdata(source_o);
-  f = lua_getuserdata(filter_o);
-  lua_pushusertag(Source_extend(s, f), SOURCE);
+<<functions>>=
+static void IPipe_connect_lua(void) {
+  lua_Object l, r;
+  lua_get_args("Ipipe.connect", 2, SOURCE | FILTER | LUA_NIL, &l,
+	                           FILTER | SINK   | LUA_NIL, &r);
+  if (lua_isnil(l)) { lua_pushobject(r); return; }
+  if (lua_isnil(r)) { lua_pushobject(l); return; }
+  if      (lua_type(l) == MSOURCE &&  lua_type(r) == MFILTER)
+    lua_pushusertag(IPipe_connect(lua_getuserdata(l), lua_getuserdata(r)), SOURCE);
+  else if (lua_type(l) == MSOURCE &&  lua_type(r) == MSINK)		   
+    lua_pushusertag(IPipe_connect(lua_getuserdata(l), lua_getuserdata(r)), IPIPE);
+  else if (lua_type(l) == MFILTER &&  lua_type(r) == MFILTER)		   
+    lua_pushusertag(IPipe_connect(lua_getuserdata(l), lua_getuserdata(r)), FILTER);
+  else if (lua_type(l) == MFILTER &&  lua_type(r) == MSINK)		   
+    lua_pushusertag(IPipe_connect(lua_getuserdata(l), lua_getuserdata(r)), SINK);
 }
 @ 
 
-\subsection{Filter-extend}
-
-This function simply takes two Lua [[Filters]] and combines them into a single
-[[Filter]].
-
-<<Filter-extend>>=
-static void Filter_extend_lua(void) {
-  Filter f1, f2;
-  lua_Object filter1_o, filter2_o;
-  lua_get_args("Filter_extend", 2, FILTER, &filter1_o, FILTER, &filter2_o);
-  f1 = lua_getuserdata(filter1_o);
-  f2 = lua_getuserdata(filter2_o);
-  lua_pushusertag(Filter_extend(f1, f2), FILTER);
-}
-@ 
-
-\subsection{Sink-extend}
-
-This function simply takes a Lua [[Filter]] and [[Sink]] and combines them into a single [[Sink]].
-
-<<Sink-extend>>=
-static void Sink_extend_lua(void) {
-  Filter f;
-  Sink s;
-  lua_Object filter_o, sink_o;
-  lua_get_args("Suink_extendc", 2, FILTER, &filter_o, SINK, &sink_o);
-  f = lua_getuserdata(filter_o);
-  s = lua_getuserdata(sink_o);
-  lua_pushusertag(Sink_extend(f, s), SINK);
-}
-@ 
-
-\subsection{IPipe-execute}
+\subsection{IPipe-run}
 
 This function executes a Lua internal pipeline.
 
-<<IPipe-execute>>=
-static void IPipe_execute_lua(void) {
-  IPipe pipe;
+<<IPipe-run>>=
+static void IPipe_run_lua(void) {
   lua_Object ipipe_o;
-  lua_get_args("Ipipe_execute", 1, IPIPE, &ipipe_o);
-  pipe = lua_getuserdata(ipipe_o);
-  lua_pushnumber((double)IPipe_execute(pipe));
+  lua_get_args("Ipipe_run", 1, IPIPE, &ipipe_o);
+  lua_pushnumber((double)IPipe_run(lua_getuserdata(ipipe_o), NULL, NULL));
 }
 @ 
 
@@ -285,7 +256,7 @@ static void IPipe_execute_lua(void) {
 
 <<IPipe-free>>=
 static void IPipe_free_lua(void) {
-  IPipe pipe;
+  IPipe_T pipe;
   lua_Object ipipe_o;
   lua_get_args("IPipe_free", 1, IPIPE, &ipipe_o);
   pipe = lua_getuserdata(ipipe_o);
@@ -301,10 +272,8 @@ int IPipe_open(void) {
   lua_register("Filter_create", Filter_create_lua);
   lua_register("Sink_create", Sink_create_lua);
   lua_register("IPipe_create", IPipe_create_lua);
-  lua_register("Source_extend", Source_extend_lua);
-  lua_register("Filter_extend", Filter_extend_lua);
-  lua_register("Sink_extend", Sink_extend_lua);
-  lua_register("IPipe_execute", IPipe_execute_lua);
+  lua_register("IPipe_connect", IPipe_connect_lua);
+  lua_register("IPipe_run", IPipe_run_lua);
   lua_register("IPipe_free", IPipe_free_lua);
   return 1;
 }
