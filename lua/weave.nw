@@ -226,13 +226,13 @@ using_index=nil; using_xref=nil
              "; filters = filters .. MPipe.filter(f, arg) end")
     i = i + 1
 | "-x" => 
-    filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
+    filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
 | "-index" =>  
   filters = filters .. P.filter(Defaults.finduses, noquote)
   filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
 | "-indexfrom" =>
   filters = filters .. P.filter(Defaults.finduses, noquote .. {argv[i+1]})
-  filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
+  filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
   i = i + 1
 <<option printout for usage>>=
 errormsg("-x		Use the default cross-referencer (needs LaTeX or HTML).")
