@@ -15,6 +15,8 @@ all: $(CONFIG) $(STAGES) $(SCRIPTS)
 
 test: $(CONFIG) $(STAGES) $(SCRIPTS)
 	@echo 'write("Scripts load from .\n")' | NWPATH=. no
+	@echo 'argv = {"-internaldefaults", "-n", "-html", "/dev/null"}; do_nwfile("weave.nws"); write("Null weave OK.\n")' | NWPATH=. no
+	@echo 'argv = {"-internal", "test.nw"}; do_nwfile("tangle.nws"); write("Null tangle OK.\n")' | NWPATH=. no
 
 htmltest: $(CONFIG) $(STAGES) $(SCRIPTS)
 	@echo 'testfile("/home/nr/www/noweb/index.html")' | NWPATH=. no
@@ -36,4 +38,9 @@ sys.cfg: config.nw;	$(NOTANGLE) -L'$$file %F%N$$line %L%N' -R$@ config.nw > $@
 noweb.cfg: config.nw;	$(NOTANGLE) -L'$$file %F%N$$line %L%N' -R$@ config.nw > $@
 util.cfg: config.nw;	$(NOTANGLE) -L'$$file %F%N$$line %L%N' -R$@ config.nw > $@
 
+################################################################
+#
+
+noidx.tex: noidx.nw
+	noweave -delay -x -filter 'elide hackers:*' noidx.nw > noidx.tex
 
