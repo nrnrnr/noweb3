@@ -16,8 +16,9 @@ int main(int argc, char** argv) {
   struct c_args* args = ALLOC(sizeof(struct c_args));
   args->argc = argc;
   args->argv = argv;
-  return IPipe_execute(IPipe_create(Source_create(markup_source, args),
-				    Sink_create(NowebBuffer_toascii, stdout)));
-  nowebexit(NULL);
+  return IPipe_run(
+     IPipe_connect(IPipe_stage("Stages.markup",  markup_source,       args),
+                   IPipe_stage("Stages.toascii", NowebBuffer_toascii, stdout)),
+     NULL, NULL);
 }
 @

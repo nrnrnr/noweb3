@@ -7,23 +7,21 @@
 <<*>>=
 #include <stdio.h>
 #include "markparse.h"
-#include "toascii.h"
 #include "nwbuffer.h"
 #include "ipipe.h"
 #include "cargs.h"
 #include "fromascii.h"
 #include "errors.h"
 #include <mem.h>
-
-int notangle_sink(void *arg, NowebBuffer in);
+#include "notangle.h"
 
 int main(int argc, char** argv) {
   struct c_args* args = ALLOC(sizeof(struct c_args));
   args->argc = argc;
   args->argv = argv;
-  return IPipe_execute(IPipe_create(Source_create(readascii, stdin),
-				    Sink_create(notangle_sink, args)));
-
-  nowebexit(NULL);
+  return IPipe_run(
+     IPipe_connect(IPipe_stage("Stages.fromascii", readascii,        stdin),
+                   IPipe_stage("Stages.nt",        notangle_sink,    args)),
+     NULL, NULL);
 }
 @
