@@ -235,37 +235,36 @@ leaf, then executing the next leaf to the right, and so on until all leaf
 functions are executed.
 
 <<functions>>=
-void Filter_execute(Filter filter, NowebBuffer in, NowebBuffer out) {
+int Filter_execute(Filter filter, NowebBuffer in, NowebBuffer out) {
   if (filter->isPair) {
-    Filter_execute(filter->u.pair.left, in, filter->u.pair.buf);
-    Filter_execute(filter->u.pair.right, filter->u.pair.buf, out);
+    return Filter_execute(filter->u.pair.left, in, filter->u.pair.buf)
+        || Filter_execute(filter->u.pair.right, filter->u.pair.buf, out);
   }
   else
-    filter->u.leaf.stage(filter->u.leaf.arg, in, out);
+    return filter->u.leaf.stage(filter->u.leaf.arg, in, out);
 }
 
-void Source_execute(Source source, NowebBuffer buffer) {
+int Source_execute(Source source, NowebBuffer buffer) {
   if (source->isPair) {
-    Source_execute(source->u.pair.left, source->u.pair.buf);
-    Filter_execute(source->u.pair.right, source->u.pair.buf, buffer);
+    return Source_execute(source->u.pair.left, source->u.pair.buf)
+        || Filter_execute(source->u.pair.right, source->u.pair.buf, buffer);
   }
   else
-    source->u.leaf.stage(source->u.leaf.arg, buffer);
+    return source->u.leaf.stage(source->u.leaf.arg, buffer);
 }
 
-void Sink_execute(Sink sink, NowebBuffer buffer) {
+int Sink_execute(Sink sink, NowebBuffer buffer) {
   if (sink->isPair) {
-    Filter_execute(sink->u.pair.left, buffer, sink->u.pair.buf);
-    Sink_execute(sink->u.pair.right, sink->u.pair.buf);
+    return Filter_execute(sink->u.pair.left, buffer, sink->u.pair.buf)
+        || Sink_execute(sink->u.pair.right, sink->u.pair.buf);
   }
   else
-    sink->u.leaf.stage(sink->u.leaf.arg, buffer);
+    return sink->u.leaf.stage(sink->u.leaf.arg, buffer);
 }
 
 int IPipe_execute(IPipe pipe) {
-  Source_execute(pipe->source, pipe->buffer);
-  Sink_execute(pipe->sink, pipe->buffer);
-  return 0;
+  return Source_execute(pipe->source, pipe->buffer) ||
+         Sink_execute(pipe->sink, pipe->buffer);
 }
 @ 
 

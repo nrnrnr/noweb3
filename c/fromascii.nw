@@ -31,7 +31,7 @@ int readascii(void *arg, NowebBuffer buf) {
   string:
     <<scan to first blank (if any) and call [[NowebBuffer_append_str]]>>
   }
-  return 0;
+  return errorrc;
 }
 @ 
 <<scan to first blank (if any) and call [[NowebBuffer_append_str]]>>=
