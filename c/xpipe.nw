@@ -431,7 +431,7 @@ switch (stage->tag) {
   case Prog:
     { struct XPipe_Program *prog = &stage->u.prog;
       char** new_argv;
-      <<make [[new_argv]] be [[argv]] with [[prog->path]] prepended>>
+      <<make [[new_argv]] be [[prog->path]] followed by [[argv]]>>
       if (Str_find(prog->path, 1, 0, Sys_dirsep))
 	execve(prog->path, new_argv, prog->envp);
       else {
@@ -453,7 +453,7 @@ of arguments is allocated, then [[prog->name]] and [[prog->argv]] are
 copied onto it.  It is not necessary to free this memory because a
 call to [[execve]] will follow immediately, resulting in completion of
 the program by either successful execution or a Noweb fatal error.
-<<make [[new_argv]] be [[argv]] with [[prog->path]] prepended>>=
+<<make [[new_argv]] be [[prog->path]] followed by [[argv]]>>=
 {
   int i, n;
   for (n = 0; prog->argv[n] != NULL; n++);  /* set n to length of argv */
@@ -483,10 +483,17 @@ The first two helper functions, [[waitfor]] and [[waitfor2]], return the
 exit status of a child process or a pair of child processes, respectively,
 that function is to wait for.  If an unexpected process terminates before
 one of the awaited processes, then the functions return an error and abort.
+Note that this might happen if, for example, another process forks a
+child, doesn't wait for it, and then execs Noweb.%
+\footnote{Thank you, Russ Cox.}
 <<Unix run-program functions>>=
 static int waitfor(int pid) {
-  int status;
-  assert(pid == wait(&status));
+  int status, childpid;
+  childpid = wait(&status);
+  if (childpid != pid)
+    errormsg(Impossible, "Fatal error: waiting for process %d to finish; "
+             "found process %d.\n\tCould you have forked a child, "
+             "then exec'ed no without waiting?\n", pid, childpid);
   return WEXITSTATUS(status);
 }
 <<private Unix functions>>=
@@ -494,9 +501,15 @@ static int waitfor2(int pid1, int pid2) {
   int status;
   int pid;
   pid = wait(&status);
-  assert((pid == pid1) || (pid == pid2));
+  if ((pid != pid1) && (pid != pid2))
+    errormsg(Impossible, "Fatal error: waiting for process %d or %d to finish; "
+             "found process %d.\n\tCould you have forked a child, "
+             "then exec'ed no without waiting?\n", pid1, pid2, pid);
   return WEXITSTATUS(status) | waitfor(pid == pid1 ? pid2 : pid1);
 }
+<<private Unix functions>>=
+static void unexpected_pid(int pid) {
+  fprintf(stderr, "Surprised by pid %d when waiting for child
 @
 [[makeInput]] and [[makeOutput]] return immediately if the parameters passed
 to them already equal [[stdin]] and [[stdout]], respectively.  Otherwise,
@@ -550,7 +563,9 @@ static int do_stage (XPipe_Stage stage, FILE *in, FILE *out);
 static int do_stages(List_T stages, FILE *in, FILE *out);
 <<temporary-file functions>>=
 int XPipe_run(XPipe_T pipeline, FILE *in, FILE *out) {
+#if 0
   fprintf(stderr, "tmp running "); XPipe_print(stderr, pipeline); putc('\n', stderr); fflush(stderr);
+#endif
   return do_stages(pipeline->stages, in, out);
 }
 @
@@ -581,10 +596,14 @@ static int do_stage(struct XPipe_Stage *stage, FILE *in, FILE *out) {
   switch (stage->tag) {
     case Fun:
       assert(stage->u.fun.f);
+#if 0
 fprintf(stderr, "running function %s in xpipe\n", stage->u.fun.name);
+#endif
       return stage->u.fun.f(stage->u.fun.arg, in, out);
     case Prog:
+#if 0
 fprintf(stderr, "running program %s in xpipe\n", stage->u.prog.path);
+#endif
       return run_program(&stage->u.prog, in, out);
     default:
       assert(0); return -1;
@@ -603,7 +622,7 @@ static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
   char** new_argv;
   int pid;
   if ((pid = fork()) == 0) {
-    <<make [[new_argv]] be [[argv]] with [[prog->path]] prepended>>
+    <<make [[new_argv]] be [[prog->path]] followed by [[argv]]>>
     makeInput (fileno(in ));
     makeOutput(fileno(out));
     if (Str_find(prog->path, 1, 0, Sys_dirsep))
