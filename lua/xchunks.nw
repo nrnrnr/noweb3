@@ -1,0 +1,118 @@
+% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
+
+\section{Getting chunks from an external ``dictionary''}
+
+Mike Smith wants to do an unweblike thing: keep his code and
+documentation in separate source files.
+I~think he wants to do this so he can enable the \emph{same} code
+chunks to appear in \emph{multiple} documents, with guaranteed
+consistency, but I~suppose the reasons don't matter.
+In any case, he wants syntax for referring to a code chunk from an
+external database, and for displaying the definition(s) of that chunk
+exactly where he specifies.
+
+I~suggested solving the problem with a Noweb filter.
+He can refer to chunks using the approved source syntax:
+\texttt{[{}[<{}<}\emph{chunk name}\texttt{>{}>]{}]}.
+To pull in the definitions from the external database, I suggested he
+provide an empty definition.
+Since such a definition can be written in one line (two lines if the
+definition is followed by a documentation chunk), he can pull in many
+definitions concisely.
+
+This program is the noweb filter that does the job.
+Named ``\texttt{xchunks},'' short for ``external chunks,'' it pulls in
+definitions from an external database.
+The external database is itself simply a list of Noweb files.
+It's a bit more liberal than defined above; a chunk is considered
+empty if its definition contains at most whitespace.
+<<*>>=
+Xchunks = { }
+
+function Stages.xchunks(inbuf, outbuf, argv)
+  if type(argv) == "string" then argv = List.fromstring(argv) end
+  if List.length(argv) == 0 then error("xchunks needs an external database") end
+
+  local db = NWB.new()
+  local rc = Stages.markup(db, argv)
+  if rc ~= 0 then return rc end
+  local dbchunks = Xchunks.readchunks(db)
+  local defns = Xchunks.defnstable(dbchunks)
+    -- defns maps name to list of code chunks defining that name
+
+  local thisdoc = Xchunks.readchunks(inbuf)
+  local i = 1
+  local n = List.length(thisdoc)
+  while i <= n do
+    local c = thisdoc[i]
+    if c.type ~= "code" or c.notEmpty or not defns[c.name] then
+      Stages.cat(c.lines, outbuf)
+    else
+      local d = defns[c.name]
+      local m = List.length(d)
+      local j = 1
+      while j <= m do Stages.cat(d[j].lines, outbuf)
+        j = j + 1
+      end
+    end
+    i = i + 1
+  end
+  return 0
+end
+@ 
+Reading chunks is fairly straightforward; we look for begin and end.
+The loop logic is a little less pleasant than I would like.
+<<*>>=
+function Xchunks.readchunks(buf)
+  local chunks, c
+  chunks = List.new()
+  -- finish converting me to Lua...
+  local r = NWB.reader(buf)
+  key, arg = NWB.read(r)
+  while key do
+    case key of
+    | NW_BEGIN_DOCS, NW_BEGIN_CODE =>
+        local t
+        if key == NW_BEGIN_DOCS then t = "docs" else t = "code" end
+        local lines = NWB.new()
+        c = { lines = lines , type = t }
+        NWB.put(lines, key, arg)
+        key, arg = NWB.read(r)
+        while key and key ~= NW_END_DOCS and key ~= NW_END_CODE do
+          NWB.put(lines, key, arg)
+          if key == NW_DEFN then c.name = arg end
+          if key == NW_USE or (key == NW_TEXT and strfind(arg, "%S")) then
+            c.notEmpty = 1
+          end
+          key, arg = NWB.read(r)
+        end
+        if not key then error("unmatched @begin "..t) end
+        NWB.put(lines, key, arg)
+        List.put(chunks, c)
+     else =>
+        local lines = NWB.new()
+        NWB.put(lines, key, arg)
+        List.put(chunks, {lines=lines, type="unknown"})
+     end
+     key, arg = NWB.read(r)
+  end
+  return chunks
+end
+@ 
+Building the definitions table is easy.
+<<*>>=
+function Xchunks.defnstable(chunks)
+  local t = {}
+  local i = 1
+  local n = List.length(chunks)
+  while i <= n do
+    local c = chunks[i]
+    if c.type == "code" then
+      t[c.name] = t[c.name] or List.new()
+      List.put(t[c.name], c)
+    end
+    i = i + 1
+  end
+  return t
+end
+@ 

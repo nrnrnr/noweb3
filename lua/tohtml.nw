@@ -1,0 +1,557 @@
+% -*- mode: Noweb; noweb-code-mode: lua-mode -*-
+\section{Converting {\tt noweb} markup to HTML markup (Lua version)}
+The copyright applies both to the {\tt noweb} source and to the
+generated Lua script.
+Thanks to Bill Trost for getting me started with an early version.
+<<copyright notice>>=
+-- Copyright 1994-1999 by Norman Ramsey.  All rights reserved.
+-- See file COPYRIGHT for more information.
+@ 
+<<hackers: subsubsections for internal sinks>>=
+\subsubsection{The sink \texttt{Stages.tohtml}}
+
+This back end emits HTML.
+It uses the formatter {\tt html} with \kw{header} and \kw{trailer} to
+emit suitable HTML boilerplate.
+For other formatters (like {\tt none}) it emits no header or trailer.
+Its arbitrary argument is a list of options:
+\begin{quote}
+\begin{tabularx}{\linewidth}{lX}
+\tt -delay&Accepted, for compatibility with other back ends, but ignored.\\
+\tt -localindex&Produces local identifier cross-reference after each code chunk.\\
+\tt -raw&Wraps text generated for code chunks in a {\LaTeX} {\tt rawhtml}
+environment, making the whole document suitable for processing with
+{\tt latex2html}.\\
+\end{tabularx}
+\end{quote}
+@
+The [[-raw]] option brackets HTML with [[\begin{rawhtml}]] and 
+[[\end{rawhtml}]]; the purpose is to embed HTML in a {\LaTeX} 
+document before converting the document with {\tt latex2html}.
+[[braw]] and [[eraw]] hold those delimiters (or else empty strings).
+<<*>>=
+<<copyright notice>>
+-- Don't try to understand this file!  Look at lua/tohtml.nw in the noweb source!
+
+Tohtml = { }
+
+function Stages.tohtml(sourcebuf, args)
+  local defns, useitems, defns_above, useitemstab
+  local delay, raw, where, localindex, noindex, shortxref, no_gen_comment
+  local r, key, value -- for reading from sourcebuf
+  local rcsinfo = 
+     "$Id$" .. "$Name$"
+
+  <<initialization>>
+
+  Tohtml.braw = ""
+  Tohtml.eraw = ""
+  shortxref = 1   -- by default, use short form for cross-reference
+  while List.length(args) > 0 do 
+    a = List.get(args)
+    case a of
+    | "-delay" => delay = 1
+    | "-noindex" => noindex = 1
+    | "-longxref" => shortxref = nil
+    | "-localindex" => localindex = 1    -- produce local identifer cross-reference
+    | "-raw" => raw = 1  -- wrap HTML in rawhtml environment
+    | "-no-gen-comment" => no_gen_comment = 1
+    end
+  end
+  localindex = localindex and not noindex
+
+  if raw then
+    Tohtml.braw = "\\begin{rawhtml}"
+    Tohtml.eraw = "\\end{rawhtml}"
+  end
+  if not no_gen_comment then
+    write(Tohtml.braw, "<!-- this file was generated automatically by noweave;",
+          " better not edit it-->", Tohtml.eraw, "\n")
+  end
+
+  r = NWB.reader(sourcebuf)
+  key, value = NWB.read(r)
+  while key do
+    case key of
+    <<cases for conversion>>
+    end
+    key, value = NWB.read(r)
+  end
+  write('\n')
+end
+<<cases for conversion>>=
+<<@text>>
+<<@nl>>
+<<code chunks>>
+<<@defn>>
+<<docs chunks>>
+<<@use>>
+<<@xref>>
+<<@index>>
+<<others>>
+| NW_FATAL => return 1
+else =>
+  if type(key) == "string" then
+    warn_unknown(key, value)
+  else
+    noweb_error("Internal error in weave (tohtml): did not handle key ", key)
+  end
+@ 
+[[ecode]] is the marker used at the end of the current code chunk.
+If there is no cross-reference stuff at the end, we just use [[</pre>]];
+otherwise we terminate whatever environment is used for the cross-reference stuff.
+<<code chunks>>=
+| NW_BEGIN_CODE => code = 1   ; thischunk = nil
+                   <<reset cross-reference info>>
+                   write(Tohtml.braw, "<pre>"); ecode = "</pre>"
+| NW_END_CODE   => <<dump pending cross-reference info (long form)>>
+                   code = nil ; previscode = 1 
+                   write(ecode, Tohtml.eraw)
+@ %def previscode
+@ We maintain [[thischunk]] null until we've seen [[@defn]].
+
+We want to try to avoid emitting paragraph elements when the
+preceding chunk is a code chunk, as tracked by [[previscode]].
+Also, if we do slip in a paragraph, we may use the {\LaTeX} style.
+<<docs chunks>>=
+| NW_BEGIN_DOCS => if previscode then write((raw and "\\par") or "<p>") end
+                   previscode = nil
+                   text = 0 -- count of how many text chars seen
+@
+Sometimes it happens that a document-chunk anchor is put in a document chunk that
+contains no text.  In that case, we put in a phony anchor at the end of the chunk so 
+we won't lose the cross-reference.
+<<docs chunks>>=
+| NW_END_DOCS =>  if lastxreflabel then write(linklabel(lastxreflabel, "*")) end
+                  lastxreflabel = nil
+@
+Normally, if there's a pending anchor, we put it on the first available text line.
+There's a bit of a fine point that crops up if the very first piece of text
+is quoted code.  In that case we have to attach both the label for the
+{\it docs} anchor and the ref for the {\it index} anchor.
+<<@text>>=
+| NW_TEXT =>      text = text + strlen (value)
+                  if code then
+                    if <<there should be an index anchor>> then
+                      <<emit the index anchor>>
+                    else
+                      write(Tohtml.escapeSpecials(value))
+                    end
+                  elseif quoting then
+                    if <<there should be an index and docs anchor>> then
+                      <<emit the index and docs anchor>>
+                    else
+                      write(Tohtml.escapeSpecials(value))
+                    end
+                  else
+                    if <<there should be a docs anchor>> then
+                      <<emit the docs anchor>>
+                    else
+                      write(value)
+                    end
+                  end
+<<there should be an index anchor>>=
+lastindexref and strfind(value, "[%S]") -- text has nonblank
+<<emit the index anchor>>=
+write(linkto(lastindexref, Tohtml.escapeSpecials(value)))
+lastindexref = nil
+@
+We anchor on the first nonblank character of the line, unless that's
+an SGML tag, in which case we have to
+skip past. 
+None of this crap would be necessary if HTML could anchor to empty text.
+<<there should be a docs anchor>>=
+lastxreflabel and Tohtml.untagged_chars_range(value)
+<<emit the docs anchor>>=
+local pre, chars, post = Tohtml.untagged_chars_split(value)
+write(pre, linklabel(lastxreflabel, chars), post)
+Set.insert(defns_above, lastxreflabel)
+lastxreflabel = nil
+@ 
+An indexed identifier is not empty and contains no tags, so we don't 
+have to worry.
+<<there should be an index and docs anchor>>=
+strfind(value, "[%S]") -- text has nonblank
+<<emit the index and docs anchor>>=
+write(linklabelto(lastxreflabel, lastindexref, Tohtml.escapeSpecials(value), "bare"))
+lastxreflabel = nil; lastindexref = nil
+@
+To anchor something in text, we need to skip preceding whitespace and
+tags to find some real characters.
+We do this with a [[while]] loop.
+After the loop there are many alternatives to decide how far to go to
+get the taggable text --- or if there is taggable text at all.
+<<*>>=
+Tohtml = Tohtml or { }
+function Tohtml.untagged_chars_range(s)
+  local trail, start, next
+  -- skip initial whitespace and HTML tags
+  next = 1
+  while next do 
+    start = next
+    next, trail = strfind(s, "^%s*<%s*/?%s*%a%a*[^>]*>%s*", start)
+    if not next then
+      next, trail = strfind(s, "^%s*<%s*!--[^>]*>%s*", start)
+    end
+    if not next then
+      next, trail = strfind(s, "^%s%s*", start)
+    end
+    next = next and trail + 1
+  end
+  -- bracket non-tag material with trail, next
+  if not strfind(s, "^<", start) and strfind(s, "<", start) then -- take to next tag
+    trail = strfind(s, "<", start)
+    return start, trail - 1
+  elseif strfind(s, "^&[^;]*;", start) then -- take an HTML entity
+    start, trail = strfind(s, "^&[^;]*;", start)
+    return start, trail
+  elseif strfind(s, "^%s", start)
+      or (strfind(s, "^<", start) and strfind(s, ">", start)) then -- grim error
+    noweb_error('broken Tohtml.untagged_chars_range; ',
+                'report to nr@alumni.princeton.edu: ', image(strsub(s, start)))
+  elseif strfind(s, "^<", start) then -- open tag w/o close; give up
+    errormsg("Warning: can't find end of HTML tag: ", image(strsub(s, start)))
+    errormsg('  quoted code embedded in comment?')
+    return nil, nil
+  elseif start == strlen(s) + 1 then -- no text left
+    return nil, nil
+  else -- take the rest of the string
+    return start, strlen(s)
+  end
+end
+
+function Tohtml.untagged_chars_split(s)
+  local n, t = Tohtml.untagged_chars_range(s)
+  if n then
+    return strsub(s, 1, n-1), strsub(s, n, t), strsub(s, t+1)
+  else
+    return nil, nil, nil
+  end
+end
+@ 
+<<@nl>>=
+| NW_NL   => <<show definitions and uses on definition line---once>>
+             write('\n')
+<<@defn>>=
+| NW_DEFN => thischunk = value
+             defns[thischunk] = defns[thischunk] or "="
+             Tohtml.writechunk(lastxreflabel, lastxrefref, "dfn",
+                               thischunk, defns[thischunk])
+             if lastxreflabel then Set.insert(defns_above, lastxreflabel) end
+             useitems = useitemstab[thischunk] or useitems
+             pendinguses = 1
+             <<clear [[lastxref*]]>>
+             defns[thischunk] = "+="
+<<initialization>>=
+useitemstab = { }
+defns = { }
+defns_above = Set.new()     -- keep track of defining chunks we've seen
+<<@use>>=
+| NW_USE  => Tohtml.writechunk(lastxreflabel, lastxrefref, "i", value) 
+             <<clear [[lastxref*]]>>
+@
+Writing a chunk involves creating an anchor for it.
+The anchor is ``bare'' because it's always in an HTML-containing place.
+<<*>>=
+function Tohtml.writechunk(label, ref, tag, name, suffix)
+  suffix = suffix or ""
+  write(linklabelto(label, ref, 
+                     sgmlwrap(tag, "&lt;" .. Tohtml.convquotes(name) .. "&gt;" .. suffix),
+                     "bare"))
+end
+@
+<<others>>= 
+| NW_QUOTE    => quoting = 1   ; write(Tohtml.braw, "<code>")
+| NW_ENDQUOTE => quoting = nil ; write("</code>", Tohtml.eraw)
+<<others>>=
+| NW_FILE     => filename = value; <<clear [[lastxref*]]>>
+| NW_LITERAL  => write(tab(0))
+| NW_HEADER   => if strfind(value, "^html ") then 
+                   value = strsub(value, 6)
+                   <<write HTML header>>
+                 end
+| NW_TRAILER  => if value == "html" then <<write HTML trailer>> end
+@
+<<write HTML header>>=
+write("<html><head><title>", value, "</title></head><body>")
+<<write HTML trailer>>=
+write("</body></html>\n")
+@
+[[useitemstab]] seems to exist to enable us to repeat the
+uses for each chunk, even though the [[noidx]] filter only provides them once.
+I think it may prove better to provide use information for each instance
+of a chunk.
+<<@xref>>=
+| NW_XREF_LABEL     => <<warn if unused [[lastxreflabel]]>>; lastxreflabel = value
+| NW_XREF_REF       => <<warn if unused [[lastxrefref]]>>;   lastxrefref   = value
+| NW_XREF_PREVDEF   => pendingprev   = value
+| NW_XREF_NEXTDEF   => pendingnext   = value
+| NW_XREF_BEGINUSES => useitems = List.new()
+| NW_XREF_USEITEM   => List.put(useitems, value)
+| NW_XREF_ENDUSES   => if thischunk then useitemstab[thischunk] = useitems end
+| NW_XREF_NOTUSED   => notused = value
+<<clear [[lastxref*]]>>=
+lastxreflabel = nil; lastxrefref = nil
+<<warn if unused [[lastxreflabel]]>>=
+if lastxreflabel then Tohtml.warn_unused_xref("label", lastxreflabel) end
+<<warn if unused [[lastxrefref]]>>=
+if lastxrefref   then Tohtml.warn_unused_xref("ref", lastxrefref) end
+<<*>>=
+Tohtml.warned = Set.new()
+function Tohtml.warn_unused_xref(tag, label)
+  if not Set.member(Tohtml.warned, tag) then
+    Set.insert(Tohtml.warned, tag)
+    errormsg("Warning: internal inconsistency in noweb (not urgent)---")
+    errormsg("\tnever used @xref ", tag, " ", label)
+  end
+end  
+@
+<<show definitions and uses on definition line---once>>=
+if shortxref and (pendinguses or pendingprev or pendingnext or notused) then
+  <<write out definition-line markup>>
+  pendinguses, pendingprev, pendingnext, notused = nil
+end
+<<write out definition-line markup>>=
+if pendinguses and useitems and (List.length(useitems) > 0) then
+  write(" <b>(")
+  local i, n, pfx = 1, List.length(useitems), ""
+  while i <= n do
+    local usedir
+    if Set.member(defns_above, useitems[i]) then
+      usedir = "&lt;-U"
+    else
+      usedir = "U-&gt;"
+    end
+    write(pfx, linkto(useitems[i], usedir))
+    i = i + 1
+    pfx = " "
+  end
+  write(")</b>")
+end
+if pendingprev or pendingnext then
+  write(" <b>[")
+  if pendingprev then write(linkto(pendingprev, "&lt;-")) end
+  write("D")
+  if pendingnext then write(linkto(pendingnext, "-&gt;")) end
+  write("]</b>")
+end
+<<dump pending cross-reference info (long form)>>=
+if not shortxref then 
+  local have_useitems = useitems and (List.length(useitems) > 0)
+  if thischunk then useitems = useitemstab[thischunk] end
+  if pendingprev or pendingnext or (pendinguses and (have_useitems or notused)) then 
+    <<code-to-blockquote>>
+    <<write out uses with links>>
+    if have_useitems and (pendingprev or pendingnext) then
+      write("; ")
+    end
+    if have_useitems then p = "previous" else p = "Previous" end
+    if have_useitems then n = "next"     else n = "Next"     end
+    if pendingprev then
+      if pendingnext then
+        write(linkto(pendingprev, p), " and ",
+              linkto(pendingnext, "next"), " definitions")
+      else
+        write(linkto(pendingprev, p), " definition")
+      end
+    else
+      if pendingnext then
+        write(linkto(pendingnext, n), " definition")
+      end
+    end
+    if pendingprev or pendingnext or have_useitems then
+      write(".")
+    end
+    if notused then
+      write("<br>\nThis code is written to a file (or else not used).")
+    end
+    write("<p>\n")
+    pendinguses, pendingprev, pendingnext, useitems, notused = nil
+  end
+end
+<<write out uses with links>>=
+if have_useitems then
+  local i, n, useprefix = 1, List.length(useitems), "Used "
+  local usedir, usesuffix
+  if member(defns_above, useitems[i]) then usedir = "above" else usedir = "below" end
+  if n > 1 then usesuffix = " (" .. i .. ")" else usesuffix = "" end
+  write(useprefix, linkto(useitems[i], usedir .. usesuffix))
+  useprefix = ", "
+end
+<<reset cross-reference info>>=
+useitems = List.new()
+notused = nil
+@
+The hack here is to put the supplementary information in a blockquote area
+after the code.
+<<code-to-blockquote>>=
+if ecode == "</pre>" then 
+  write("</pre><blockquote>")
+  ecode = "</blockquote>"
+end
+@
+The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
+[[@xref enddefs]]; it uses the [[nextdef]] and [[prevdef]] links instead.
+<<@xref>>=
+| NW_XREF_BEGINDEFS, NW_XREF_DEFITEM, NW_XREF_ENDDEFS => -- do nothing
+@
+<<@xref>>=
+| NW_XREF_BEGINCHUNKS => write(Tohtml.braw, "<ul>\n")
+| NW_XREF_CHUNKBEGIN  => write("<li>"); comma = ": "; count = 0
+                         local ref, name = split_first_space(value)
+--errormsg("ref = ", image(ref), "; name = ", image(name), "; value = ", image(value))
+                         Tohtml.writechunk(nil, ref, "i", name) 
+| NW_XREF_CHUNKUSE    => count = count + 1
+                         write(comma, linkto(value, "U" .. count))
+                         comma = ", "
+| NW_XREF_CHUNKDEFN   => count = count + 1
+                         write(comma, linkto(value, "D" .. count))
+                         comma = ", "
+| NW_XREF_CHUNKEND    => write('\n')
+| NW_XREF_ENDCHUNKS   => write("</ul>", Tohtml.eraw, '\n')
+<<@index>>=
+| NW_INDEX_BEGININDEX => write(Tohtml.braw, "<ul>", '\n')
+| NW_INDEX_ENTRYBEGIN => write("<li>"); comma = ": "; count = 0
+                         local ref, name = split_first_space(value)
+                         write(linklabelto("NWI-" .. Tohtml.escapeSpecials(name),
+                                           ref, name, "b"))
+| NW_INDEX_ENTRYUSE   => count = count + 1
+                         write(comma, linkto(value, "U" .. count))
+                         comma = ", "
+| NW_INDEX_ENTRYDEFN  => count = count + 1
+                         write(comma, linkto(value, "D" .. count))
+                         comma = ", "
+| NW_INDEX_ENTRYEND   => write('\n')
+| NW_INDEX_ENDINDEX   => write("</ul>", Tohtml.eraw, '\n')
+@
+The local identifier cross-reference doesn't show each use; it just shows
+the identifiers that are defined, with links to the full index.
+<<@index>>=
+| NW_INDEX_USE       => lastindexref = lastxrefref; lastxrefref = nil
+| NW_INDEX_DEFN      => <<clear [[lastxref*]]>>
+| NW_INDEX_LOCALDEFN => <<clear [[lastxref*]]>>
+| NW_INDEX_NL        => -- do nothing -- no hope of keeping line numbering
+@
+I tried an abbreviated index format at the end of the chunk, but it looks
+so bad that I've punted on it (for now).  Hence the [[\uglyindex]].
+<<@index>>=
+| NW_INDEX_BEGINDEFS => if localindex then
+                          <<dump pending cross-reference info (long form)>>
+                          if not uglyindex or not shortxref then
+                            <<code-to-blockquote>>
+                            write("Defines ") 
+                          else
+                            write("<hr><b>[</b>")
+                          end
+                          comma = "" 
+                        end
+| NW_INDEX_ISUSED  => -- do nothing
+| NW_INDEX_DEFITEM => if localindex then
+                        write(comma, linkto("NWI-" .. Tohtml.escapeSpecials(value), 
+                                       sgmlwrap("code", Tohtml.escapeSpecials(value))))
+                       if not uglyindex or not shortxref then
+                         comma = ", "
+                       else
+                         comma = "<b>,</b> "
+                       end
+                     end
+| NW_INDEX_ENDDEFS => if localindex then 
+                        if not uglyindex or not shortxref then
+                          write(" (links are to index).<p>\n")
+                        else
+                          write("<b>]</b>\n")
+                        end
+                      end
+| NW_INDEX_BEGINUSES, NW_INDEX_ISDEFINED, NW_INDEX_USEITEM, NW_INDEX_ENDUSES => 
+    -- do nothing; use local links
+@
+\subsection{Support functions}
+Here's all our anchor support goo.
+Unless the anchor is deemed ``bare,'' the beginning and ending tags
+are protected with [[Tohtml.braw]] and [[Tohtml.eraw]].
+This step is necessary to make \verb=noweave -latex+html= work without
+trapping {\LaTeX} markup in a \texttt{rawhtml} environment.
+<<*>>=
+function linklabelto(label, ref, contents, bare)
+  local s
+  s = ""
+  if bare         then s = s .. Tohtml.braw                   end
+  if label or ref then s = s .. "<a"                          end
+  if label        then s = s .. " name=" .. image(label)      end
+  if ref          then s = s .. " href=" .. image("#" .. ref) end
+  if label or ref then s = s .. ">"                           end
+  if bare         then s = s .. Tohtml.eraw                   end
+                       s = s .. contents
+  if bare         then s = s .. Tohtml.braw                   end
+  if label or ref then s = s .. "</a>"                        end
+  if bare         then s = s .. Tohtml.eraw                   end
+  return s
+end
+@ 
+Here are two abbreviations.
+<<*>>=
+function linklabel(label, contents, bare)
+  return linklabelto(label, nil, contents, bare)
+end
+
+function linkto(ref, contents)
+  return linklabelto(nil, ref, contents, "bare")
+end
+@ [[linkto]] is always used ``bare,'' and I've decided that the
+inconsistency in calling conversions is worth the savings from not
+having to write a meaningless argument everywhere.
+Reasonable people could disagree.
+@
+Another support function is used for wrapping tags around text:
+<<*>>=
+function sgmlwrap(tag, s)
+  return "<" .. tag .. ">" .. s .. "</" .. tag .. ">"
+end
+@
+Lucky for us, {\tt HTML} has few special characters.  Unlucky for us,
+we have to deal with each one seperately.  Nothing much to whine
+about, really.
+<<*>>=
+Tohtml.escapes = { }
+Tohtml.escapes["&"] = "&amp;"
+Tohtml.escapes["<"] = "&lt;"
+Tohtml.escapes[">"] = "&gt;"
+Tohtml.escapes['"'] = "&quot;"
+Tohtml.specials = '[&<>"]'
+
+function Tohtml.escapeSpecials (s)
+  local l, r, start, t
+  start, t = 1, ""
+--errormsg("calling strfind(", image(s), ", ", image(Tohtml.specials), ", ", image(start))
+  l, r = strfind(s, Tohtml.specials, start)
+  while l do
+    t = t .. strsub(s, start, l-1) .. Tohtml.escapes[strsub(s, l, r)]
+    start = r + 1
+    l, r = strfind(s, Tohtml.specials, start)
+  end
+  return t .. strsub(s, start)
+end
+@
+A special function is used to implement {\tt noweb}'s quoting 
+convention within chunk names.
+<<*>>=
+function Tohtml.convquotes(s)
+  local l, r, t, start
+  t = ""
+  start = 1
+  -- don't call Tohtml.escapeSpecials on s; it destroys internal markup
+  l, r = strfind(s, '%[%[')
+  while l do
+    t = t .. strsub(s, start, l - 1)  
+    start = r + 1
+    l, r = strfind(s, '%]%]%]*', start)
+    if l then
+      t = t .. "<code>" .. strsub(s, start, r - 2) .. "</code>"
+      start = r + 1
+      l, r = strfind(s, '%[%[', start)
+    end
+  end
+  return t .. strsub(s, start)
+end
+@ 
+\end{document}

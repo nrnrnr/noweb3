@@ -1,0 +1,85 @@
+% -*- mode: Noweb; noweb-code-mode: lua-mode -*-
+\section{Eliding unwanted code chunks}
+
+This filter removes from the pipline any code chunk
+    whose name matches any of the ``globbing'' patterns given it as
+    arguments.  These are the familiar file name globbing patterns.  For
+    example: [[elide 'RefMan_Ch*']] will prevent weaving a chunk
+    defined as ``\LA{}RefMan\_Chapter\_14\RA{}''.
+
+You could also use this filter when tangling, but it's not clear why you'd want to.
+
+<<hackers: subsubsections for internal filters>>=
+\subsubsection{The filter \texttt{Stages.elide}}
+The filter \texttt{Stages.elide} removes code chunks from a stream.
+It is most frequently used to remove ``code chunks'' that actually
+contain documentation destined for a man page or user manual.
+Its arbitrary argument is a list of strings, each of which is a ``glob
+pattern.''
+(In a glob pattern, \texttt{*} matches any string, and \texttt{?}
+matches any single character.)
+The filter removes definitions matching any of the glob patterns in
+the arguments.
+For example, this section of this manual
+actually appears in a code chunk named
+\emph{$\langle$hackers: subsections for internal filters$\rangle$}.
+To prepare internal documentation for the stages, we use
+\texttt{Stages.elide} with the argument \texttt{hackers:*}.
+@
+\subsection{Eliding}
+The main loop simply copies the input to the output.
+We stop only if we see [[@begin code]], because that means we might
+need to elide.
+<<*>>=
+function Stages.elide(sourcebuf, sinkbuf, globs)
+  local rcsinfo = "$Id$" ..
+                  "$Name$"
+  local r = NWB.reader(sourcebuf)
+  local key, arg
+  key, arg = NWB.read(r)
+  while key do 
+    if key == NW_BEGIN_CODE then
+      <<see about eliding this chunk>>
+    else
+      NWB.put(sinkbuf, key, arg)
+      key, arg = NWB.read(r)
+    end
+  end
+  return 0
+end
+@
+To see about eliding, we accumulate lines until we see [[@defn]].
+At that point we can either keep the chunk, which means printing the
+accumulated lines and returning to the main loop, or elide it, which
+means draining the input until the next [[@end code]].
+<<see about eliding this chunk>>=
+local accum = List.new { key, arg }
+key, arg = NWB.read(r)
+while key and key ~= NW_DEFN do
+  List.put(accum, key); List.put(accum, arg)
+  key, arg = NWB.read(r)
+end
+<<set [[matches]] if definition matches a pattern in [[globs]]>>
+if matches then
+  -- discard accum and everything up the next @end code
+  while key and key ~= NW_END_CODE do
+    key, arg = NWB.read(r)
+  end
+  if key then key, arg = NWB.read(r) end
+else
+  while List.length(accum) >= 2 do
+    local k = List.get(accum)
+    local a = List.get(accum)
+    NWB.put(sinkbuf, k, a)
+  end
+end
+<<set [[matches]] if definition matches a pattern in [[globs]]>>=
+local matches
+local i, n = 1, List.length(globs)
+while i <= n and not matches do
+  globmatch arg of 
+  | globs[i] => matches = 1
+  end
+  i = i + 1
+end
+@

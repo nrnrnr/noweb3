@@ -1,0 +1,107 @@
+\section{Sets}
+<<*>>=
+Set = {}
+
+<<hackers: entries for set functions>>=
+Set.length&
+Number of elements in a set.\\
+<<*>>=
+function Set.length(set)
+  local i, n, v
+  i = nil
+  n = 0
+  repeat
+    i, v = next(set, i)
+    if (i ~= nil) then
+      n = n + 1
+    end
+  until (i == nil)
+  return n
+end
+<<hackers: entries for set functions>>=
+Set.members&
+Returns list of the elements in a set.\\
+<<*>>=
+function Set.members(set)
+  local i, n, v
+  local l = { }
+  i = nil
+  n = 0
+  repeat
+    i, v = next(set, i)
+    if i then
+      n = n + 1
+      l[n] = i
+    end
+  until (i == nil)
+  return List.new(l)
+end
+<<hackers: entries for set functions>>=
+Set.insert&
+Takes a set and an item, and adds the item to the set.\\
+Set.delete&
+Takes a set and an item, and removes the item from the set, if present.\\
+Set.member&
+Takes a set and an item, and returns non-null if an only if the item
+is in the set.\\
+<<*>>=
+function Set.insert(set, item)
+  if type(set) ~= "table" then
+    errormsg("Inserting into non-set ", image(set), " of type ", type(set))
+  end
+  set[item] = 1
+end
+
+function Set.delete(set, item)
+  set[item] = nil
+end
+
+function Set.member(set, item)
+  return set[item]
+end
+@
+<<hackers: entries for set functions>>=
+Set.diff&
+\texttt{Set.diff(s1, s2)} returns a new set containing 
+all of the elements of~\texttt{s1} that are not members of~\texttt{s2}.
+Fallbacks are set up so the subtraction operator invokes \texttt{Set.diff}.\\
+<<*>>=
+function Set.diff(big, little)
+  local diff = { }
+  local i, v
+  i = nil
+  repeat
+    i, v = next(big, i)
+    if i and not little[i] then
+      diff[i] = 1
+    end
+  until i == nil
+  return diff
+end
+<<hackers: entries for set functions>>=
+Set.new&
+Takes a list of elements and returns a set containing those elements.
+With no argument, returns a fresh, empty set.\\
+<<*>>=
+function Set.new (tbl)
+  if not tbl then return { } end
+  local t = { }
+  local i = 1
+  while tbl[i] do
+    t[tbl[i]] = 1
+    i = i + 1
+  end
+  return t
+end
+@ 
+<<*>>=
+function Set.arithfallback(x, y, op)
+  if type(x) == "table" and type(y) == "table" then
+    case op of
+    | "sub" => return Set.diff(x, y)
+    end
+  end
+  return Set.prevarithfallback(x, y, op)
+end
+
+Set.prevarithfallback = setfallback("arith", Set.arithfallback)

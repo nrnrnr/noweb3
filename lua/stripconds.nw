@@ -1,0 +1,60 @@
+\section{Simple conditional tangling}
+
+<<hackers: subsubsections for internal sinks>>=
+\subsubsection{The filter \texttt{Stages.stripconds}}
+
+The filter \texttt{Stages.stripconds} enables the Noweb programmer to
+include code chunks conditionally.
+The filter is sensitive to chunk definitions in the following form:
+\begin{quote}
+\texttt{@<<\textrm{\emph{name}} ((\textrm{\emph{condition}}))@>>=}
+\end{quote}
+where \emph{name} is the name of the chunk, as usual, and
+\emph{condition} is a simple identifier.
+
+The arbitrary argument is a list of identifiers; if
+\emph{condition} is one of the identifiers, it is removed from the
+definition, arranging that the chunk becomes a definition of
+\texttt{@<<\textrm{\emph{name}}@>>}.
+The effect is that
+the chunk definition is included in
+the output from \texttt{tangle} if and only 
+if the \emph{condition} is one of the identifiers passed to 
+\texttt{Stages.stripconds}.
+@
+<<*>>=
+function Stages.stripconds(sourcebuf, sinkbuf, args)
+  if type(args) == "string" then args = List.fromstring(args) end
+  local r = NWB.reader(sourcebuf)
+  local key, arg = NWB.read(r)
+  local argc = List.length(args)
+  local pats = { }
+  <<make [[pats]] from [[args]]>>
+  while key do
+    if key == NW_DEFN then
+      <<strip patterns in [[pats]] from [[arg]]>>
+    end
+    NWB.put(sinkbuf, key, arg)
+    key, arg = NWB.read(r)
+  end
+  return 0
+end
+@ 
+<<make [[pats]] from [[args]]>>=
+local i = 1
+while i <= argc do
+  List.put(pats, " *%(%(" .. args[i] .. "%)%)")
+  i = i + 1
+end
+<<strip patterns in [[pats]] from [[arg]]>>=
+local i = 1
+while i <= argc do
+  arg = gsub(arg, pats[i], "", 1)
+  i = i + 1
+end
+
+
+
+
+
+
