@@ -280,7 +280,7 @@ definitions for the UNIX versions of the functions that will execute
 the pipeline.  The [[#include]]s are for Linux, and they may have to
 be different for different kinds of Unix.
 
-<<* ((unx))>>=
+<<* ((pipe))>>=
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -547,9 +547,10 @@ static void close_pair(int *surplus) {
 
 Useful on systems that can't fork.
 Also useful for debugging!
-<<* ((tmpfiles))>>=
+<<* ((spawn))>>=
 #include "util.h"
 #include "errors.h"
+#include "nwprocess.h"
 #include <fmt.h>
 
 <<private temporary-file prototypes>>
