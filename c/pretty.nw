@@ -236,6 +236,7 @@ main (int argc, char *argv[]) {
 \subsection{Boilerplate}
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
