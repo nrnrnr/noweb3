@@ -285,8 +285,10 @@ be different for different kinds of Unix.
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fmt.h>
 #include "errors.h"
 #include "sys.h"
+#include "util.h"
 
 <<private Unix prototypes>>
 <<Unix functions>>
@@ -450,32 +452,12 @@ the program by either successful execution or a Noweb fatal error.
 }
 @ 
 The program is looked up from each directory in the PATH, in order.
-[[Str_chr]] results in a checked runtime error if there is no PATH
-defined.  If PATH is defined but empty, an attempt is made to execute
-the program with [[prog->path]] unchanged.  The loop terminates when
-no more semicolons are found; i.e., all directories in PATH are tried
-and the program is not successfully executed.
-
-Note: for each search on [[path]], [[i]] points to the beginning of
-the directory name to search and [[j]] points to the end, just before
-the next semicolon or the end of the string.
 <<lookup [[prog->path]] on PATH and execute>>=
-{
-  int i = 1;
-  int j;
-  char* path = getenv("PATH");
-  char* dir;
-  char* which_prog;
-  do {
-    j = Str_chr(path, i, 0, ':');
-    dir = Str_sub(path, i, j);
-    if (Str_len(dir, 1, 0) > 0)
-      which_prog = Str_catv(dir, 1, 0, "/", 1, 0, prog->path, 1, 0, NULL);
-    else
-      which_prog = prog->path;
-    i = j + 1;
-    execve(which_prog, new_argv, prog->envp);
-  } while (j != 0);
+{ List_T path = pathsplit(getenv("PATH"));
+  for ( ; path; path = path->rest) {
+    char* pathname = Fmt_string("%s%s%s", path->first, Sys_dirsep, prog->path);
+    execve(pathname, new_argv, prog->envp);
+  };
 } 
 @ 
 The first two helper functions, [[waitfor]] and [[waitfor2]], return the
