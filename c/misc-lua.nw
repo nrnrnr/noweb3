@@ -1,0 +1,114 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\section{Miscellaneous Lua code}
+
+Because I can't easily create comparison functions in Lua (no
+closure), and also because I'm tempted by looping thoughts, 
+I write a Lua sort that uses C comparisons.
+
+<<header>>=
+extern void misc_open(void);
+@ 
+<<*>>=
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <ctype.h>
+
+#include "lua.h"
+#include "lua-help.h"
+<<header>>
+<<functions>>
+@ 
+
+<<functions>>=
+static int length(lua_Object l) {
+  int i;
+  lua_Object x;
+  for (i = 1; ; i++) {
+    lua_beginblock();
+    lua_pushobject(l);
+    lua_pushnumber((double)i);
+    x = lua_getsubscript();
+    lua_endblock();
+    if (lua_isnil(x)) break;
+  }
+  return i - 1;
+}
+@ 
+This code is \emph{not} reentrant.
+Our [[qsort]] comparison function uses a Lua function stored in a
+global variable.
+<<functions>>=
+static lua_Object compare_function;
+
+static int compare(const void *a, const void *b) {
+  int n;
+  lua_beginblock();
+  lua_pushobject(*(lua_Object *)a);
+  lua_pushobject(*(lua_Object *)b);
+  lua_callfunction(compare_function);
+  n = (int) lua_getnumber(lua_getresult(1));
+  lua_endblock();
+  return n;
+}
+@ 
+To sort: build an array, sort it, and build a new table.
+<<functions>>=
+static void sort(void) {
+  lua_Object table, *array;
+  int i, n;
+
+  lua_get_args("sort", 2, LUA_FUNCTION, &compare_function, LUA_TABLE, &table);
+  n = length(table);
+  array = malloc(n * sizeof (*array));
+  assert(array);
+  <<fill [[array]] with elements of [[table]]>>
+  qsort(array, n, sizeof(*array), compare);
+  table = lua_createtable();  
+  <<fill [[table]] with elements of [[array]]>>
+  lua_pushobject(table);
+  free(array);
+  return;
+}
+@ 
+<<fill [[array]] with elements of [[table]]>>=
+for (i = 0; i < n; i++) {
+  lua_pushobject(table);
+  lua_pushnumber((double)(i+1));
+  array[i] = lua_getsubscript();
+}
+<<fill [[table]] with elements of [[array]]>>=
+for (i = 0; i < n; i++) {
+  lua_pushobject(table);
+  lua_pushnumber((double)(i+1));
+  lua_pushobject(array[i]);
+  lua_storesubscript();
+}
+@ 
+This comparison ignores case.
+<<functions>>=
+static int strcasecmpx(const char *s1, const char *s2) {
+  for (;;) {
+    int n = tolower(*s1) - tolower(*s2);
+    if (n != 0 || (n == 0 && *s1 == 0)) return n;
+    s1++; s2++;
+  }
+}
+@
+This comparison doesn't ignore case, but it does bring together
+strings that differ only in case.
+<<functions>>=
+static void alphacmp(void) {
+  char *s1 = lua_getstring(lua_getparam(1));
+  char *s2 = lua_getstring(lua_getparam(2));
+  int n = strcasecmpx(s1, s2);
+  if (n == 0) n = strcmp(s1, s2);
+  lua_pushnumber((float)n);
+}
+@ 
+<<functions>>=
+void misc_open(void) {
+  lua_register("sort", sort);
+  lua_register("alphacmp", alphacmp);
+}  
