@@ -10,6 +10,8 @@ static char rcsname[] = "$Name$";
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include "nwbuffer.h"
+#include "cargs.h"
 #include "notangle.h"
 #include "errors.h"
 #include "columns.h"
@@ -22,11 +24,14 @@ to set global state, and counting any roots it sees.
 It then makes a second pass to emit all the roots, or if there are no
 roots on the command line, it emits the module (chunk) named [[<<*>>]].
 <<*>>=
-main(int argc, char **argv) {
-    int i;
+int notangle_sink(void *arg, NowebBuffer in) {
+    CArgs args = arg;
+    int argc = args->argc;
+    char **argv = args->argv;
     char *locformat = "";
     char *Clocformat = "#line %L \"%F\"%N";
     int root_options_seen = 0;
+    int i;
 
     tabsize = 0;  /* default for nt is not to use tabs */
     progname = argv[0];
@@ -36,7 +41,8 @@ main(int argc, char **argv) {
         <<process argument [[i]]---first pass>>
     }
 
-    read_defs(stdin);                        /* read all the definitions */
+    read_defs(in);	             /* read all the definitions */
+    if (errorrc) return errorrc;
     apply_each_module(remove_final_newline); /* pretty up the module texts */
     if (root_options_seen == 0)
       emit_module_named(stdout, "*", locformat);
@@ -45,8 +51,8 @@ main(int argc, char **argv) {
         if (argv[i][0] == '-' && argv[i][1] == 'R')
 	  emit_module_named(stdout, argv[i]+2, locformat);
 
-    nowebexit(NULL);
-    return errorlevel;  /* slay warning */
+    (void) rcsname; (void) rcsid;   /* slay warning */
+    return errorrc;
 }
 @
 <<process argument [[i]]---first pass>>=
