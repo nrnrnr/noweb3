@@ -9,7 +9,6 @@ This is the Lua registration of the C internal pipeline stages.
 <<stages.c>>=
 #include "cargs.h"
 #include "fromascii.h"
-#include "nullsink.h"
 #include "nwbuffer.h"
 #include "mem.h"
 #include "list.h"
@@ -59,7 +58,8 @@ static void toascii_lua(void) {
 
 static void fromascii_lua(void) {
   lua_Object arg, buf;
-  lua_get_args("Stages.fromascii", 2, NWBUFFER, &buf, LUA_USERDATA | LUA_NIL, &arg);
+  lua_get_args("Stages.fromascii", 2, NWBUFFER, &buf,
+	                              LUA_USERDATA | LUA_NIL | OPTIONAL, &arg);
   lua_pushnumber((double)readascii(lua_isnil(arg) ? stdin : lua_getuserdata(arg),
 				   lua_getuserdata(buf)));
 }
