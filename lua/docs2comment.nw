@@ -1,0 +1,88 @@
+
+\section{Converting documentation chunks to comments}
+<<*>>=
+CommentFuns = {}
+
+function Filters.docs2comment(inbuf, outbuf, argv)
+  local i, fmt, pat1, repl1, pat2, repl2, width, k, v
+  width = 72
+  i = 1
+  while i <= length(argv) do
+    globmatch argv[i] of
+    | "-ml", "-m3" => fmt="(* %%-%ds *)"
+	              pat1 = "%*%)"; repl1 = "* )"; pat2 = "%(%*"; repl2 = "( *"
+    | "-awk", "-icn", "-icon" => fmt="# %%-%ds"
+    | "-lisp", "-scm" =>	    fmt=";;; %%-%ds"
+    | "-c++" =>    fmt="// %%-%ds" 
+    | "-c" =>      fmt="/* %%-%ds */"  
+                   pat1 = "%*%/"; repl1 = "* /"; pat2 = "%/%*"; repl2 = "/ *"
+    | "-pascal" => fmt="{ %%-%ds }" pat1 = "[{}]"; repl1 = "-"
+    | "-f77" =>    fmt="C %%-%ds"
+    | "-f90" =>    fmt="! %%-%ds"
+    | "-tex" =>    fmt="%%%% %%-%ds"
+    | "-w[0-9]" | "-w[0-9][0-9]" | "-w[0-9][0-9][0-9]" | "-w[0-9][0-9][0-9][0-9]"
+    =>    width=tonumber(strsub(argv[i], 3))
+    else =>
+      error("Unrecognized option ", argv[i], " to Filters.docs2comment")
+    end
+    i++
+  done
+  if not fmt then 
+    error("Language not specified to Filters.docs2comment")
+  end
+  fmt = format(fmt, width)
+  
+  holding = List.new {}
+
+  rdr = NowebBuffer.reader(in)
+  k, v = NowebBuffer.read(rdr)
+  while k do
+    case k of
+    | NW_END_DOCS => capture = nil; List.put(holding, "")
+    | NW_BEGIN_DOCS => capture = 1
+
+    | NW_TEXT => 
+/^@end doc/ { capture = 0; holding[++line] = "" ; next }
+/^@begin doc/ { capture = 1; next }
+
+/^@text /     { grab(substr($0,7)); next}
+/^@quote$/    { grab("[[") ; next}
+/^@endquote$/ { grab("]]") ; next}
+
+/^@nl$/ { if (capture !=0 ) {
+            holding[++line] = ""
+          } else if (defn_pending != 0) {
+	    print "@nl"
+            for (i=0; i<=line && holding[i] ~ /^ *$/; i++) i=i
+            for (; i<=line; i++) printf "@text %s\n@nl\n", comment(holding[i])
+            line = 0; holding[0] = ""
+            defn_pending = 0
+          } else print
+          next  
+        }
+
+/^@defn / { holding[line] = holding[line] "<"substr($0,7)">=" # (line should be blank)
+            print ; defn_pending = 1 ; next }
+{ print }' |
+    
+
+  
+	case $1 in
+	shift
+done
+
+width=72 subst='gsub("\\*/", "* /", s)' format='/* %%-%ds */'
+PATH="$PATH:$LIB" eval "$markup $arg $filters" |
+nawk 'BEGIN { line = 0; capture = 0; format=sprintf("'"$format"'",'"$width"') }
+
+function comment(s) {
+    '"$subst"'
+    return sprintf(format,s)
+}
+
+function grab(s) {
+  if (capture==0) print
+  else holding[line] = holding[line] s
+}
+   
+eval "$LIB/nt $opt"

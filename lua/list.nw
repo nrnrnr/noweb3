@@ -1,0 +1,100 @@
+\section{Lists}
+<<*>>=
+List = {}
+
+function List.length(list)
+  local i, n, v
+  i = nil
+  n = 0
+  repeat
+    i, v = next(list, i)
+    if (i ~= nil) then
+      n = n + 1
+    end
+  until (i == nil)
+  return n
+end
+
+<<*>>=
+function List.get(list)
+  local x, n, i
+  x = list[1]
+  n = List.length(list)
+  i = 2
+  while (i <= n) do
+    list[i-1] = list[i]
+    i = i + 1
+  end
+  list[n] = nil
+  return x
+end
+
+<<*>>=
+function List.put(list, item)
+  list[List.length(list) + 1] = item
+end
+
+<<*>>=
+function List.flatten(l)
+  local i = 1
+  s = ""
+  while l[i] do s = s .. tostring(l[i]) i = i + 1 end
+  return s
+end
+
+<<*>>=
+function List.concat(l1, l2)
+  local l, i, n, m
+  l = {}
+  i = 1
+  n = List.length(l1)
+  while (i <= n) do
+    l[i] = l1[i]
+    i = i + 1
+  end
+  m = List.length(l2)
+  i = 1
+  while (i <= m) do
+    l[i+n] = l2[i]
+    i = i + 1
+  end
+  return l
+end
+
+<<*>>=
+function List.new (tbl)
+  return tbl
+end
+@ 
+<<*>>=
+-- concatenate list elements as strings
+function List.tostring(l, sep)
+  local s, i, n
+  n = List.length(l)
+  if n == 0 then
+    return ""
+  else
+    if not sep then sep = " " end
+    i = 1
+    s = tostring(l[1])
+    while i < n do
+      i = i + 1
+      s = s .. sep .. tostring(l[i])
+    end
+    return s
+  end
+end
+@ be generous here
+<<*>>=
+function List.concatfallback(x, y)
+  case type(x) .. "," .. type(y) of
+  | "table,table" => return List.concat(x, y)
+  | "table,nil" => return x
+  | "nil,table" => return y
+  | "table,string" => return List.concat(x, {y})
+  | "string,table" => return List.concat({x}, y)
+  else => return List.prevconcatfallback(x, y)
+  end
+end
+
+List.prevconcatfallback = setfallback("concat", List.concatfallback)

@@ -1,0 +1,133 @@
+\section{Configuration files}
+<<noweb.cfg>>=
+$debug
+LIB="|LIBDIR|"
+do_nwfile("pipes.cfg")
+do_nwfile("sys.cfg")
+do_nwfile("util.cfg")
+do_nwfile("list.nws")
+do_nwfile("totex.nws")
+@ 
+<<util.cfg>>=
+$debug
+function libFile(name)
+  return MD.extendPath(LIB, name)
+end
+
+function errormsg(a, b, c, d, e, f)
+  local i, j, out
+  out = writeto(stderr)
+  local l = {a, b, c, d, e, f}
+  j = 1; while l[j] do
+    case type(l[j]) of 
+    | "string", "number" => write(l[j])
+    | "table"  => i = 1; while l[j][i] do errormsg(l[j][i]); i = i+1 end
+    else => error("non-string non-table to errormsg")
+    end
+  j = j+1; end
+  write("\n")
+  writeto(out)
+end
+<<util.cfg>>=
+function noweb_error(a, b, c, d, e, f, g, h, i)
+  error(List.flatten {a, b, c, d, e, f, g, h, i})
+end
+@ 
+<<pipes.cfg>>=
+$debug
+XPipe.filter = XPipe.stage
+XPipe.source = XPipe.stage
+XPipe.sink   = XPipe.stage
+
+function MPipe.print(p)
+  errormsg("Cannot print mixed pipeline")
+end
+@ 
+<<sys.cfg>>=
+$debug
+if not Unix then Unix = { } end
+
+function Unix.stringFilter(s)
+  return MPipe.filter("sh", { "-c", s })
+end
+
+function Unix.extendPath(dir, file) 
+  return dir .. "/" .. file
+end
+
+function Unix.isExecutable(file)
+  return XPipe.run(XPipe.stage("test", {"-x", file})) == 0
+end
+
+if not Dos then Dos = { } end
+
+function Dos.extendPath(dir, name)
+  return dir .. "\\" .. name
+end
+
+case PLATFORM of
+| "unix" => MD = Unix
+else => error("Unknown target platform ", PLATFORM)
+end
+@ 
+<<util.cfg>>=
+$debug
+function show(x)
+  local i, n, v, pfx
+  case type(x) of
+  | "string" => write(format("%q", x))
+  | "number" => write(x)
+  | "function", "cfunction" =>
+       i = funname(x)
+       if i then write("<function ", i, ">")
+       else print(x)
+       end
+  | "table" =>
+        write("{"); pfx = " "
+        i = nil
+        n = 0
+        repeat
+          i, v = next(x, i)
+          if (i ~= nil) then
+	    write(pfx)
+   	    if type(i) == "string" and strfind(i, "^[a-zA-Z][a-zA-Z_0-9]*$") then
+              write(i)
+            else
+              write("["); show(i); write("]")
+            end
+	    write(" = "); show(v)
+          end
+          pfx = ", "
+        until (i == nil)
+        write (" }")
+  else => print(x)
+  end
+end
+
+function funname(x)
+  local i, v, ii, vv
+  i, v = nextvar(nil)
+  while i ~= nil do
+    if v == x then
+      return i
+    else
+      i, v = nextvar(i)
+    end
+  end
+  i, v = nextvar(nil)
+  while i ~= nil do
+    if type(v) == "table" then
+      ii, vv = next(v, nil)
+      while ii ~= nil do
+        if vv == x then
+          return i .. "." .. ii
+        else
+          ii, vv = next(v, ii)
+        end
+      end
+    end
+    i, v = nextvar(i)
+  end
+  return nil
+end
+
