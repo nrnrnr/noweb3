@@ -268,14 +268,38 @@ int IPipe_execute(IPipe pipe) {
 }
 @ 
 
-NOTE: THIS FUNCTION SHOULD BE FINISHED!!!
-
+Freeing means walking the tree.
 <<functions>>=
-void IPipe_free(IPipe* pipe) {
-
-
+static void filter_free(Filter filter) {
+  if (filter->isPair) {
+    filter_free(filter->u.pair.left);
+    filter_free(filter->u.pair.right);
+    NowebBuffer_free(&filter->u.pair.buf);
+  }
 }
 
+static void source_free(Source source) {
+  if (source->isPair) {
+    source_free(source->u.pair.left);
+    filter_free(source->u.pair.right);
+    NowebBuffer_free(&source->u.pair.buf);
+  }
+}
+
+static void sink_free(Sink sink) {
+  if (sink->isPair) {
+    filter_free(sink->u.pair.left);
+    sink_free(sink->u.pair.right);
+    NowebBuffer_free(&sink->u.pair.buf);
+  }
+}
+
+void IPipe_free(IPipe* pipe) {
+  source_free((*pipe)->source);
+  sink_free((*pipe)->sink);
+  NowebBuffer_free(&(*pipe)->buffer);
+  *pipe = (IPipe)0;
+}
 <<*>>=
 <<ipipe.c>>
 <<header>>=
