@@ -16,7 +16,7 @@ char *rcs_iolib="$Id$";
 #include "luadebug.h"
 #include "lualib.h"
 
-static FILE *in=stdin, *out=stdout;
+static FILE *in, *out;
 
 
 #ifdef POPEN
@@ -613,6 +613,8 @@ static struct lua_reg iolib[] = {
 
 void iolib_open (void)
 {
+  in  = stdin;
+  out = stdout;
   luaI_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_setfallback("error", errorfb);
 }
