@@ -1,4 +1,6 @@
 \section{Lists}
+<<hackers: entries for list functions>>=
+List.length&Number of elements in a list.\\
 <<*>>=
 List = {}
 
@@ -6,6 +8,9 @@ function List.length(list)
   local i, n, v
   i = nil
   n = 0
+  if type(list) ~= "table" then
+    errormsg("Length of non-list (", type(list), ") ", image(list))
+  end
   repeat
     i, v = next(list, i)
     if (i ~= nil) then
@@ -14,7 +19,10 @@ function List.length(list)
   until (i == nil)
   return n
 end
-
+<<hackers: entries for list functions>>=
+List.get&
+Removes and returns the first element of a list.
+Side-effects the list.\\
 <<*>>=
 function List.get(list)
   local x, n, i
@@ -28,12 +36,19 @@ function List.get(list)
   list[n] = nil
   return x
 end
-
+<<hackers: entries for list functions>>=
+List.put&
+Takes two arguments, a list and an item, 
+and appends the item to the end of the list.\\
 <<*>>=
 function List.put(list, item)
   list[List.length(list) + 1] = item
 end
-
+@ 
+<<hackers: entries for list functions>>=
+List.flatten&
+Takes the values in a list, converts them to strings with
+\texttt{tostring}, and concatenates them.\\
 <<*>>=
 function List.flatten(l)
   local i = 1
@@ -41,7 +56,11 @@ function List.flatten(l)
   while l[i] do s = s .. tostring(l[i]) i = i + 1 end
   return s
 end
-
+@ 
+<<hackers: entries for list functions>>=
+List.concat&
+Appends two lists.
+\texttt{tostring}, and concatenates them.\\
 <<*>>=
 function List.concat(l1, l2)
   local l, i, n, m
@@ -61,11 +80,23 @@ function List.concat(l1, l2)
   return l
 end
 
+@ 
+<<hackers: entries for list functions>>=
+List.new&
+Takes a table literal and returns a list, or 
+given no argument, returns a fresh, empty list.
+Recommended in case \texttt{noweb} moves to a more efficient
+implementation of lists.\\
 <<*>>=
-function List.new (tbl)
-  return tbl
+function List.new(tbl)
+  return tbl or { }
 end
 @ 
+<<hackers: entries for list functions>>=
+List.tostring&
+Concatenates list elements as strings.
+Takes a list and a second argument, the ``separator.''
+Separator defaults to a space.\\
 <<*>>=
 -- concatenate list elements as strings
 function List.tostring(l, sep)
@@ -83,6 +114,23 @@ function List.tostring(l, sep)
     end
     return s
   end
+end
+@ 
+<<hackers: entries for list functions>>=
+List.fromstring&
+Takes a string, splits it on white space, and makes a list of the results.\\
+<<*>>=
+-- concatenate list elements as strings
+function List.fromstring(s)
+  local l = List.new()
+  local i, j = strfind(s, "%s%s*")
+  while i do
+    if i > 1 then List.put(l, strsub(s, 1, i-1)) end
+    s = strsub(s, j+1)
+    i, j = strfind(s, "%s%s*")
+  end
+  if strlen(s) > 0 then List.put(l, s) end
+  return l
 end
 @ be generous here
 <<*>>=
