@@ -1,8 +1,7 @@
 \section{Internal filters}
 <<*>>=
 function Stages.cat(inbuf, outbuf, argv)
-  local out, key, arg, r
-  out = writetox(stderr)
+  local key, arg, r
   -- < announce [[argv]]>>
   r = NWB.reader(inbuf)
   key, arg = NWB.read(r)
@@ -12,6 +11,7 @@ function Stages.cat(inbuf, outbuf, argv)
   end
 end
 <<announce [[argv]]>>=
+  local out = writetox(stderr)
   if type(argv) == "table" then
     local i = 1
     while i <= List.length(argv) do
@@ -21,4 +21,6 @@ end
   else
     write("Filters.cat: argv = ", image(argv), "\n")    
   end
+  writetox(out)
+
 

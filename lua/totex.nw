@@ -204,7 +204,7 @@ defns = {}
 \subsection{Quoting, headers, trailers, \& miscellany}
 <<others>>=
 | NW_QUOTE    => quoting = 1   ; writes("{\\Tt{}")
-| NW_ENDQUOTE => quoting = nil ; writes("}")
+| NW_ENDQUOTE => quoting = nil ; writes("\\nwendquote}")
 | NW_FILE     => filename = value; <<clear [[lastxref*]]>>
                  if not delay then writes("\\nwfilename{", filename, "}") end
 | NW_LITERAL  => writes(value)
