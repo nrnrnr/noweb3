@@ -61,7 +61,6 @@ extern CArgs CArgs_fromtable(char *argv0, lua_Object o);
 extern char *lua_optstring(lua_Object o);
   /* string, or NULL if object is nil */
 extern void lua_pushoptstring(const char *s);
-
 #endif
 @ 
 
