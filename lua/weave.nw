@@ -33,7 +33,7 @@ end
 ---- backend = foo
 backend  = P.sink(backend, backopts .. noindex .. delay .. shortxref)
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>
-pipeline = P.connect(P.connect(src, filters), backend)
+pipeline = src .. filters .. backend
 if verbose then
   oldoutput=writetox(stderr)
   P.print(pipeline)
@@ -217,20 +217,20 @@ using_index=nil; using_xref=nil
 | "-indexfrom" => i=i+1; noindex=nil ; using_index=1
 <<second pass {\tt noweave} options>>=
 | "-filter" => 
-    filters = P.connect(filters, MD.stringFilter(argv[i+1]))
+    filters = filters .. MD.stringFilter(argv[i+1])
     i = i + 1
 | "-ifilter" =>
     dostring("if 1 then local f, arg = " .. argv[i+1] .. 
-             "; filters = P.connect(filters, MPipe.filter(f, arg)) end")
+             "; filters = filters .. MPipe.filter(f, arg)) end"
     i = i + 1
 | "-x" => 
-    filters = P.connect(filters, P.filter(Defaults.noidx, docanchor .. delay))
+    filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
 | "-index" =>  
-  filters = P.connect(filters, P.filter(Defaults.finduses, noquote))
-  filters = P.connect(filters, P.filter(Defaults.noidx, docanchor .. delay))
+  filters = filters .. P.filter(Defaults.finduses, noquote)
+  filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
 | "-indexfrom" =>
-  filters = P.connect(filters, P.filter(Defaults.finduses, noquote .. {argv[i+1]}))
-  filters = P.connect(filters, P.filter(Defaults.noidx, docanchor .. delay))
+  filters = filters .. P.filter(Defaults.finduses, noquote .. {argv[i+1]})
+  filters = filters .. P.filter(Defaults.noidx, docanchor .. delay)
   i = i + 1
 <<option printout for usage>>=
 errormsg("-x		Use the default cross-referencer (needs LaTeX or HTML).")
@@ -331,7 +331,7 @@ do in a portable way is [[test -r]].
 | "-autodefs" => 
     f = libFile("autodefs." .. argv[i+1])
     if MD.isExecutable(f) then
-      filters = P.connect(filters, P.filter(f, {}))
+      filters = filters .. P.filter(f, {})
     else
       errormsg {argv0, ": don't know how to find definitions for '", argv[i+1], "'"}
       exit(1)

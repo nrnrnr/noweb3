@@ -53,9 +53,9 @@ end
 
 p = P.source(markup, markopt .. arg)
 while List.length(filters) > 0 do 
-  p = P.connect(p, List.get(filters))
+  p = p .. List.get(filters)
 end
-p = P.connect(p, P.sink(nt, opt))
+p = p .. P.sink(nt, opt)
 if verbose then 
   local out = writetox(stderr)
   P.print(p)
