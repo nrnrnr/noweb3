@@ -6,7 +6,15 @@ do_nwfile("pipes.cfg")
 do_nwfile("sys.cfg")
 do_nwfile("util.cfg")
 do_nwfile("list.nws")
+do_nwfile("set.nws")
 do_nwfile("totex.nws")
+do_nwfile("tohtml.nws")
+do_nwfile("noidx.nws")
+do_nwfile("elide.nws")
+do_nwfile("unmarkup.nws")
+do_nwfile("cat.nws")
+do_nwfile("stripconds.nws")
+do_nwfile("xchunks.nws")
 @ 
 <<util.cfg>>=
 $debug
@@ -14,34 +22,91 @@ function libFile(name)
   return MD.extendPath(LIB, name)
 end
 
-function errormsg(a, b, c, d, e, f)
+function errormsg(a, b, c, d, e, f, g, h)
   local i, j, out
-  out = writeto(stderr)
-  local l = {a, b, c, d, e, f}
+  out = writetox(stderr)
+  local l = {a, b, c, d, e, f, g, h}
   j = 1; while l[j] do
     case type(l[j]) of 
     | "string", "number" => write(l[j])
     | "table"  => i = 1; while l[j][i] do errormsg(l[j][i]); i = i+1 end
-    else => error("non-string non-table to errormsg")
+    else => writeto(out); error("non-string non-table to errormsg")
     end
   j = j+1; end
   write("\n")
-  writeto(out)
+  writetox(out)
 end
+<<hackers: entries for Lua functions>>=
+errormsg&
+Takes up to 8~arguments and writes them to standard error.
+Arguments may be strings, numbers, or lists.\\
 <<util.cfg>>=
 function noweb_error(a, b, c, d, e, f, g, h, i)
   error(List.flatten {a, b, c, d, e, f, g, h, i})
 end
+<<hackers: entries for Lua functions>>=
+noweb\_error&
+Halts \texttt{noweb} with an error message consisting of up to
+9~arguments.\\ 
+@ 
+Debug by tracing
+<<util.cfg>>=
+Config = Config or { } 
+
+Config.readers = { }
+Config.nextreader = 1
+
+function Config.reader(r)
+  if not Config.readers[r] then 
+    Config.readers[r] = Config.nextreader
+    Config.nextreader = Config.nextreader + 1
+  end
+  return Config.readers[r]
+end
+
+Config.read = NWB.read
+function Config.tread (r) 
+  local k, a
+  k, a = Config.read(r)
+  errormsg("Read key ", image(k), " arg ", image(a), " from reader ", Config.reader(r))
+  return k, a
+end
+
+Config.put = NWB.put
+function Config.tput (r, k, a) 
+  errormsg("Put key ", image(k), " arg ", image(a), " into reader ", Config.reader(r))
+  return Config.put(r, k, a)
+end
+
+function pipetrace(x)
+  if x then
+    NWB.read = Config.tread
+    NWB.put  = Config.tput
+  else
+    NWB.read = Config.read
+    NWB.put  = Config.put
+  end
+end
+<<hackers: entries for Lua functions>>=
+pipetrace&
+If given a non-null argument, starts tracing every call to
+\texttt{NWB.read} and \texttt{NWB.put}.
+Useful for debugging pipeline problems.
+A null argument turns off tracing.\\
 @ 
 <<pipes.cfg>>=
 $debug
+function XPipe.stage(f, arg)
+  if type(f) == "function" then
+    local n = funname(f) .. '(' .. image(arg) .. ')'
+    return XPipe.dostage(f, arg, n)
+  else
+    return XPipe.dostage(f, arg)
+  end
+end
 XPipe.filter = XPipe.stage
 XPipe.source = XPipe.stage
 XPipe.sink   = XPipe.stage
-
-function MPipe.print(p)
-  errormsg("Cannot print mixed pipeline")
-end
 @ 
 <<sys.cfg>>=
 $debug
@@ -50,7 +115,11 @@ if not Unix then Unix = { } end
 function Unix.stringFilter(s)
   return MPipe.filter("sh", { "-c", s })
 end
-
+<<hackers: entries for Lua functions>>=
+Unix.stringFilter&
+Takes one argument, a Unix shell command, 
+and returns a filter to execute that argument.\\
+<<sys.cfg>>=
 function Unix.extendPath(dir, file) 
   return dir .. "/" .. file
 end
@@ -72,48 +141,64 @@ end
 @ 
 <<util.cfg>>=
 $debug
-function show(x)
-  local i, n, v, pfx
+function image(x)
+  local i, n, v, pfx, s, ty, tag
   case type(x) of
-  | "string" => write(format("%q", x))
-  | "number" => write(x)
+  | "string" => return format("%q", x)
+  | "number" => return format("%.0f", x)
   | "function", "cfunction" =>
        i = funname(x)
-       if i then write("<function ", i, ">")
-       else print(x)
+       if i then return "<function " .. i .. ">"
+       else return tostring(x)
        end
   | "table" =>
-        write("{"); pfx = " "
+        s = "{"; pfx = " "
         i = nil
         n = 0
         repeat
           i, v = next(x, i)
           if (i ~= nil) then
-	    write(pfx)
+	    s = s .. pfx 
    	    if type(i) == "string" and strfind(i, "^[a-zA-Z][a-zA-Z_0-9]*$") then
-              write(i)
+              s = s .. i
             else
-              write("["); show(i); write("]")
+              s = s .. "[" .. image(i) .. "]"
             end
-	    write(" = "); show(v)
+	    s = s .. " = " .. image(v)
           end
           pfx = ", "
         until (i == nil)
-        write (" }")
-  else => print(x)
+        return s .. " }"
+  | "nil" => return 'nil'
+  | "userdata" => ty, tag = type(x)
+                  case tag of
+                  | NWKEY => return funname(x)
+                  else => return tostring(x)
+                  end
+  else => return tostring(x)
   end
 end
-
+@ 
+<<hackers: entries for Lua functions>>=
+image&
+Attempts to convert any Lua value to string form.\\
+show&
+Writes images of up to 6~arguments on the default Lua output.\\
+@
+<<util.cfg>>=
+function show(x, a, b, c, d, e)
+  local i, n, v, pfx
+  write(image(x))
+  if a then show(a, b, c, d, e) end
+end
+@ 
+We try to find a two-element name for a function.
+If that fails we look at top level.
+If that fails, we give up.
+<<util.cfg>>=
 function funname(x)
   local i, v, ii, vv
-  i, v = nextvar(nil)
-  while i ~= nil do
-    if v == x then
-      return i
-    else
-      i, v = nextvar(i)
-    end
-  end
+  -- search global tables for x
   i, v = nextvar(nil)
   while i ~= nil do
     if type(v) == "table" then
@@ -128,6 +213,21 @@ function funname(x)
     end
     i, v = nextvar(i)
   end
+  -- search globals for x
+  i, v = nextvar(nil)
+  while i ~= nil do
+    if v == x then
+      return i
+    else
+      i, v = nextvar(i)
+    end
+  end
   return nil
 end
+<<hackers: entries for Lua functions>>=
+funname&
+Attempts to return a name by which a Lua value can be known.
+Searches top-level variables, then top-level tables.
+Typically used to find names of functions.\\
+@
 
