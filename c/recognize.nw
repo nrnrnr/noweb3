@@ -22,6 +22,7 @@ efficient solution~\cite{aho:efficient}.
 
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 <<Include files>>
 <<header>>
 <<Type definitions>>

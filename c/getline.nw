@@ -15,6 +15,7 @@ of the length of the longest line.
 calls destroy the results of previous calls.
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #define START_SIZE 128                  /* initial buffer size */
 
 #include <stdio.h>

@@ -7,6 +7,7 @@ script efficient.
 Tips of the hat to Ross Williams and Preston Briggs.
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

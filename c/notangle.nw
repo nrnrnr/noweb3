@@ -16,6 +16,7 @@ details later.
 void notangle (FILE* in, FILE *out, char *rootname, char *locformat);
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #define MAX_MODNAME 255
 @
 <<*>>=

@@ -8,6 +8,7 @@ extern int is_end(char *line, char *type);
 extern int is_index(char *line, char *type);
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #include <string.h>
 #include "match.h"
 static int matches(char *line, char *search) {

@@ -22,6 +22,7 @@ expands to an at sign, but I won't bother.
 
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

@@ -12,6 +12,7 @@ The following options are good on the command line:
 \end{fields}
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
