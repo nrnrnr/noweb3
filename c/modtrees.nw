@@ -6,8 +6,8 @@ Trees of modules.
 A table of modules with insert and lookup, but no delete.
 The key is the module name.
 <<header>>=
-Module insert (char *modname);  /* add a module to the world */
-Module lookup (char *modname);  /* return ptr to module or NULL */
+Module insert (const char *modname);  /* add a module to the world */
+Module lookup (const char *modname);  /* return ptr to module or NULL */
 void apply_each_module(void (*fun)(Module));
      /* apply [[fun]] to each module in the tree */
 <<*>>= 
@@ -30,12 +30,13 @@ static struct tnode *root=NULL;
         
 <<Function declarations>>
 <<*>>= 
-Module insert (char *modname) {
+Module insert (const char *modname) {
+    (void) rcsname; (void) rcsid;
     return insert_tree (&root, modname);
 }
 
 static Module
-insert_tree(TNODE **rootptr, char *modname) {
+insert_tree(TNODE **rootptr, const char *modname) {
      if (*rootptr==NULL) {
          <<Allocate new tnode in **rootptr>>
          return (*rootptr)->data = newmodule(modname);
@@ -57,16 +58,16 @@ Node allocation is perfectly standard.
        (*rootptr)->left = (*rootptr)->right = NULL;
 @
 <<Function declarations>>=
-static Module insert_tree(TNODE **rootptr, char *modname);
-static Module lookup_tree(TNODE **rootptr, char *modname);
+static Module insert_tree(TNODE **rootptr, const char *modname);
+static Module lookup_tree(TNODE **rootptr, const char *modname);
 @
 <<*>>=
-Module lookup (char *modname) {
+Module lookup (const char *modname) {
     return lookup_tree (&root, modname);
 }
 
 static Module
-lookup_tree(TNODE **rootptr, char *modname) {
+lookup_tree(TNODE **rootptr, const char *modname) {
      if (*rootptr==NULL) {
         return NULL;
      } 
