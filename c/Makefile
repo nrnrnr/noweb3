@@ -98,8 +98,9 @@ mnt:	$(MNTOBJS)
 nwbuffer-lua.c: nwbuffer.nw nwbuffer-lua.nw
 	(echo "<<key macros>>="; $(NOTANGLE) $(TANGLEOPTS) -R'key macros' nwbuffer.nw; echo "@") | $(NOTANGLE) $(TANGLEOPTS) -L nwbuffer-lua.nw - > $@
 
+# did have  $(CII)/memchk.o preceding -lcii
 no:	$(NOOBJS) $(CII)/memchk.o $(CII)/libcii.a $(LUA)/lib/liblua.a $(LUA)/lib/liblualib.a
-	$(CC) $(CFLAGS) -o no $(NOOBJS) $(CII)/memchk.o -lcii -llua -llualib -lm
+	$(CC) $(CFLAGS) -o no $(NOOBJS) -lcii -llua -llualib -lm
 
 
 source:	$(SRCS)
