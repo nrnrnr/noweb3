@@ -435,7 +435,7 @@ static int forkStageTo(struct XPipe_Stage *stage, int outfd, int *pipefds) {
     makeOutput(outfd);
     close_pair(pipefds);
     <<execute [[stage]] and cause process to exit with suitable status>>
-    return 0; /* prevents warning */
+    return -1; /* prevents warning */
   }
   else {                           /* parent process */
     assert(pid > 0);
@@ -455,6 +455,7 @@ switch (stage->tag) {
 	<<lookup [[prog->path]] on PATH and execute>>
       }
       fatal("Could not execute %s", prog->path);
+      exit(1);
       return -1; /* prevents warning */
     }
   case Fun:
@@ -524,7 +525,7 @@ one of the awaited processes, then the functions return an error and abort.
 static int waitfor(int pid) {
   int status;
   assert(pid == wait(&status));
-  return status;
+  return WEXITSTATUS(status);
 }
 
 static int waitfor2(int pid1, int pid2) {
@@ -532,7 +533,7 @@ static int waitfor2(int pid1, int pid2) {
   int pid;
   pid = wait(&status);
   assert((pid == pid1) || (pid == pid2));
-  return status | waitfor(pid == pid1 ? pid2 : pid1);
+  return WEXITSTATUS(status) | waitfor(pid == pid1 ? pid2 : pid1);
 }
 
 @
