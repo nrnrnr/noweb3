@@ -1,0 +1,109 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode; c-indent-level: 4 -*-
+<<header>>=
+#include <stdio.h>
+
+struct cpif;
+struct cpif *cpif_open(const char *filename);
+void cpif_close(struct cpif **);
+FILE *cpif_file(struct cpif *);
+@ 
+<<*>>=
+#include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "cpif.h"
+#include "errors.h"
+#include "strsave.h"
+
+struct cpif {
+  const char *filename;
+  const char *tempname;
+  FILE *fp;
+};
+
+<<local prototypes>>
+
+struct cpif *cpif_open(const char *filename) {
+  struct cpif *cpif = malloc(sizeof(*cpif));
+  assert(cpif);
+  assert(filename);
+  cpif->filename = strsave(filename);
+  cpif->tempname = strsave(tempnam(".", 0));
+  cpif->fp = fopen(cpif->tempname, "w");
+  if (cpif->fp == NULL)
+    errormsg(Fatal, "Can't open temporary file %s", cpif->tempname);
+  return cpif;
+}
+
+FILE *cpif_file(struct cpif *cpif) {
+  assert(cpif);
+  return cpif->fp;
+}
+
+void cpif_close(struct cpif **cpifp) {
+  struct cpif *cpif;
+  assert(cpifp && *cpifp);
+  cpif = *cpifp;
+  fclose(cpif->fp);
+  <<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>
+  remove(cpif->filename);
+  if (rename(cpif->tempname, cpif->filename) != 0) {
+    /* different file systems? Try to copy. */
+    FILE *fp = fopen(cpif->filename, "w");
+    if (fp == NULL) {
+        remove(cpif->tempname);
+        <<complain about [[filename]] and [[return]]>>;
+    }
+    <<copy [[tempname]] to [[fp]]>>;
+    fclose(fp);
+    remove(cpif->tempname);
+  }
+  free(cpif);
+  *cpifp = NULL;
+}
+<<copy [[tempname]] to [[fp]]>>=
+{ FILE *tmp;
+  int x;
+  tmp = fopen(cpif->tempname, "r");
+  assert(tmp);
+  for (x = getc(tmp); x != EOF; x = getc(tmp))
+     putc(x, fp);
+  fclose(tmp);
+}
+<<if file [[filename]] is as file [[tempname]], remove [[tempname]] and [[return]]>>=
+{ FILE *dest, *tmp;
+  dest = fopen(cpif->filename, "r");
+  if (dest != NULL) {
+    int x, y;
+    tmp = fopen(cpif->tempname, "r");
+    assert(tmp);
+    do { 
+      x = getc(tmp);
+      y = getc(dest);
+    } while (x == y && x != EOF);
+    fclose(tmp);
+    fclose(dest);
+    if (x == y) {
+      remove(cpif->tempname);
+      free(cpif);
+      *cpifp = NULL;
+      return;
+    }
+  }
+}
+<<complain about [[filename]] and [[return]]>>=
+errormsg(Error, "Can't open output file %s", cpif->filename);
+return;
+@ 
+\subsubsection{Temporary files}
+Some operating systems provide a [[tempnam]] call that makes it possible to 
+create a temporary file in the current directory.  This makes [[mnt]] more 
+efficient by making [[rename]] efficient.  If your operating system
+provides [[tempnam]], define [[TEMPNAM]] for compilation.
+<<local prototypes>>=
+#ifdef TEMPNAM
+extern char *tempnam (const char *dir, const char *pfx);        /* temp file in dir */
+#else
+#define tempnam(DIR,PFX) (strsave(tmpnam(NULL)))
+#endif
+@ %def tempnam
