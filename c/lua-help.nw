@@ -60,7 +60,10 @@ extern struct List_T *lua_makestringlist(lua_Object o);
 extern CArgs CArgs_fromtable(char *argv0, lua_Object o);
 extern char *lua_optstring(lua_Object o);
   /* string, or NULL if object is nil */
+extern const char *lua_optatom(lua_Object o);
+  /* Atom_string(string), or NULL if object is nil */
 extern void lua_pushoptstring(const char *s);
+extern const char *lua_funname(lua_Object o); /* destroys lua parameters/results */
 #endif
 @ 
 
@@ -84,10 +87,12 @@ struct Application {
   int arg; /* reference to its argument */
 };
 extern struct Application* build_app_from_lua_args(char *funname);
-  /* call to make an application from lua arguments f, arg 
+  /* call to make an application from lua arguments f, arg, optional name
      funname is name of lua function (for errors) */
 #include <stdio.h>
 extern int apply_application(void *app, FILE *in, FILE *out);
+void print_application(FILE *fp, void*env, void*app);
+  /* if env is NULL, use the short version, o/w full */
 @ 
 
 
@@ -237,7 +242,7 @@ extern struct List_T *lua_makestringlist(lua_Object arglist_o) {
     if (lua_isnil(o)) break;
     s = lua_getstring(o);
     if (!s) lua_error("Argument is not a string.");
-    arglist = List_push(arglist, s);
+    arglist = List_push(arglist, (void*)Atom_string(s));
   }
   return List_reverse(arglist);
 }
@@ -300,6 +305,9 @@ CArgs CArgs_fromtable(char *argv0, lua_Object o) {
 char *lua_optstring(lua_Object o) {
   return lua_isnil(o) ? NULL : lua_getstring(o);
 }
+const char *lua_optatom(lua_Object o) {
+  return lua_isnil(o) ? NULL : Atom_string(lua_getstring(o));
+}
 void lua_pushoptstring(const char *s) {
   if (s)
     lua_pushstring((char *)s);
@@ -307,18 +315,28 @@ void lua_pushoptstring(const char *s) {
     lua_pushnil();
 }
 @ 
-
-
+<<functions>>=
+const char *lua_funname(lua_Object o) {
+  lua_Object answer;
+  lua_pushobject(o);
+  lua_call("funname");
+  answer = lua_getresult(1);
+  return lua_isnil(answer)
+           ? "<unknown lua function>"
+           : Atom_string(lua_getstring(answer));
+}
 @
 To build an application, we need to make Lua objects into references;
 otherwise they disappear.
 <<functions>>=
 struct Application* build_app_from_lua_args(char *funname) {
   struct Application* app = ALLOC(sizeof *app);
-  lua_get_args(funname, 2, FUNCTION, &app->f, ANY, &app->arg);
-  lua_pushobject(app->f);
+  lua_Object name, f, arg;
+  lua_get_args(funname, 3, FUNCTION, &f, ANY, &arg, 
+                           LUA_STRING | OPTIONAL, &name);
+  lua_pushobject(f);
   app->f = lua_ref(1);
-  lua_pushobject(app->arg);
+  lua_pushobject(arg);
   app->arg = lua_ref(1);
   return app;
 }
@@ -338,5 +356,17 @@ int apply_application(void *closure, FILE *in, FILE *out) {
   lua_outfile = oldout;
   return (int)lua_getnumber(lua_getresult(1));
 }
-
+<<functions>>=
+void print_application(FILE *fp, void*env, void*app) {
+  struct Application *a = app;
+  if (env != NULL) {
+    lua_pushref(a->f);
+    lua_call("image");
+    fprintf(fp, "%s, ", lua_getstring(lua_getresult(1)));
+  }
+  lua_pushref(a->arg);
+  lua_call("image");
+  fprintf(fp, "%s", lua_getstring(lua_getresult(1)));
+}
+  
 
