@@ -19,6 +19,7 @@ in [[ipipe.h]].
 
 #include "nwbuffer.h"
 #include "fromascii.h"
+#include "xpipe.h"
 
 typedef struct MSource* MSource;
 typedef struct MFilter* MFilter;
@@ -37,12 +38,12 @@ information about a particular stage.
 
 <<prototypes for basics>>=
 extern MSource MSource_create_i (int (*stage)(void*, NowebBuffer), void* arg);
-extern MSource MSource_create_x (char* path, char** argv, char** envp);
+extern MSource MSource_create_x (XPipe external);
 extern MFilter MFilter_create_i (int (*stage)(void*, NowebBuffer, NowebBuffer),
 				void* arg);
-extern MFilter MFilter_create_x (char* path, char** argv, char** envp);
+extern MFilter MFilter_create_x (XPipe external);
 extern MSink MSink_create_i (int (*stage)(void*, NowebBuffer), void* arg);
-extern MSink MSink_create_x (char* path, char** argv, char** envp);
+extern MSink MSink_create_x (XPipe external);
 extern MPipe MPipe_create (MSource source, MSink sink);
 @ 
 
@@ -174,10 +175,10 @@ MSource MSource_create_i(int (*stage)(void*, NowebBuffer), void* arg) {
   return new_source;
 }
   
-MSource MSource_create_x(char* path, char** argv, char** envp) {
+MSource MSource_create_x(XPipe external) {
   MSource new_source = ALLOC(sizeof(struct MSource));
   new_source->s = EXTERNAL;
-  new_source->u.external = XPipe_program(path, argv, envp);
+  new_source->u.external = external;
   return new_source;
 }
 
@@ -189,10 +190,10 @@ MFilter MFilter_create_i(int (*stage)(void*, NowebBuffer, NowebBuffer),
   return new_filter;
 }
 
-MFilter MFilter_create_x(char* path, char** argv, char** envp) {
+MFilter MFilter_create_x(XPipe external) {
   MFilter new_filter = ALLOC(sizeof(struct MFilter));
   new_filter->s = EXTERNAL;
-  new_filter->u.external = XPipe_program(path, argv, envp);
+  new_filter->u.external = external;
   return new_filter;
 }
 
@@ -203,10 +204,10 @@ MSink MSink_create_i(int (*stage)(void*, NowebBuffer), void* arg) {
   return new_sink;
 }
 
-MSink MSink_create_x(char* path, char** argv, char** envp) {
+MSink MSink_create_x(XPipe external) {
   MSink new_sink = ALLOC(sizeof(struct MSink));
   new_sink->s = EXTERNAL;
-  new_sink->u.external = XPipe_program(path, argv, envp);
+  new_sink->u.external = external;
   return new_sink;
 }
 @ 
@@ -310,6 +311,12 @@ static int do_exec_start(MSource left, MSink right) {
       return -1; /* should not happen */
   }
 }
+static int ipipe_exec_and_free(IPipe p) {
+  int rc = IPipe_execute(p);
+  IPipe_free(&p);
+  return rc;
+}
+
 static int do_exec(XPipe ext, Source ints, MSink rest) {
   assert(ext || ints);
   switch (rest->s) {
@@ -322,9 +329,9 @@ static int do_exec(XPipe ext, Source ints, MSink rest) {
       { IPipe intp = IPipe_create(ints ? ints : fromascii, rest->u.internal);
         if (ext)
 	  return XPipe_execute(XPipe_connect(ext,
-			         XPipe_function((int (*)(void*))IPipe_execute, intp)));
+			         XPipe_function((int (*)(void*))ipipe_exec_and_free, intp)));
 	else
-	  return IPipe_execute(intp);
+	  return ipipe_exec_and_free(intp);
       }
     case PAIR: {
       switch (rest->u.pair.left->s) {
@@ -356,142 +363,10 @@ static int do_exec(XPipe ext, Source ints, MSink rest) {
 if (!ints) {
   start = ext;
 } else {
-  start = XPipe_function((int (*)(void *))IPipe_execute, IPipe_create(ints, toascii));
+  start = XPipe_function((int (*)(void *))ipipe_exec_and_free, IPipe_create(ints, toascii));
   if (ext) start = XPipe_connect(ext, start);
 }
 
-@     
-
-There are three ``helper'' functions to individual execute an [[MSource]],
-[[MFilter]], and [[MSink]].  These functions each take the source, filter, or
-sink that they are to operate on, as well as an external pipeline and internal
-source that act as buffers.
-
-Since the first stage in every internal pipeline will be a [[Source]], this is
-the type that is used as a buffer.  When the execute functions come across an
-internal stage, they are placed at the end of the [[src]] buffer (either by
-assigning to [[src]] or extending [[src]]).  When an external stage is then
-found, the [[src]] buffer is cleared and placed into [[xpipe]] as a single
-stage.  The internal/external pipeline format conversion functions [[toascii]]
-and [[fromascii]] are inserted as a [[Sink]] or [[Source]] as necessary.
-
-@
-
-There should be only one root source; therefore, when a root source is found
-(either internal or external), both [[xpipe]] and [[src]] should be empty.
-
-<<execute functions>>=
-void MSource_execute(MSource source, XPipe xpipe, Source src) {
-  if (source->s == PAIR) {
-    MSource_execute(source->u.pair.left);
-    MFilter_execute(source->u.pair.right);
-  }
-  else if (source->s == INTERNAL) {
-    assert(xpipe == NULL);
-    assert(src == NULL);
-    src = source->u.internal;
-  }
-  else if (source->s == EXTERNAL) {
-    assert(xpipe == NULL);
-    assert(src == NULL);
-    xpipe = source->u.external;
-  }
-}
-@ 
-
-If an internal filter is found, then it is tacked on to any existing internal
-source.  If no internal source is present in the buffer, then the internal
-filter is used to extend [[fromascii]] and the result is placed in the buffer.
-
-If an external filter is found, then the contents of the [[src]] buffer are
-placed in an [[IPipe]] with [[toascii]] as a sink.  This [[IPipe]] and its
-execute function are placed in [[xpipe]] as the next external pipeline stage.
-The internal source buffer [[src]] is reset to NULL.
-
-<<execute functions>>=
-void MFilter_execute(MFilter filter, XPipe xpipe, Source src) {
-  if (filter->s == PAIR) {
-    MFilter_execute(filter->u.pair.left);
-    MFilter_execute(filter->u.pair.right);
-  }
-  else if (filter->s == INTERNAL) {
-    if (src) {
-      src = Source_extend(src, filter->u.internal);
-    }
-    else {
-      src = Source_extend(fromascii, filter->u.internal);
-    }
-  }
-  else if (filter->s == EXTERNAL) {
-    if (src) {
-      IPipe ipipe = IPipe_create(src, toascii);
-      XPipe temp_xpipe = XPipe_program(IPipe_execute, ipipe);
-      xpipe = XPipe_connect(xpipe, temp_xpipe);
-      src == NULL;
-    }
-    else {
-      xpipe = XPipe_connect(xpipe, filter->u.external);
-    }
-  }
-}
-@ 
-If an internal sink is found, a pipeline is created consisting of it and either
-the contents of the [[src]] buffer or (if the buffer is empty) the
-[[fromascii]] source.  This internal pipeline is then added as the next stage
-of the external pipeline.
-
-If an external sink is found, then the contents of the [[src]] buffer, if it
-is non-empty, are connected to [[toascii]] and placed as the next stage of the
-external pipeline.  Then, the external sink is placed in the external pipeline
-as well.
-
-<<execute functions>>=
-void MSink_execute(MSink sink, XPipe xpipe, Source src) {
-  if (sink->s == PAIR) {
-    MFilter->execute(sink->u.pair.left);
-    MSink->execute(sink->u.pair.right);
-  }
-  else if (sink->s == INTERNAL) {
-    if (src) {
-      IPipe ipipe = IPipe_create(src, sink->u.internal);
-      XPipe temp_xpipe = XPipe_program(IPipe_execute, ipipe);
-      xpipe = XPipe_connect(xpipe, temp_xpipe);
-      src = NULL;
-    }
-    else {
-      IPipe ipipe = IPipe_create(fromascii, sink->u.internal);
-      XPipe temp_xpipe = XPipe_program(IPipe_execute, ipipe);
-      xpipe = XPipe_connect(xpipe, temp_xpipe);
-      src = NULL;
-    }
-  }
-  else if (sink->s == EXTERNAL) {
-    if (src) {
-      IPipe ipipe = IPipe_create(src, toascii);
-      XPipe temp_pipe = XPipe_program(IPipe_execute, ipipe);
-      xpipe = XPipe_connect(xpipe, temp_xpipe);
-      xpipe = XPipe_connect(xpipe, sink->u.external);
-      src = NULL;
-    }
-    else {
-      xpipe = XPipe_connect(xpipe, sink->u.external);
-    }
-  }
-}
-@ 
-
-The [[MPipe_execute]] function uses the other execute functions to build a
-single external pipeline from a collection of external and internal pipe
-stages.  It then executes that external pipeline.
-
-<<execute functions>>=
-int MPipe_execute(MPipe pipe) {
-  XPipe xpipe = NULL;
-  Source src = NULL;
-  MSource_execute(pipe->source, xpipe, src);
-  MSink_execute(pipe->sink, xpipe, src);
-  return(XPipe_execute(xpipe));
-}
 @ 
 <<header>>=
 <<mpipe.h>>
