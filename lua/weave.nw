@@ -45,18 +45,21 @@ end
 exit(P.run(pipeline))
 @
 <<initialization>>=
-markup = libFile("markup")  -- could be internal
-backend = libFile("totex")  -- could be internal
-Defaults = { tohtml = libFile("tohtml"), noidx = libFile("noidx"),
-             finduses = libFile("finduses")
-           }
-function internalDefaults ()
-  backend = Stages.totex
-  markup = Stages.markup
-  Defaults.noidx = Stages.noidx
-  Defaults.tohtml = Stages.tohtml
-  Defaults.finduses = Stages.finduses
+-- default is to use internal filters
+backend = Stages.totex
+markup = Stages.markup
+Defaults.noidx = Stages.noidx
+Defaults.tohtml = Stages.tohtml
+Defaults.finduses = Stages.finduses
+
+function externalDefaults ()
+  backend = libFile("totex")
+  markup = libFile("markup")
+  Defaults.noidx = libFile("noidx")
+  Defaults.tohtml = libFile("tohtml")
+  Defaults.finduses = libFile("finduses")
 end
+  
 backopts = List.new {}
 wrapper = nil
 delay = List.new {}
@@ -79,7 +82,7 @@ be given in a certain order.
 i = 1
 while i <= List.length(argv) do
   globmatch argv[i] of
-  | "-internaldefaults" => internalDefaults()
+  | "-externaldefaults" => externalDefaults()
   | "-e" => i = i + 1; dostring(argv[i])
   <<first pass {\tt noweave} options>>
   | "-"  => List.put(args, "-")
@@ -93,8 +96,8 @@ end
 @ \iffalse
 <<noweave man page option table>>=
 .TP
-.B \-internaldefaults
-Use internal filters wherever possible, instead of external ones.
+.B \-externaldefaults
+Use external filters wherever possible, instead of internal ones.
 .TP
 .BI \-e " string"
 Treat
