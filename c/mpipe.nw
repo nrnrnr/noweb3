@@ -46,7 +46,7 @@ extern MPipe_T MPipe_identity;
 @ 
 Once completed, a mixed pipeline may be executed, printed,  or freed from memory.
 <<operations on completed pipeline>>=
-extern int  MPipe_run  (MPipe_T pipe, NowebBuffer in, NowebBuffer out);
+extern int  MPipe_run  (MPipe_T pipe);
 extern void MPipe_print(FILE *fp, MPipe_T pipe);
 extern void MPipe_free (MPipe_T *pipe);
 @ 
@@ -238,7 +238,7 @@ static int ipipe_run_right(void *p, FILE *in, FILE *out) {
 @ 
 The files for I/O are bound too early here.
 <<functions>>=
-extern int  MPipe_run  (MPipe_T pipe, NowebBuffer in, NowebBuffer out) {
+extern int  MPipe_run  (MPipe_T pipe) {
   struct list cell;
   cell.hd = pipe;
   cell.tl = NULL;
