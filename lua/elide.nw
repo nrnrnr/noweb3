@@ -25,6 +25,9 @@ actually appears in a code chunk named
 \emph{$\langle$hackers: subsections for internal filters$\rangle$}.
 To prepare internal documentation for the stages, we use
 \texttt{Stages.elide} with the argument \texttt{hackers:*}.
+
+Also undocumented \texttt{-eat} option.
+
 @
 \subsection{Eliding}
 The main loop simply copies the input to the output.
@@ -36,6 +39,8 @@ function Stages.elide(sourcebuf, sinkbuf, globs)
                   "$Name$"
   local r = NWB.reader(sourcebuf)
   if type(globs) == "string" then globs = List.fromstring(globs) end
+  local eat = nil
+  if globs[1] == "-eat" then List.get(globs); eat = List.get(globs) end
   local key, arg
   key, arg = NWB.read(r)
   while key do 
@@ -60,11 +65,32 @@ while key and key ~= NW_DEFN do
   List.put(accum, key); List.put(accum, arg)
   key, arg = NWB.read(r)
 end
-<<set [[matches]] if definition matches a pattern in [[globs]]>>
+<<set [[matches]] if [[arg]] matches a pattern in [[globs]]>>
 if matches then
-  -- discard accum and everything up the next @end code
-  while key and key ~= NW_END_CODE do
-    key, arg = NWB.read(r)
+  -- discard accum and everything up the next @end code, replacing newlines by eat
+  if eat then
+    while List.length(accum) >= 2 do
+      local k = List.get(accum)
+      local a = List.get(accum)
+      if k == NW_NL or k == NW_INDEX_NL then
+        NWB.put(sinkbuf, "literal", eat)        
+        NWB.put(sinkbuf, NW_NL, a)
+      end
+    end
+  end
+
+  if eat then
+    while key and key ~= NW_END_CODE do
+      if key == NW_NL or key == NW_INDEX_NL then
+        NWB.put(sinkbuf, "literal", eat)        
+        NWB.put(sinkbuf, NW_NL, arg)
+      end
+      key, arg = NWB.read(r)
+    end
+  else  
+    while key and key ~= NW_END_CODE do
+      key, arg = NWB.read(r)
+    end
   end
   if key then key, arg = NWB.read(r) end
 else
@@ -74,7 +100,7 @@ else
     NWB.put(sinkbuf, k, a)
   end
 end
-<<set [[matches]] if definition matches a pattern in [[globs]]>>=
+<<set [[matches]] if [[arg]] matches a pattern in [[globs]]>>=
 local matches
 local i, n = 1, List.length(globs)
 while i <= n and not matches do
@@ -84,3 +110,51 @@ while i <= n and not matches do
   i = i + 1
 end
 @
+[[Stages.elideuse]] elides uses, plus following whitespace,
+and if whitespace and a newline follow, the use and the preceding whitespace.
+<<*>>=
+function Stages.elideuse(sourcebuf, sinkbuf, globs)
+  local rcsinfo = "$Id$" ..
+                  "$Name$"
+  local r = NWB.reader(sourcebuf)
+  if type(globs) == "string" then globs = List.fromstring(globs) end
+  local eat = nil
+  if globs[1] == "-eat" then List.get(globs); eat = List.get(globs) end
+  local key, arg
+  key, arg = NWB.read(r)
+  local eliding = nil
+  while key do 
+    case key of
+    | NW_USE =>
+        <<set [[matches]] if [[arg]] matches a pattern in [[globs]]>>
+        if matches then
+          eliding = 1
+        else
+          NWB.put(sinkbuf, key, arg)
+        end
+    | NW_TEXT =>
+        if eliding and strfind(arg, "^%s*$") then
+          -- do nothing
+        else
+ 	  eliding = nil
+          NWB.put(sinkbuf, key, arg)
+        end
+    | NW_NL =>
+        if eliding then
+          local k, a = NWB.pull(sinkbuf)
+          while k == NW_TEXT and strfind(a, "^%s*$") do
+            k, a = NWB.pull(sinkbuf)
+          end
+          NWB.put(sinkbuf, k, a)
+          if eat then NWB.put(sinkbuf, "literal", eat) end
+          eliding = nil
+        end
+        NWB.put(sinkbuf, key, arg)
+    else =>          
+      NWB.put(sinkbuf, key, arg)
+    end
+    key, arg = NWB.read(r)
+  end
+  return 0
+end
+
