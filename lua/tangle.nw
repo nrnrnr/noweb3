@@ -25,6 +25,11 @@ while List.length(argv) > 0 do
       	      List.put(opt, a)
   | "-filter" => List.put(filters, MD.stringFilter(List.get(argv)))
   | "-ifilter" =>
+--  if verbose then 
+--  errormsg("FILTER: ", 
+--  "if 1 then local f, arg = " .. argv[1] .. 
+--                 "; List.put(filters, MPipe.filter(f, arg)) end")
+--  end
       dostring("if 1 then local f, arg = " .. List.get(argv) .. 
                "; List.put(filters, MPipe.filter(f, arg)) end")
   | "-markup" => markup = List.get(argv)
