@@ -19,6 +19,17 @@ function List.length(list)
   until (i == nil)
   return n
 end
+@ 
+<<hackers: entries for list functions>>=
+List.is&Returns non-nil if the argument is a list.\\
+<<*>>=
+function List.is(list)
+  if type(list) ~= "table" then return nil end
+  local i = 1
+  while list[i] do i = i + 1 end
+  i = i - 1
+  return i == List.length(list)
+end
 <<hackers: entries for list functions>>=
 List.get&
 Removes and returns the first element of a list.
