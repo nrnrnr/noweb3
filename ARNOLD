@@ -1,12 +1,27 @@
 Guide to the ultimate structure of the noweb 3 distribution
 
+Outputs directories with defaults:
+  LIB   /usr/local/noweb/lib      external stages and Lua scripts
+  BIN   /usr/local/noweb/bin      executable binaries (e.g., no, htmltoc)
+  MAN   /usr/local/noweb/man      man-page hierarchy
+  TEXINPUTS  /usr/share/texmf/tex/latex/local   place for noweb.sty, nwmac.tex
+  ELISP /dev/null                 place for emacs lisp files
+
+I'd like your opinion about whether to have a single LIB directory for
+both external pipeline stages and Lua scripts.  My inclination is yes.
+
+Most of these directories will contain what they contain under noweb 2,
+so I haven't answered your request for a list.  Instead, I'll just ask
+you to install noweb 2 in a pristine place and you can see for yourself
+what files go where.  Below I've given considerable play to the
+differences in noweb 3.
+
+Here's also a considerable discussion of the sources.
+
 I'd like your opinion about whether it's a good idea to replicate the
 structure of the Noweb 2 distribution, which was two layers with src
 below dist, or whether dist and src should be flattened into a single
 directory.
-
-I'd like your opinion about whether to have a single LIB directory for
-both external pipeline stages and Lua scripts.  My inclination is yes.
 
 The stuff in dist in v2 is
 
@@ -33,7 +48,8 @@ target in Noweb 2.
 
 A student worked on nwconfig.  Please see if some of those targets
 (e.g., POSIX, POPEN) can be removed, perhaps by making suitable
-adjustments in sources elsewhere.
+adjustments in sources elsewhere.  Also please note missing variables
+from the Noweb 2 Makefile.
 
 The following Makefile targets are needed:
 
