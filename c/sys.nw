@@ -1,0 +1,12 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\section{System dependencies}
+<<header ((unx))>>=
+#define Sys_dirsep "/"
+#define Sys_pathsep ':'
+<<header ((dos))>>=
+#define Sys_dirsep "\\"
+#define Sys_pathsep ';'
+@ 
+<<*>>=
+int Sys_ignoreme;

@@ -1,0 +1,281 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\documentclass{article}
+\usepackage{noweb,tabularx}
+\newcommand\module[1]
+  {\texttt{#1} module (Chapter~\ref{#1-module} on
+  page~\pageref{#1-module})}
+% l2h macro module 1 <a href="#$1.html"><tt>#1.nw</tt></a>
+\renewcommand\module[1]{\nwanchorto{#1.html}{\texttt{#1.nw}}}
+
+\begin{document}
+@
+
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Overview of work done on Noweb}
+
+Over the past year work has been done to improve the performance and
+portability of Noweb.  The performance issue is addressed by the creation of
+a pipeline structure that would allow stages of Noweb to be run as separate
+functions participating in the same process rather than using the UNIX
+pipeline to connect a series of separate processes.  However, in order to allow
+users to still write their own extensions to Noweb, the original pipeline
+structure must also be supported.  In other words, Noweb had to provide a
+pipeline that could connect stages of any type, whether they were functions
+written as part of the Noweb release or external programs written by users.
+The portability issue is addressed, then, by re-implementing the existing
+UNIX pipeline in C with an interface that could be extended to other operating
+systems.
+
+This document attempts to explain the changes made to Noweb by describing each
+new module, explaining how they all work together, how they are used, and what
+work remains to be done on them.
+
+\section{Pipeline modules}
+
+These four modules are the substance of the changes made to Noweb.  They define
+the new pipeline structures that eventually will result in a faster and more
+portable Noweb.
+
+\begin{quote}
+\begin{tabularx}{\textwidth}{lX}
+
+\module{xpipe}&
+Interface and implementation for an ``external'' pipeline in C, similar to the
+existing UNIX pipeline mechanism.\\
+\module{ipipe}&
+Interface and implementation for an internal Noweb pipeline.  Allows Noweb to
+connect a series of functions together, passing results through a special
+buffer.\\
+\module{nwbuffer}&
+Interface and implementation for the buffer and its operations.  This module
+is used by the internal pipeline module.\\
+\module{mpipe}&
+Interface and implementation for a mixed Noweb pipeline.  Allows Noweb users to
+connect both external and internal stages in the same pipeline.  This module
+use the modules for the external and internal pipelines.\\
+
+\end{tabularx}
+
+\end{quote}
+
+\section{Pipeline stage modules}
+
+The next four modules define the first of many stages that will eventually be
+converted for use by the internal Noweb pipeline.  Rather than executing as
+stand-alone programs, these stages are implemented as functions and pass
+results to one another using the [[NowebBuffer]] interface.
+
+As defined by the interface to the internal pipeline structure, each internal
+stage must be declared as a [[Source]], [[Filter]], or [[Sink]].  A [[Source]]
+is a stage which reads from a file or from standard input and passes
+information out into a [[NowebBuffer]].  A [[Filter]] is a stage which reads
+from and writes to two [[NowebBuffer]]s.  A [[Sink]] is a stage which reads
+from a [[NowebBuffer]] and writes to a file or to standard output.  All that is
+needed to create a complete internal pipeline is one [[Source]] and one
+[[Sink]].  [[Filter]]s may be optionally added.
+
+In the following list of modules, three stages are defined: [[markup]],
+[[toascii]], and [[nullsink]].  The first of these is a [[Source]] and the
+others are [[Sinks]].  Together, these stages were combined to form two
+pipelines which were used to test the internal pipeline and Noweb buffer
+implementations.
+
+\begin{quote}
+
+\begin{tabularx}{\textwidth}{lX}
+\module{markmain}&
+This module already existed as a definition for an external stage; it was
+simply converted so that all calls to [[printf]] became calls to 
+[[NowebBuffer_append*]].  The stage ``[[markup]]'' is defined here.\\
+\module{toascii}&
+A [[Sink]] that converts the contents of a [[NowebBuffer]] back into the
+original ASCII representation of Noweb tags.  This stage will be necessary
+for converting the results of an internal pipeline that is included as part of
+a mixed pipeline.\\
+\module{nullsink}&
+A [[Sink]] that does nothing.  When connected to [[markup]], this sink can
+test for stray calls to [[printf]] that were not caught in converting
+[[markup]] from an external to an internal stage.  This module is useful for
+testing only.\\
+\module{markup-test}&
+Also used for testing, this module simply attempts to create and execute an
+internal pipeline consisting of [[markup]] and either [[toascii]] or
+[[nullsink]].  To switch between these two [[Sink]]s, the module must be edited
+and recompiled.\\
+
+\end{tabularx}
+
+\end{quote}
+
+\section{Lua-related modules}
+
+To make Noweb more portable, its dependence on UNIX shell scripts should be
+removed.  As a result, the Lua programming language was chosen as a portable
+scripting language.  The modules listed above had to be converted for use in
+Lua.  In addition, several Lua utilities were written to aid in the writing of
+future Lua code.  These will be described later; however, the modules are
+listed here with a brief description.
+
+\begin{quote}
+
+\begin{tabularx}{\textwidth}{lX}
+\module{xpipe-lua}&
+The Lua conversion of the functions defined in the external pipeline module.\\
+\module{ipipe-lua}&
+The Lua conversion of the functions defined in the internal pipeline module.\\
+\module{mpipe-lua}&
+The Lua conversion of the functions defined in the mixed pipeline module.\\
+\module{stages}&
+The Lua registration of the [[markup]] and [[toascii]] internal pipeline
+stages.\\
+\module{env-lua}&
+The Lua conversion of functions to read and write environment variables.\\
+\module{lua-help}&
+The definition of a C utility for getting and type-checking arguments passed to
+a Lua function.  This module also contains Noweb type definitions for Lua
+objects.\\
+\module{lua-main}&
+This module contains the main program for the Lua interpreter.  It adds the
+functions defined in the above modules to the standard version of Lua.\\
+
+\end{tabularx}
+
+\end{quote}
+
+\section{Lua interfaces and functions}
+
+The following is a list of everything that has been added to the standard
+version of Lua, with a brief description of how each item is used.
+
+\subsection{External pipeline functions}
+
+\emph{name}[[ = XPipe_program(``]]\emph{program}[['', {``]]\emph{arg1}[['', ``]]\emph{arg2}[['', ...})]]
+
+This function creates a one-stage external pipeline.  The stage is the
+program defined by \emph{program}, which is a string matching the name of the
+program.  An entire path to the program may be included in \emph{name}.  The
+second parameter to this function is a table of arguments, not including the
+program name itself.  Each argument, like the program name, is also a string.
+
+\emph{name}[[ = XPipe_connect(]]\emph{pipe1}[[, ]]\emph{pipe2}[[, ...)]]
+
+This function is called in order to create a pipeline of more than one stage.
+The procedure to do this is as follows:  create multiple one-stage pipelines
+using [[XPipe_program]], then connect them all using [[XPipe_connect]].  Each
+parameter to this function must be a complete external pipeline (it may have
+any number of stages).  Any number of pipelines (>= 2) may be connected.
+
+[[XPipe_print(]]\emph{pipe}[[)]]
+
+Prints an ASCII representation of an external pipeline.
+
+[[XPipe_execute(]]\emph{pipe}[[)]]
+
+Executes an external pipeline.
+
+[[XPipe_free(]]\emph{pipe}[[)]]
+
+Frees an external pipeline from memory.  WARNING:  Do not free smaller
+pipelines that are connected to produce a larger pipeline until you are done
+using the larger pipeline.  Otherwise the larger pipeline will have NULL
+stages.
+
+\subsection{Internal pipeline functions}
+
+\begin{quote}
+\noindent
+\emph{name}[[ = Source_create(]]\emph{function}[[, ]]\emph{arg}[[)]]\\
+\emph{name}[[ = Filter_create(]]\emph{function}[[, ]]\emph{arg}[[)]]\\
+\emph{name}[[ = Sink_create(]]\emph{function}[[, ]]\emph{arg}[[)]]
+\end{quote}
+Creates a [[Source]]/[[Filter]]/[[Sink]] that calls \emph{function} with the
+[[void*]] parameter equal to \emph{arg}.
+
+\begin{quote}
+\emph{name}[[ = IPipe_create(]]\emph{Source}[[, ]]\emph{Sink}[[)]]
+\end{quote}
+Creates an internal pipeline in which \emph{Source} reads from standard
+input or a file and passes information through a [[NowebBuffer]] to
+\emph{Sink}.  \emph{Sink} then reads from that buffer, does its work, and
+writes to either standard output or to a file.
+
+\begin{quote}
+\noindent
+\emph{name}[[ = Source_extend(]]\emph{Source}[[, ]]\emph{Filter}[[)]]\\
+\emph{name}[[ = Filter_extend(]]\emph{Filter}[[, ]]\emph{Filter}[[)]]\\
+\emph{name}[[ = Sink_extend(]]\emph{Filter}[[, ]]\emph{Sink}[[)]]\\
+\end{quote}
+Creates an extended [[Source]], [[Filter]], or [[Sink]] by connecting a
+[[Filter]] onto the existing object.
+
+\begin{quote}
+\noindent
+[[IPipe_execute(]]\emph{pipe}[[)]]\\
+[[IPipe_free(]]\emph{pipe}[[)]]
+\end{quote}
+Executes or frees an existing internal pipeline.  NOTE: [[IPipe_free]] has not
+been written yet.
+
+\subsection{Mixed pipeline functions}
+
+The interface for the Lua version of the mixed pipeline does not need to be
+shown in detail because it is based directly on the interfaces for the
+external and internal pipeline structures.  The following rules are helpful
+for deriving the appropriate mixed pipeline function:
+
+\begin{itemize}
+\item There are definitions now for \emph{external} sources, filters, and sinks
+as well.  However, there is no difference underneath the defined type; these
+types exist solely for type checking when building a pipeline out of its parts.
+
+\item All functions are of the same form as in the internal pipeline, with the
+exceptions that all functions begin with a capital ``M'' to designate that the
+operation is being performed on a mixed pipeline, and . . .
+
+\item . . . all functions which operate on a single stage rather than on an
+entire pipeline end in either ``[[_i]]'' or ``[[_x]]'' to designate whether the stage 
+being operated on is internal or external.  (Currently there are separate
+functions to handle internal and external stages but this should be corrected.)
+
+\end{itemize}
+
+\subsection{Internal pipeline stages}
+
+[[markup(]]\emph{args}[[, ]]\emph{NowebBuffer}[[)]]
+
+[[toascii(]]\emph{file or nil}[[, ]]\emph{NowebBuffer}[[)]]
+
+These functions are not used in the form shown here; they are generally passed
+as parameters to internal pipeline ``create'' functions.  These are each
+internal stages (a [[Source]] and a [[Sink]]) that pass information between
+text and a [[NowebBuffer]].
+
+\subsection{Environment functions for Lua}
+
+\emph{value}[[ = getenv(]]\emph{string}[[)]]
+
+This function will return a string representing the value of the environment
+variable named \emph{string}.
+
+[[putenv(]]\emph{string}[[)]]
+
+This function assigns the environment variable \emph{name} to be equal to
+\emph{value} IF \emph{string} is of the format ``\emph{name}=\emph{value}''.
+
+[[abort()]]
+
+Aborts a Lua program.
+
+\subsection{List operations for Lua}
+
+The new [[lua]] executable attempts to load a file called [[list.lua]].  If
+this file is located in the same directory as the executable then the list
+operations [[length]], [[get]], and [[put]] are made available.  [[length]]
+returns the length of the list, [[get]] removes the first element from the
+list and returns it, and [[put]] adds an element to the front of the list.
+
+@
+\end{document}

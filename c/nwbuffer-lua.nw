@@ -1,0 +1,59 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+<<header>>=
+<<*>>=
+#include <lua.h>
+
+#include "lua-help.h"
+#include "nwbuffer.h"
+
+<<functions>>
+@ 
+<<functions>>=
+static void reader_lua(void) {
+  lua_Object buf;
+  lua_get_args("NWB.reader", 1, NWBUFFER, &buf);
+  lua_pushusertag(NowebBuffer_reader(lua_getuserdata(buf)), NWREADER);
+}
+<<functions>>=
+static void read_lua(void) {
+  lua_Object rdr;
+  NowebPair p;
+  lua_get_args("NWB.read", 1, NWREADER, &rdr);
+  p = NowebBuffer_read(lua_getuserdata(rdr));
+  if (p) {
+    if (p->key == NW_XXX_STRINGKEY) {
+      lua_pushstring((char *)p->u.alternate->key);
+      lua_pushoptstring(p->u.alternate->value);
+    } else {
+      lua_pushusertag((void *)p->key, NWKEY);
+      lua_pushoptstring(p->u.value);
+    }
+  } else {
+    lua_pushnil();
+    lua_pushnil();
+  }
+}
+@ 
+<<functions>>=
+static void append_lua(void) {
+  lua_Object buf, key, val;
+  lua_get_args("NWB.append", 3, NWBUFFER, &buf, NWKEY | LUA_STRING, &key,
+	                        OPTIONAL | LUA_STRING, &val);
+  if (lua_isstring(key))
+    NowebBuffer_append_str(lua_getuserdata(buf), lua_getstring(key),
+	                   lua_optstring(val));
+  else
+    NowebBuffer_append(lua_getuserdata(buf), (NowebKey)lua_getuserdata(key),
+		       lua_optstring(val));
+}
+<<functions>>=
+void nwbuffer_open(void) {
+  lua_module_register("NWB", "reader", reader_lua);
+  lua_module_register("NWB", "read",   read_lua);
+  lua_module_register("NWB", "append", append_lua);
+#define xx(NAME, PRINTARGS) \
+  lua_pushusertag((void*)NAME, NWKEY); lua_storeglobal(#NAME);
+  <<key macros>>
+#undef xx
+}  

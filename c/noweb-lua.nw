@@ -1,0 +1,38 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Miscellaneous functions for Lua}
+
+<<header>>=
+void noweb_open(void);
+<<*>>=
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <fmt.h>
+
+#include "lua.h"
+#include "lua-help.h"
+#include "util.h"
+#include "noweb-lua.h"
+
+<<functions>>
+@
+<<functions>>=
+static void do_nwfile_lua(void) {
+  lua_Object var;
+  int status;
+  lua_get_args("do_nwfile", 1, LUA_STRING, &var);
+  status = load_nwfile(lua_getstring(var));
+  if (status == 2)
+    lua_error(Fmt_string("Failed to find file %s", lua_getstring(var)));
+  else if (status)
+    lua_error(Fmt_string("Error processing file %s", lua_getstring(var)));
+  lua_pushnumber((double)status);
+}
+@ 
+<<functions>>=
+void noweb_open(void) {
+  lua_register("do_nwfile", do_nwfile_lua);
+}

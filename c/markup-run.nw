@@ -1,0 +1,23 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Markup main program}
+
+<<*>>=
+#include <stdio.h>
+#include "markparse.h"
+#include "nwbuffer.h"
+#include "ipipe.h"
+#include "cargs.h"
+#include <mem.h>
+
+int main(int argc, char** argv) {
+  struct c_args* args = ALLOC(sizeof(struct c_args));
+  args->argc = argc;
+  args->argv = argv;
+  return IPipe_execute(IPipe_create(Source_create(markup_source, args),
+				    Sink_create(NowebBuffer_toascii, stdout)));
+  nowebexit(NULL);
+}
+@

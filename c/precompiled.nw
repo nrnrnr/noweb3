@@ -1,0 +1,6 @@
+<<header>>=
+extern struct precompiled {
+  const char *name;
+  char *code;
+} precompiled_scripts[];
+@ 

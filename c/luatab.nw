@@ -1,0 +1,35 @@
+\noindent\kern-0.5in\begin{tabular}{lp{2.7in}}
+\emph{name}[[ = Source_create(]]\emph{function}[[, ]]\emph{arg}[[)]]&
+A function is required for the first parameter and two total parameters must
+be passed.  The result is a Lua [[Source]] placed in \emph{name}.
+The \emph{function} expects two arguments: \emph{arg} and a buffer to
+write to, and it returns a number that is nonzero on error.\\
+%
+\emph{name}[[ = Filter_create(]]\emph{function}[[, ]]\emph{arg}[[)]]&
+Like [[Source_create]], [[Filter_create]] requires a function for the first
+parameter and two total parameters must be passed.  The result is a Lua
+[[Filter]] placed in \emph{name}.  
+The \emph{function} expects three arguments: \emph{arg}, a buffer to
+read from, and a buffer to write to.
+ It returns a number that is nonzero on error.\\
+%
+\emph{name}[[ = Sink_create(]]\emph{function}[[, ]]\emph{arg}[[)]]&
+[[Sink_create]] also requires a function for the first parameter, and two total
+parameters must be passed.  The result is a Lua [[Sink]] placed in
+\emph{name}.\\
+%
+\emph{name}[[ = IPipe_create(]]\emph{Source}[[, ]]\emph{Sink}[[)]]&
+[[IPipe_create]] requires a Lua [[Source]] for the first parameter and a Lua
+[[Sink]] for the second.  The result is a Lua [[IPipe]] placed in \emph{name}.\\
+%
+\emph{name}[[ = Source_extend(]]\emph{Source}[[, ]]\emph{Filter}[[)]]&
+???\\
+%
+\emph{name}[[ = Filter_extend(]]\emph{Filter}[[, ]]\emph{Filter}[[)]]&
+???\\ 
+%
+\emph{name}[[ = Sink_extend(]]\emph{Filter}[[, ]]\emph{Sink}[[)]]&
+???\\
+%
+\end{tabular}
+

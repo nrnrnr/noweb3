@@ -1,0 +1,180 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Conversion of C Mixed Pipeline functions to Lua}
+
+This is the Lua translation of the C mixed pipeline functions defined in
+[[mpipe.nw]].  The interface for each function is described at the beginning
+of the section for that function; the implementation makes use of the lua
+library that allows values to be pawssed between Lua and C.
+
+<<header>>=
+extern void MPipe_open(void);
+<<*>>=
+#include "mpipe.h"
+#include "ipipe.h"
+#include "xpipe.h"
+#include "lua.h"
+#include "lualib.h"
+#include "lua-help.h"
+#include "list.h"
+#include "mem.h"
+#include "stdio.h"
+
+extern char **environ;
+
+<<functions>>
+@ 
+
+\section{Lua Interfaces}
+
+\section{C Implementation}
+
+\subsection{MSource-create}
+@ 
+[[apply_msource]] is the C function which will be used to execute a [[Source]]
+that consists of a Lua function.
+<<functions>>=
+int apply_msource(void* app, NowebBuffer buf) {
+  struct Application* a = app;
+  lua_Object f = lua_getref(a->f);
+  lua_pushusertag(buf, NWBUFFER);
+  lua_pushref(a->arg);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+@ 
+Create an internal or external source, dynamically, based on the type
+of the first argument.
+<<functions>>=
+static void MSource_create_lua(void) {
+  lua_Object src, arg;
+  lua_get_args("MPipe.source",  2, LUA_STRING | FUNCTION, &src, ANY, &arg);
+  if (lua_isstring(src)) {
+    lua_get_args("MPipe.source", 2, LUA_STRING, &src, LUA_TABLE, &arg);
+    lua_pushusertag(
+      MSource_create_x(
+         XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
+      MSOURCE);
+  } else {
+    lua_pushusertag(
+      MSource_create_i(apply_msource, build_app_from_lua_args("MPipe.source")), MSOURCE);
+  }
+}
+
+static void MSource_create_x_lua(void) {
+  lua_Object src, arg;
+  lua_get_args("MPipe.xsource",  2, LUA_STRING | FUNCTION, &src, ANY, &arg);
+  if (lua_isstring(src)) {
+    lua_get_args("MPipe.source", 2, LUA_STRING, &src, LUA_TABLE, &arg);
+    lua_pushusertag(
+      MSource_create_x(
+         XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
+      MSOURCE);
+  } else {
+    lua_pushusertag(
+      MSource_create_x(
+        XPipe_function(apply_application,
+		       build_app_from_lua_args("MPipe.source"))), MSOURCE);
+  }
+}
+@ 
+<<setup>>=
+char** array;
+char* progname;
+lua_Object progname_o, arglist_o;
+lua_get_args(2, STRING, &progname_o, TABLE, &arglist_o);
+progname = lua_getstring(progname_o);
+array = (char**)List_toArray(lua_makestringlist(arglist_o), NULL);
+@ 
+<<functions>>=
+int apply_mfilter(void* app, NowebBuffer in, NowebBuffer out) {
+  struct Application* a = app;
+  lua_Object f = lua_getref(a->f);
+  lua_pushusertag(in, NWBUFFER);
+  lua_pushusertag(out, NWBUFFER);
+  lua_pushref(a->arg);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+@ 
+
+<<functions>>=
+static void MFilter_create_lua(void) {
+  lua_Object src, arg;
+  lua_get_args("MPipe.filter", 2, LUA_STRING | FUNCTION, &src, ANY, &arg);
+  if (lua_isstring(src)) {
+    lua_get_args("MPipe.filter", 2, LUA_STRING, &src, LUA_TABLE, &arg);
+    lua_pushusertag(
+      MFilter_create_x(
+	       XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
+      MFILTER);
+  } else {
+     lua_pushusertag(MFilter_create_i(apply_mfilter,
+				      build_app_from_lua_args("MPipe.filter")), MFILTER);
+  }
+}
+@ 
+<<functions>>=
+int apply_msink(void* app, NowebBuffer buf) {
+  struct Application* a = app;
+  lua_Object f = lua_getref(a->f);
+  lua_pushusertag(buf, NWBUFFER);
+  lua_pushref(a->arg);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+@ 
+<<functions>>=
+static void MSink_create_lua(void) {
+  lua_Object src, arg;
+  lua_get_args("MPipe.sink", 2, LUA_STRING | FUNCTION, &src, ANY, &arg);
+  if (lua_isstring(src)) {
+    lua_get_args("MPipe.sink", 2, LUA_STRING, &src, LUA_TABLE, &arg);
+    lua_pushusertag(
+      MSink_create_x(
+	 XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
+      MSINK);
+  } else {
+     lua_pushusertag(MSink_create_i(apply_msink, build_app_from_lua_args("MPipe.sink")),
+		     MSINK);
+  }
+}
+@ 
+<<functions>>=
+static void MPipe_execute_lua(void) {
+  lua_Object pipe;
+  lua_get_args("MPipe.execute", 1, MPIPE, &pipe);
+  lua_pushnumber((double)MPipe_execute(lua_getuserdata(pipe)));
+}
+@ 
+We can connect any two parts that make sense.
+The connection function is determined by the dynamic typing of the arguments. 
+<<functions>>=
+static void MPipe_connect_lua(void) {
+  lua_Object l, r;
+  lua_get_args("MPipe.connect", 2, MSOURCE | MFILTER | LUA_NIL, &l,
+	                           MFILTER | MSINK   | LUA_NIL, &r);
+  if (lua_isnil(l)) { lua_pushobject(r); return; }
+  if (lua_isnil(r)) { lua_pushobject(l); return; }
+  if      (lua_type(l) == MSOURCE &&  lua_type(r) == MFILTER)
+    lua_pushusertag(MSource_extend(lua_getuserdata(l), lua_getuserdata(r)), MSOURCE);
+  else if (lua_type(l) == MSOURCE &&  lua_type(r) == MSINK)
+    lua_pushusertag(MPipe_create(lua_getuserdata(l), lua_getuserdata(r)), MPIPE);
+  else if (lua_type(l) == MFILTER &&  lua_type(r) == MFILTER)
+    lua_pushusertag(MFilter_extend(lua_getuserdata(l), lua_getuserdata(r)), MFILTER);
+  else if (lua_type(l) == MFILTER &&  lua_type(r) == MSINK)
+    lua_pushusertag(MSink_extend(lua_getuserdata(l), lua_getuserdata(r)), MSINK);
+}
+@ 
+<<functions>>=
+void MPipe_open(void) {
+  lua_module_register("MPipe", "source",  MSource_create_lua);
+  lua_module_register("MPipe", "xsource", MSource_create_x_lua);
+  lua_module_register("MPipe", "sink",    MSink_create_lua);
+  lua_module_register("MPipe", "filter",  MFilter_create_lua);
+  lua_module_register("MPipe", "connect", MPipe_connect_lua);
+  lua_module_register("MPipe", "run",     MPipe_execute_lua);
+}
+@ 

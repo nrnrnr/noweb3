@@ -1,0 +1,29 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Notangle main program}
+
+<<*>>=
+#include <stdio.h>
+#include "markparse.h"
+#include "toascii.h"
+#include "nwbuffer.h"
+#include "ipipe.h"
+#include "cargs.h"
+#include "fromascii.h"
+#include "errors.h"
+#include <mem.h>
+
+int notangle_sink(void *arg, NowebBuffer in);
+
+int main(int argc, char** argv) {
+  struct c_args* args = ALLOC(sizeof(struct c_args));
+  args->argc = argc;
+  args->argv = argv;
+  return IPipe_execute(IPipe_create(Source_create(readascii, stdin),
+				    Sink_create(notangle_sink, args)));
+
+  nowebexit(NULL);
+}
+@

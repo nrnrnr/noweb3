@@ -1,0 +1,335 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Lua Utilities for Noweb}
+
+This file contains a few useful definitions for use when passing values
+between Lua and C.  The enumerated type [[lua_type]] serves two purposes:
+it is used to assign values to the Lua types created for [[Noweb]] as well as
+assigning bits of a mask to each type so [[lua_get_args]] will know which
+parameter type to check.
+
+<<tag macros>>=
+xx(LUA_NIL       , 0x00001, "nil",                 lua_isnil(o))
+xx(LUA_NUMBER    , 0x00002, "number",              lua_isnumber(o))
+xx(LUA_STRING    , 0x00004, "string",              lua_isstring(o))
+xx(LUA_FUNCTION  , 0x00008, "function",            lua_isfunction(o))
+xx(LUA_CFUNCTION , 0x00010, "cfunction",           lua_iscfunction(o))
+xx(LUA_USERDATA  , 0x00020, "userdata",            lua_isuserdata(o))
+xx(LUA_TABLE     , 0x00040, "table",               lua_istable(o))
+xx(NWBUFFER      , 0x00080, "noweb buffer",        lua_type(o) == NWBUFFER)
+xx(SOURCE        , 0x00100, "internal source",     lua_type(o) == SOURCE)
+xx(FILTER        , 0x00200, "internal filter",     lua_type(o) == FILTER)
+xx(SINK          , 0x00400, "interal sink",        lua_type(o) == SINK)
+xx(IPIPE         , 0x00800, "internal pipeline",   lua_type(o) == IPIPE)
+xx(MSOURCE       , 0x01000, "source",              lua_type(o) == MSOURCE)
+xx(MFILTER       , 0x02000, "filter",              lua_type(o) == MFILTER)
+xx(MSINK         , 0x04000, "sink",                lua_type(o) == MSINK)
+xx(MPIPE         , 0x08000, "pipeline",            lua_type(o) == MPIPE)
+xx(XPIPE         , 0x10000, "external pipeline",   lua_type(o) == XPIPE)
+xx(NWKEY         , 0x20000, "noweb buffer key",    lua_type(o) == NWKEY)
+xx(NWREADER      , 0x40000, "noweb buffer reader", lua_type(o) == NWREADER)
+xx(OPTIONAL      , 0x80000, "optional argument",   0)
+<<lua-help.h>>=
+#ifndef LUAHELP_H
+#define LUAHELP_H
+
+#include "cargs.h"
+
+typedef enum lua_type_mask {
+#define xx(tag, val, name, test) tag = val,
+<<tag macros>>
+#undef xx
+  ANY = ~0
+} LUA_TYPE;
+
+extern enum lua_type_mask FUNCTION;
+
+<<exports>>
+
+extern int lua_get_args(char *funname, int num_items, ...);
+/* call lua_get_args(name, count, type1, &arg1, type2, &arg2, ...) */
+
+extern void lua_module_register(char *modname, char *funname, void (*fun)(void));
+
+extern struct List_T *lua_makestringlist(lua_Object o);
+/* convert Lua list of strings to List_T list of char* */
+#define lua_makestringarray(_) ((char **)List_toArray(lua_makestringlist(_), NULL))
+
+extern CArgs CArgs_fromtable(char *argv0, lua_Object o);
+extern char *lua_optstring(lua_Object o);
+  /* string, or NULL if object is nil */
+extern void lua_pushoptstring(const char *s);
+
+#endif
+@ 
+
+The function [[lua_get_args]] takes [[n]] number of mask/location pairs as
+parameters.  The first parameter is the value of [[n]]; that many pairs make
+up the remaining parameters.  This function checks that exactly the right
+number of parameters were passed to a Lua function, and that those parameters
+were of the correct Lua type.  The value [[ANY]] may be used if the type need
+not be checked.
+
+The mask/location pairs should each match up with one parameter passed into
+the calling Lua function.  The C value of that parameter is placed into
+[[location]]; this is then checked according to the mask to see if what is now
+in [[location]] is of the correct type.
+
+@
+An [[Application]] is a container for a Lua function and its argument.
+<<exports>>=
+struct Application {
+  int f;  /* reference to function */
+  int arg; /* reference to its argument */
+};
+extern struct Application* build_app_from_lua_args(char *funname);
+  /* call to make an application from lua arguments f, arg 
+     funname is name of lua function (for errors) */
+extern int apply_application(void *app);
+@ 
+
+
+
+<<lua-help.c>>=
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <lua.h>
+#include <lualib.h>
+#include "lua-help.h"
+
+#include "list.h"
+#include "atom.h"
+#include "mem.h"
+
+enum lua_type_mask FUNCTION = LUA_FUNCTION | LUA_CFUNCTION;
+
+static const char* type_string(unsigned bit);
+static int typematch(lua_Object o, unsigned mask);
+
+<<functions>>
+@ 
+<<functions>>=
+static lua_Object private_nil;
+
+int lua_get_args(char *funname, int num_items, ...) {
+  int i;
+  va_list args;
+
+  unsigned mask;
+  lua_Object* location;
+
+  assert(private_nil);  
+
+  va_start(args, num_items);
+
+  for (i = 1; i <= num_items; i++) {
+    mask = va_arg(args, unsigned);
+    location = va_arg(args, lua_Object*);
+
+    *location = lua_getparam(i);
+    if (*location == LUA_NOOBJECT && (mask & OPTIONAL))
+      *location = private_nil;
+
+    <<insist that the parameter exists>>
+    <<insist that the parameter is of the correct type>>
+  }
+  
+  <<insist that there were not too many parameters>>
+
+  va_end(args);
+  return 1;
+}
+@ 
+
+Ensuring that the proper number of parameters were passed involves two steps.
+First, one parameter should be found for each one that is expected (i.e.,
+there should be at least the expected number of parameters).  This check is
+done inside the [[for]] statment that iterates through the arguments to
+[[lua_get_args]].
+<<insist that the parameter exists>>=
+if (*location == LUA_NOOBJECT) {
+  char buf[100];
+  sprintf(buf, "Function %.30s expected %d arguments; got %d.",
+	       funname, num_items, i-1);
+  lua_error(buf);
+  va_end(args);
+  return 0;
+}
+@ 
+Also, there must be no extra parameters.  This check is performed at the end
+of [[lua_get_args]].
+<<insist that there were not too many parameters>>=
+if (lua_getparam(num_items + 1) != LUA_NOOBJECT) {
+  char buf[100];
+  sprintf(buf, "Function %.30s expected %d arguments; got more.", funname, num_items);
+  lua_error(buf);
+  va_end(args);
+  return 0;
+}
+@ 
+One other check that must be performed is a type check for each parameter.
+If the expected type is not [[ANY]], then [[lua_get_args]] should test whether
+each parameter is of the expected type and print an error message if it is not.
+<<functions>>=
+static int typematch(lua_Object o, unsigned mask) {
+  return
+    (mask == ANY)
+#define xx(tag, value, name, test) || ((mask & tag) && test) 
+<<tag macros>>
+#undef xx
+    ;
+}
+<<insist that the parameter is of the correct type>>=
+if (!typematch(*location, mask))
+{
+  char buf[180];
+  unsigned bit;
+  char *pfx = "";
+  if (strlen(funname) < sizeof(buf) - 80)
+    sprintf(buf, "Bad argument %d to function %s:\n\texpected ", i, funname);
+  else
+    sprintf(buf, "Bad argument %d to function %.50s...:\n\texpected ", i, funname);
+  for (bit = 1; bit; bit <<= 1)
+    if (mask & bit) {
+      strncat(buf, pfx, sizeof(buf) - strlen(buf) - 1);
+      strncat(buf, type_string(bit), sizeof(buf) - strlen(buf) - 1);
+      pfx = " or ";
+    }
+  pfx = "; found ";
+  for (bit = 1; bit; bit <<= 1)
+    if (typematch(*location, bit)) {
+      strncat(buf, pfx, sizeof(buf) - strlen(buf) - 1);
+      strncat(buf, type_string(bit), sizeof(buf) - strlen(buf) - 1);
+      pfx = " or ";
+    }
+  if (strlen(buf) + strlen("(tag = 8888888888888888)  ") < sizeof(buf)) {
+    strcat(buf, " (tag = ");
+    strncat(buf, Atom_int(lua_type(*location)), sizeof(buf) - strlen(buf) - 1);
+    strncat(buf, ")", sizeof(buf) - strlen(buf) - 1);
+  }
+  strncat(buf, ".", sizeof(buf) - strlen(buf) - 1);
+  lua_error(buf);
+  va_end(args);
+  return 0;
+}
+
+<<*>>=
+<<lua-help.c>>
+<<header>>=
+<<lua-help.h>>
+@ 
+<<functions>>=
+extern struct List_T *lua_makestringlist(lua_Object arglist_o) {
+  List_T arglist = List_list(NULL);
+  lua_Object o;
+  char* s;
+  int i;
+  
+  assert(lua_istable(arglist_o));
+  for (i = 1;  ; i++) {
+    lua_pushobject(arglist_o);
+    lua_pushnumber((double)i);
+    o = lua_getsubscript();
+    if (lua_isnil(o)) break;
+    s = lua_getstring(o);
+    if (!s) lua_error("Argument is not a string.");
+    arglist = List_push(arglist, s);
+  }
+  return List_reverse(arglist);
+}
+@ 
+<<functions>>=
+void lua_module_register(char *modname, char *funname, void (*fun)(void)) {
+  lua_Object module = lua_getglobal(modname);
+  <<if [[module]] is nil, make it a global table with name [[modname]]>>
+  assert(lua_istable(module));
+  lua_pushobject(module);
+  lua_pushstring(funname);
+  lua_pushcfunction(fun);
+  lua_storesubscript();
+  if (!private_nil) {
+    lua_pushnil();
+    private_nil = lua_getref(lua_ref(1));
+  }
+}
+<<if [[module]] is nil, make it a global table with name [[modname]]>>=
+if (lua_isnil(module)) {
+  module = lua_createtable();
+  lua_pushobject(module);
+  lua_storeglobal(modname);
+}
+@ 
+<<functions>>=
+static struct typename {
+  unsigned bit;
+  char *name;
+} typenames [] = {
+#define xx(tag, val, name, test) { tag, name },
+<<tag macros>>
+#undef xx
+  { 0, (char *) 0 }
+};
+
+static const char* type_string(unsigned bit) {
+  struct typename *p;
+  for (p = typenames; p->bit; p++)
+    if (p->bit & bit)
+      return p->name;
+  return "???unknown type???";
+}
+@ 
+<<functions>>=
+CArgs CArgs_fromtable(char *argv0, lua_Object o) {
+  CArgs args;
+  List_T arglist;
+
+  NEW(args);
+  arglist = lua_makestringlist(o);
+  if (argv0) arglist = List_push(arglist, argv0);
+  args->argc = List_length(arglist);
+  args->argv = (char**)List_toArray(arglist, NULL);
+  List_free(&arglist);
+  return args;
+}
+@ 
+<<functions>>=
+char *lua_optstring(lua_Object o) {
+  return lua_isnil(o) ? NULL : lua_getstring(o);
+}
+void lua_pushoptstring(const char *s) {
+  if (s)
+    lua_pushstring((char *)s);
+  else
+    lua_pushnil();
+}
+@ 
+
+
+@
+To build an application, we need to make Lua objects into references;
+otherwise they disappear.
+<<functions>>=
+struct Application* build_app_from_lua_args(char *funname) {
+  struct Application* app = ALLOC(sizeof *app);
+  lua_get_args(funname, 2, FUNCTION, &app->f, ANY, &app->arg);
+  lua_pushobject(app->f);
+  app->f = lua_ref(1);
+  lua_pushobject(app->arg);
+  app->arg = lua_ref(1);
+  return app;
+}
+@
+<<functions>>=
+int apply_application(void *closure) {
+  struct Application *a = closure;
+  lua_Object f = lua_getref(a->f);
+  lua_pushref(a->arg);
+  lua_callfunction(f);
+  return (int)lua_getnumber(lua_getresult(1));
+}
+
+
