@@ -18,7 +18,7 @@
 
 \newcommand{\ff}{$\bullet$\ }
 
-\newcommand{\Version}{2.5}
+\newcommand{\Version}{2.5+nw}
 
 \makeindex
 
@@ -36,9 +36,15 @@ Waldemar Celes
 \vspace{2.0ex}\\
 %MCC 08/95 ---
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
+\vspace{3.0ex}\\
+%MCC 08/95 ---
+Version \Version\ extensions by Norman Ramsey
 }
 
-\date{\small \verb$Date$}
+{
+\catcode`\$=10
+\date{\small \texttt{$Date$}}
+}
 
 \maketitle
 
@@ -215,12 +221,14 @@ The following words are reserved, and cannot be used as identifiers:
       end       function  if        local
       nil       not       or        repeat
       return    then      until     while
+
+      case      globmatch of
 \end{verbatim}
 
 The following strings denote other \Index{tokens}:
 \begin{verbatim}
          ~=  <=  >=  <   >   ==  =   ..  +   -   *   /
-         %   (   )   {   }   [   ]   ;   ,   .
+         %   (   )   {   }   [   ]   ;   ,   .   |   =>
 \end{verbatim}
 
 \Index{Literal strings} can be delimited by matching single or double quotes,
@@ -357,6 +365,70 @@ the syntax for a \Index{return statement} is:
 \begin{Produc}
 \produc{ret}{\rwd{return} explist \opt{sc}}
 \end{Produc}
+
+\subsubsection{Case and matching statements}
+
+The only difference between Lua version 2.5 and version \Version\
+is that version \Version\ supports \texttt{case} and
+\texttt{globmatch} statements as control structures.\index{Version 2.5+nw}
+\newcommand\darrow{\texttt{\upshape=>}}%
+\newcommand\vbar{\texttt{\upshape|}}%
+\begin{Produc}
+\produc{stat}{\rlap{\rwd{case}}\phantom{\rwd{globmatch}} exp1 \rwd{of} \rep{case\_arm} \opt{\rwd{else}
+              \ter{\darrow} block} \rwd{end} \OrNL
+\rwd{globmatch} exp1 \rwd{of} \rep{case\_arm} \opt{\rwd{else}
+              \ter{\darrow} block} \rwd{end}}
+\produc{case\_arm}{\ter{\vbar} exp1 \rep{\ter, exp1} \ter{\darrow} block}
+\end{Produc}
+The \rwd{case} statement takes the value of \emph{exp1} and tries to
+find a matchin \emph{case\_arm}.
+A~\emph{case\_arm} matches if any of the expressions to the left of
+the arrow (\darrow) evaluates to the same value as the original
+expression immediately following \rwd{case}.
+Once a matching \emph{case\_arm} is found, the interpreter executes
+the \emph{block} on the right-hand side of that arm.
+If no arm, matches, the interpreter executes the block associated with
+\rwd{else}+\darrow, or if there is no such block, the interpreter does
+nothing.
+
+The \rwd{globmatch} statement works exactly the same way as the
+\rwd{case} statement, except that the expressions on the arms are
+treated as shell ``globbing'' patterns and the shell rules for glob
+matching are used.
+(Therefore, for a match to be successful, both values must be
+convertible to strings.)
+Globbing requires that the sequence of characters in the
+original string be matched by corresponding characters in the glob
+pattern, according to the following rules:
+\begin{itemize}
+\item
+A \texttt{*} in a glob pattern matches any sequence of
+characters, including the empty sequence.
+\item
+A \texttt{?} in a glob pattern matches any single character.
+\item
+A backslash (\texttt{\char`\\}) followed by any single character
+matches that character.
+\item
+A sequence of characters in square brackets \texttt[\emph{simple-char-set}\texttt]
+matches any single character in the set \emph{{simple-char-set}}.
+This set is the union of all
+characters in \emph{simple-char-set}.
+To include a \verb']' in \emph{simple-char-set}, it must be the first character.
+A range of characters may be specified by
+separating the end characters of the range with a \verb'-';
+e.g., \verb'A-Z' specifies the upper case characters.
+If \verb'-' appears as the first or last character of \emph{simple-char-set},
+then it represents itself.
+All other characters in \emph{simple-char-set} represent themselves.
+
+N.B.~a \emph{simple-char-set} does not support the complement
+(\verb+^+) operation or the \verb+%+ codes that are supported by the
+char-sets in the string library.
+\item
+Any other character matches itself.
+\end{itemize}
+
 
 \subsubsection{Function Calls as Statements} \label{funcstat}
 Because of possible side-effects,
@@ -1582,7 +1654,7 @@ does not belong to the class, or end of file;
 since it can match a sequence of zero characteres, it never fails.%
 \footnote{
 Notice that this behaviour is different from regular pattern matching,
-where a \verb'*' expands to the maximum length {\em such that\/}
+where a \texttt{*} expands to the maximum length {\em such that\/}
 the rest of the pattern does not fail.}
 
 A pattern item may contain sub-patterns enclosed in curly brackets,
@@ -2256,6 +2328,14 @@ Although great care has been taken to avoid incompatibilities with
 the previous public versions of Lua,
 some differences had to be introduced.
 Here is a list of all these incompatibilities.
+
+\subsection*{Incompatibilities with \Index{version 2.5}}
+
+The only incompatibility is the addition of the new \rwd{case} and
+\rwd{globmatch} statements, which make \texttt{case},
+\texttt{globmatch}, and \texttt{of} reserved words.
+The lexical treatment of \texttt{=>} is also different.
+
 
 \subsection*{Incompatibilities with \Index{version 2.4}}
 The whole I/O facilities have been rewritten.

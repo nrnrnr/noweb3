@@ -6,12 +6,11 @@ all:
 	latex manual.tex
 	latex manual.tex
 	makeindex manual
-	sort -df manual.idx | sed -e 's/_/\\_/g' >manual.id
+	sort -df manual.idx | sed -e 's/_/\\_/g;s/|hyperpage//' >manual.id
 	latex manual.tex
 	dvips -o manual.ps manual.dvi
 	gzip manual.ps
 	mv manual.ps.gz refman.ps.gz
-	rm -f manual.*
 
 clean:
 	rm -f manual.aux manual.toc manual.log manual.idx
