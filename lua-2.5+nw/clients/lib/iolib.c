@@ -93,6 +93,30 @@ static void io_writeto (void)
 }
 
 
+/* writetox returns nil (if current is closed) or the old current file */
+static void io_writetox (void)
+{
+  lua_Object f = lua_getparam(1);
+  FILE *ofp = lua_outfile;
+  if (f == LUA_NOOBJECT) {
+    closefile(lua_outfile);  /* restore standart output */
+    lua_pushnil();
+  } else if (lua_isuserdata(f)) {
+    lua_outfile = lua_getuserdata(f);
+    lua_pushuserdata(ofp);
+  } else {
+    char *s = lua_check_string(1, "writeto");
+    FILE *fp = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
+    if (fp) {
+      lua_outfile = fp;
+      lua_pushuserdata(ofp);
+    } else {
+      pushresult(0);
+    }
+  }
+}
+
+
 static void io_appendto (void)
 {
   char *s = lua_check_string(1, "appendto");
@@ -273,6 +297,7 @@ static void errorfb (void)
 static struct lua_reg iolib[] = {
 {"readfrom", io_readfrom},
 {"writeto",  io_writeto},
+{"writetox", io_writetox},
 {"appendto", io_appendto},
 {"read",     io_read},
 {"write",    io_write},
