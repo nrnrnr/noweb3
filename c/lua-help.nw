@@ -30,7 +30,7 @@ xx(MPIPE         , 0x08000, "pipeline",            lua_type(o) == MPIPE)
 xx(XPIPE         , 0x10000, "external pipeline",   lua_type(o) == XPIPE)
 xx(NWKEY         , 0x20000, "noweb buffer key",    lua_type(o) == NWKEY)
 xx(NWREADER      , 0x40000, "noweb buffer reader", lua_type(o) == NWREADER)
-xx(OPTIONAL      , 0x80000, "optional argument",   0)
+xx(OPTIONAL      , 0x80000, "optional argument",   lua_isnil(o))
 <<lua-help.h>>=
 #ifndef LUAHELP_H
 #define LUAHELP_H
@@ -87,7 +87,8 @@ struct Application {
 extern struct Application* build_app_from_lua_args(char *funname);
   /* call to make an application from lua arguments f, arg 
      funname is name of lua function (for errors) */
-extern int apply_application(void *app);
+#include <stdio.h>
+extern int apply_application(void *app, FILE *in, FILE *out);
 @ 
 
 
@@ -201,7 +202,7 @@ if (!typematch(*location, mask))
     }
   pfx = "; found ";
   for (bit = 1; bit; bit <<= 1)
-    if (typematch(*location, bit)) {
+    if (bit != OPTIONAL && typematch(*location, bit)) {
       strncat(buf, pfx, sizeof(buf) - strlen(buf) - 1);
       strncat(buf, type_string(bit), sizeof(buf) - strlen(buf) - 1);
       pfx = " or ";
@@ -324,11 +325,18 @@ struct Application* build_app_from_lua_args(char *funname) {
 }
 @
 <<functions>>=
-int apply_application(void *closure) {
+extern FILE *lua_infile, *lua_outfile; /* from lua iolib.c */
+int apply_application(void *closure, FILE *in, FILE *out) {
   struct Application *a = closure;
+  FILE *oldin = lua_infile;
+  FILE *oldout = lua_outfile;
   lua_Object f = lua_getref(a->f);
+  lua_infile = in;
+  lua_outfile = out;
   lua_pushref(a->arg);
   lua_callfunction(f);
+  lua_infile = oldin;
+  lua_outfile = oldout;
   return (int)lua_getnumber(lua_getresult(1));
 }
 
