@@ -32,9 +32,11 @@ static void PrintCode(Byte* code, Byte* end)
 	case PUSH0:
 	case PUSH1:
 	case PUSH2:
+        case DUP:
 	case PUSHINDEXED:
 	case STOREINDEXED0:
 	case ADJUST0:
+        case GLOBMATCHOP:
 	case EQOP:
 	case LTOP:
 	case LEOP:
@@ -102,18 +104,32 @@ static void PrintCode(Byte* code, Byte* end)
 		break;
 	case PUSHWORD:
 	case CREATEARRAY:
-	case ONTJMP:
-	case ONFJMP:
-	case JMP:
-	case UPJMP:
-	case IFFJMP:
-	case IFFUPJMP:
 	case SETLINE:
 	{
 		Word w;
 		p++;
 		get_word(w,p);
 		printf("\t%d",w);
+		break;
+	}
+	case ONTJMP:
+	case ONFJMP:
+	case JMP:
+	case IFFJMP:
+	{
+		Word w;
+		p++;
+		get_word(w,p);
+		printf("\t%d\t\t; target address %d",w,(p-code)+w);
+		break;
+	}
+	case UPJMP:
+	case IFFUPJMP:
+	{
+		Word w;
+		p++;
+		get_word(w,p);
+		printf("\t%d\t\t; target address %d",w,(p-code)-w);
 		break;
 	}
 	case PUSHFLOAT:
