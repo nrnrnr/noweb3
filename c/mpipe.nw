@@ -12,19 +12,18 @@ to be combined into a single pipeline.
 
 This pipeline is similar in structure to the internal Noweb pipeline as defined
 in [[ipipe.h]].
-
-<<mpipe.h>>=
+<<header>>=
 #ifndef MPIPE_H
 #define MPIPE_H
+
+#include <stdio.h>
 
 #include "nwbuffer.h"
 #include "fromascii.h"
 #include "xpipe.h"
+#include "ipipe.h"
 
-typedef struct MSource* MSource;
-typedef struct MFilter* MFilter;
-typedef struct MSink* MSink;
-typedef struct MPipe* MPipe;
+typedef struct MPipe_T *MPipe_T;
 
 <<prototypes for basics>>
 <<identity operations>>
@@ -32,125 +31,27 @@ typedef struct MPipe* MPipe;
 
 #endif
 @ 
-
 The create functions create the appropriate mixed pipeline type when passed
-information about a particular stage.
-
+an  particular stage.
 <<prototypes for basics>>=
-extern MSource MSource_create_i (int (*stage)(void*, NowebBuffer), void* arg);
-extern MSource MSource_create_x (XPipe external);
-extern MFilter MFilter_create_i (int (*stage)(void*, NowebBuffer, NowebBuffer),
-				void* arg);
-extern MFilter MFilter_create_x (XPipe external);
-extern MSink MSink_create_i (int (*stage)(void*, NowebBuffer), void* arg);
-extern MSink MSink_create_x (XPipe external);
-extern MPipe MPipe_create (MSource source, MSink sink);
+extern MPipe_T MPipe_internal (IPipe_T p);
+extern MPipe_T MPipe_external (XPipe_T p);
+extern MPipe_T MPipe_connect  (MPipe_T l, MPipe_T r);
 @ 
-
-The identity operations return an extended version of the original type when
-a filter is added to it.
-
+Like the internal pipe, the mixed pipe has an identity filter.
+As with all filters, it is an unchecked runtime error to run a
+pipeline consisting solely of the identity filter.
 <<identity operations>>=
-extern MSource MSource_extend (MSource source, MFilter filter);
-extern MFilter MFilter_extend (MFilter filter1, MFilter filter2);
-extern MSink MSink_extend (MFilter filter, MSink sink);
-extern MFilter Midentity_filter;
+extern MPipe_T MPipe_identity;
 @ 
-
-Once completed, a mixed pipeline may be executed or freed from memory.
-
+Once completed, a mixed pipeline may be executed, printed,  or freed from memory.
 <<operations on completed pipeline>>=
-extern int MPipe_execute (MPipe pipe);
-extern void MPipe_free (MPipe* pipe);
+extern int  MPipe_run  (MPipe_T pipe, NowebBuffer in, NowebBuffer out);
+extern void MPipe_print(FILE *fp, MPipe_T pipe);
+extern void MPipe_free (MPipe_T *pipe);
 @ 
-
-This interface requires the use of several data types mentioned above.  Here
-are their definitions.
-
-Each stage of the pipeline is identified by its [[STAGE_TYPE]] value.  The
-pipeline is stored as a tree structure, with an [[MSource]] on the left and
-an [[MSink]] on the right as direct children of the [[MPipe]].  Further down
-the tree, sources and filters are children of sources, filters and sinks are
-children of sinks, and only filters may be children of filters.  The value
-of each item's [[STAGE_TYPE]] identifies the item as a leaf node or interior
-node of the tree, and if it is a leaf node this value identifies the item as
-an internal or external pipe stage.
-
-<<type definitions>>=
-typedef enum {
-  PAIR,
-  INTERNAL,
-  EXTERNAL
-} STAGE_TYPE;
-@ 
-
-[[struct MSource]] contains either an internal [[Source]] or an external stage,
-as well as an integer to keep track of whether the struct represents an
-internal or external stage.
-
-<<type definitions>>=
-struct MSource {
-  STAGE_TYPE s;
-  union {
-    struct {
-      MSource left;
-      MFilter right;
-    } pair;
-    Source internal;
-    XPipe external;
-  } u;
-};
-@ 
-
-Similarly, [[struct MFilter]] contains an internal or external filter and
-[[struct MSink]] contains an internal or external sink.
-
-<<type definitions>>=
-
-struct MFilter {
-  STAGE_TYPE s;
-  union {
-    struct {
-      MFilter left;
-      MFilter right;
-    } pair;
-    Filter internal;
-    XPipe external;
-  } u;
-};
-
-struct MSink {
-  STAGE_TYPE s;
-  union {
-    struct {
-      MFilter left;
-      MSink right;
-    } pair;
-    Sink internal;
-    XPipe external;
-  } u;
-};
-@ 
-
-The connected [[MPipe]] simply contains an [[MSource]] and an [[MSink]].  Any
-[[MFilter]]s must be connected to them.  An [[MPipe]] is thus the root of the
-tree structure described above.
-
-<<type definitions>>=
-struct MPipe {
-  MSource source;
-  MSink sink;
-};
-@ 
-
 \section{Implementation}
-
-Aside from its name, the mixed pipeline interface gives no indication of its
-dependence on other pipeline structures.  However, the implementation
-described here makes use of both the internal and external pipeline structures
-as defined in [[ipipe.h]] and [[xpipe.h]].
-
-<<mpipe.c>>=
+<<*>>=
 #include <assert.h>
 #include "ipipe.h"
 #include "xpipe.h"
@@ -159,110 +60,55 @@ as defined in [[ipipe.h]] and [[xpipe.h]].
 #include "mem.h"
 
 <<type definitions>>
-<<create functions>>
-<<extend functions>>
 <<functions>>
+@
+A mixed pipeline is either a pair, internal, external, or the
+identity.
+I single out the identity in case some dangerous person tries to run it.
+<<type definitions>>=
+struct MPipe_T {
+  enum { PAIR, INTERNAL, EXTERNAL } type;
+  union {
+    struct { MPipe_T l, r; } pair;
+    IPipe_T i;
+    XPipe_T x;
+  } u;
+};
 @ 
-
-The functions defined here create the appropriate mixed pipeline versions of
-internal and external pipe stages.
-
-<<create functions>>=
-MSource MSource_create_i(int (*stage)(void*, NowebBuffer), void* arg) {
-  MSource new_source = ALLOC(sizeof(struct MSource));
-  new_source->s = INTERNAL;
-  new_source->u.internal = Source_create(stage, arg);
-  return new_source;
+<<functions>>=
+MPipe_T MPipe_internal (IPipe_T i) {
+  MPipe_T p;
+  NEW(p);
+  p->type = INTERNAL;
+  p->u.i = i;
+  return p;
 }
-  
-MSource MSource_create_x(XPipe external) {
-  MSource new_source = ALLOC(sizeof(struct MSource));
-  new_source->s = EXTERNAL;
-  new_source->u.external = external;
-  return new_source;
-}
-
-MFilter MFilter_create_i(int (*stage)(void*, NowebBuffer, NowebBuffer),
-			void* arg) {
-  MFilter new_filter = ALLOC(sizeof(struct MFilter));
-  new_filter->s = INTERNAL;
-  new_filter->u.internal = Filter_create(stage, arg);
-  return new_filter;
-}
-
-MFilter MFilter_create_x(XPipe external) {
-  MFilter new_filter = ALLOC(sizeof(struct MFilter));
-  new_filter->s = EXTERNAL;
-  new_filter->u.external = external;
-  return new_filter;
-}
-
-MSink MSink_create_i(int (*stage)(void*, NowebBuffer), void* arg) {
-  MSink new_sink = ALLOC(sizeof(struct MSink));
-  new_sink->s = INTERNAL;
-  new_sink->u.internal = Sink_create(stage, arg);
-  return new_sink;
-}
-
-MSink MSink_create_x(XPipe external) {
-  MSink new_sink = ALLOC(sizeof(struct MSink));
-  new_sink->s = EXTERNAL;
-  new_sink->u.external = external;
-  return new_sink;
+<<functions>>=
+MPipe_T MPipe_external (XPipe_T x) {
+  MPipe_T p;
+  NEW(p);
+  p->type = EXTERNAL;
+  p->u.x = x;
+  return p;
 }
 @ 
+As in the internal pipe, the identity is a cheat.
+<<functions>>=
+static struct MPipe_T identity;
+MPipe_T MPipe_identity = &identity;
 
-The following function creates a mixed pipeline from a mixed source and sink,
-which were created using the functions defined above.
-
-<<create functions>>=
-MPipe MPipe_create(MSource source, MSink sink) {
-  MPipe pipe = ALLOC(sizeof(struct MPipe));
-  pipe->source = source;
-  pipe->sink = sink;
-  return pipe;
+MPipe_T MPipe_connect(MPipe_T l, MPipe_T r) {
+  MPipe_T p;
+  if (l == MPipe_identity) return r;
+  if (r == MPipe_identity) return l;
+  NEW(p);
+  p->type = PAIR;
+  p->u.pair.l = l;
+  p->u.pair.r = r;
+  return p;
 }
 @ 
-
-The following set of functions extends a source, filter, or sink by adding
-a filter to it.  In essence, these are ``type-identity'' operations; extending
-a source produces a source, extending a filter produces a filter, and extending
-a sink produces a sink.
-
-It is with these functions that interior nodes of the pipe tree are produced.
-
-<<extend functions>>=
-MSource MSource_extend(MSource source, MFilter filter) {
-  MSource new_source = ALLOC(sizeof(struct MSource));
-  new_source->s = PAIR;
-  new_source->u.pair.left = source;
-  new_source->u.pair.right = filter;
-  return new_source;
-}
-
-MFilter MFilter_extend(MFilter filter1, MFilter filter2) {
-  MFilter new_filter = ALLOC(sizeof(struct MFilter));
-  new_filter->s = PAIR;
-  new_filter->u.pair.left = filter1;
-  new_filter->u.pair.right = filter2;
-  return new_filter;
-}
-
-static struct MSink mkMSink(MFilter filter, MSink sink) {
-  struct MSink new_sink;
-  new_sink.s = PAIR;
-  new_sink.u.pair.left = filter;
-  new_sink.u.pair.right = sink;
-  return new_sink;
-}
-
-MSink MSink_extend(MFilter filter, MSink sink) {
-  MSink new_sink = ALLOC(sizeof(struct MSink));
-  *new_sink = mkMSink(filter, sink);
-  return new_sink;
-}
-@ 
-
+\subsection{Rules for combining a mixed list of pipelines}
 It is the job of the execute functions to make one large external pipeline out
 of the tree of external and internal stages, and then to execute that pipeline.
 Internal stages can be made external by connecting [[fromascii]] or
@@ -273,115 +119,131 @@ stages.
 And to make things really unpleasant, we'd like to avoid a whole lot
 of consing.
 
-Accordingly, we process the pipeline with a recursive function and
+Accordingly, we put on our ML programmers' hats and process the
+pipeline with a recursive function and 
 accumulating parameters.
+One of the things we'll accumulate is a list of unprocessed pipelines,
+thus:
+<<type definitions>>=
+struct list {
+  MPipe_T hd;
+  struct list *tl;
+};
+@ 
 At any moment we may be accumulating an external pipeline, the results
 of which are to be fed into an internal pipeline, the results of
 which are to be fed into whatever is left to be processed.
-Both accumulating parameters may be [[NULL]], indicating we have no
-stages in that category.
-
-We begin by working our way down, moving all filters from left to right.
+Notice the following combination rules:
+$$
+\let\to\Rightarrow
+% l2h substitution to ==&gt;
+\begin{array}{lcl}
+XX&\to&X\\
+XI&\to&XI\\
+XIX&\to&X\\
+XII&\to&XI\\
+IX&\to&X \mbox{~(odd)}\\
+II&\to&I\\
+\end{array}
+$$
+$I$'s combine with each other to produce more~$I$'s, but when an~$I$
+combines with an~$X$, it has to be wrapped to turn it into an~$X$.
+ The wrapping is different depending on whether the~$I$ is
+the left end, the middle, or the right of its pipeline.
 <<functions>>=
-static Sink toascii;
-static Source fromascii;
+static int ipipe_run_left  (void *internal_pipe, FILE*, FILE*);
+static int ipipe_run_middle(void *internal_pipe, FILE*, FILE*);
+static int ipipe_run_right (void *internal_pipe, FILE*, FILE*);
+@ 
+The most interesting operation is absorbing an~$I$ into the~$X$ to
+its left. 
+We need to say whether the~$I$ is the end of its pipeline so we know
+how to wrap it.
+Note an~$I$ can't be at both the right and left of the pipeline; if it
+were, it would be a purely internal pipeline, and we shouldn't be
+externalizing it.
+<<functions>>=
+static XPipe_T combine_XI(XPipe_T l, IPipe_T r, int r_is_last);
+static XPipe_T combine_XI(XPipe_T l, IPipe_T r, int r_is_last) {
+  XPipe_T x;
+  int (*wrapper)(void *, FILE*, FILE*);
 
-static int do_exec(XPipe ext, Source internal, MSink rest);
-static int do_exec_start(MSource left, MSink right);
-
-int MPipe_execute(MPipe p) {
-  if (!fromascii) {
-    fromascii = Source_create(readascii, stdin);
-    toascii   = Sink_create(NowebBuffer_toascii, stdout);
-  }
-  return do_exec_start(p->source, p->sink);
+  if (l) wrapper = r_is_last ? ipipe_run_right : ipipe_run_middle;
+  else   wrapper = (assert(!r_is_last), ipipe_run_left);
+  x = XPipe_function(wrapper, r);
+  if (l) x = XPipe_connect(l, x);
+  return x;
 }
 @ 
+The accumulating parameters [[ext]] and [[ints]] represent $X$~and~$I$.
 <<functions>>=
-static int do_exec_start(MSource left, MSink right) {
-  switch (left->s) {
-    case PAIR: {
-      struct MSink tmp = mkMSink(left->u.pair.right, right);
-      return do_exec_start(left->u.pair.left, &tmp);
-    }      
-    case EXTERNAL: return do_exec(left->u.external, NULL, right);
-    case INTERNAL: return do_exec(NULL, left->u.internal, right);
-    default:
-      assert(0);
-      return -1; /* should not happen */
-  }
-}
-static int ipipe_exec_and_free(IPipe p, FILE *in, FILE *out) {
-  int rc = IPipe_execute(p);
-  FILE *oldin = stdin;
-  FILE *oldout = stdout;
-/*
-  stdin = in;
-  stdout = out;
-*/
-  IPipe_free(&p);
-/*
-  stdin = oldin;
-  stdout = oldout;
-*/
-  return rc;
-}
-
-static int do_exec(XPipe ext, Source ints, MSink rest) {
-  assert(ext || ints);
-  switch (rest->s) {
-    case EXTERNAL: 
-      { XPipe start;
-        <<make [[start]] be [[ext]] followed by wrapped [[ints]]>>
-	return XPipe_execute(XPipe_connect(start, rest->u.external));
+static int do_run(XPipe_T ext, IPipe_T ints, struct list *pipeline);
+static int do_run(XPipe_T ext, IPipe_T ints, struct list *pipeline) {
+  if (pipeline) {
+    switch (pipeline->hd->type) {
+      case PAIR: {
+        struct list cell;
+        cell.hd = pipeline->hd->u.pair.l;
+        cell.tl = pipeline;
+        pipeline->hd = pipeline->hd->u.pair.r;
+        return do_run(ext, ints, &cell);
       }
-    case INTERNAL: 
-      { IPipe intp = IPipe_create(ints ? ints : fromascii, rest->u.internal);
-        if (ext)
-	  return XPipe_execute(XPipe_connect(ext,
-			         XPipe_function((int (*)(void*, FILE*, FILE*))ipipe_exec_and_free, intp)));
-	else
-	  return ipipe_exec_and_free(intp);
-      }
-    case PAIR: {
-      switch (rest->u.pair.left->s) {
-        case EXTERNAL: {
-	  XPipe start;
-	  <<make [[start]] be [[ext]] followed by wrapped [[ints]]>>
-          return do_exec(XPipe_connect(start, rest->u.pair.left->u.external),
-			 NULL, rest->u.pair.right);
-	}      
-        case INTERNAL:
-	  return do_exec(ext, Source_extend(ints ? ints : fromascii,
-					    rest->u.pair.left->u.internal),
-			   rest->u.pair.right);
-        case PAIR: {
-	  struct MSink tmp2 =
-            mkMSink(rest->u.pair.left->u.pair.right, rest->u.pair.right);
-	  struct MSink tmp1 = mkMSink(rest->u.pair.left->u.pair.left, &tmp2);
-	  return do_exec(ext, ints, &tmp1);
+      case INTERNAL:
+        if (ints) /* XII => XI  or  II => I */
+          return do_run(ext, IPipe_connect(ints, pipeline->hd->u.i), pipeline->tl);
+        else  /* XI => XI  or  initial I */
+          return do_run(ext, pipeline->hd->u.i, pipeline->tl);
+      case EXTERNAL: 
+        if (ints) { /* XIX => X  or  IX => X */
+	  return do_run(XPipe_connect(combine_XI(ext, ints, 0), pipeline->hd->u.x),
+			(IPipe_T)0, pipeline->tl);
+	} else if (ext) { /* XX => X */
+          return do_run(XPipe_connect(ext, pipeline->hd->u.x), ints, pipeline->tl);
+	} else { /* initial X */
+          return do_run(pipeline->hd->u.x, ints, pipeline->tl);
 	}
-	default:
-	  assert(0); return -1;
-      }
+      default: assert(0); return -1;
     }
-    default:
-      assert(0); return -1;
+  } else {
+    <<run [[ext]] followed by [[ints]]>>
   }
 }
-<<make [[start]] be [[ext]] followed by wrapped [[ints]]>>=
-if (!ints) {
-  start = ext;
-} else {
-  start = XPipe_function((int (*)(void *, FILE *, FILE *))ipipe_exec_and_free, 
-			 IPipe_create(ints, toascii));
-  if (ext) start = XPipe_connect(ext, start);
+@ 
+<<run [[ext]] followed by [[ints]]>>=
+if (!ext)
+  return IPipe_run(ints, NULL, NULL);
+else if (!ints)
+  return XPipe_run(ext);
+else
+  return XPipe_run(combine_XI(ext, ints, 1));
+@ 
+I don't think this is quite going to work --- we have to connect
+[[fromascii]] and [[toascii]] to the correct files.
+<<functions>>=
+static int ipipe_run (int left, int right, IPipe_T p, FILE *in, FILE *out) {
+  if (!left)  p = IPipe_connect(IPipe_stage("fromascii", readascii, in), p);
+  if (!right) p = IPipe_connect(p, IPipe_stage("toascii", NowebBuffer_toascii, out));
+  return IPipe_run(p, NULL, NULL);
 }
 
+static int ipipe_run_left  (void *p, FILE *in, FILE *out) {
+  return ipipe_run(1, 0, p, in, out);
+}
+static int ipipe_run_middle(void *p, FILE *in, FILE *out) {
+  return ipipe_run(0, 0, p, in, out);
+}
+static int ipipe_run_right(void *p, FILE *in, FILE *out) {
+  return ipipe_run(0, 1, p, in, out);
+}
 @ 
-<<header>>=
-<<mpipe.h>>
-<<*>>=
-<<mpipe.c>>
+The files for I/O are bound too early here.
+<<functions>>=
+extern int  MPipe_run  (MPipe_T pipe, NowebBuffer in, NowebBuffer out) {
+  struct list cell;
+  cell.hd = pipe;
+  cell.tl = NULL;
+  return do_run(NULL, NULL, &cell);
+}
 @ 
+
 
