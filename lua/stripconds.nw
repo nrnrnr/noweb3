@@ -25,13 +25,15 @@ if the \emph{condition} is one of the identifiers passed to
 <<*>>=
 function Stages.stripconds(sourcebuf, sinkbuf, args)
   if type(args) == "string" then args = List.fromstring(args) end
+  local use = nil
+  if args[1] == "-use" then use = List.get(args) end
   local r = NWB.reader(sourcebuf)
   local key, arg = NWB.read(r)
   local argc = List.length(args)
   local pats = { }
   <<make [[pats]] from [[args]]>>
   while key do
-    if key == NW_DEFN then
+    if key == NW_DEFN or (use and key == NW_USE) then
       <<strip patterns in [[pats]] from [[arg]]>>
     end
     NWB.put(sinkbuf, key, arg)
