@@ -22,7 +22,7 @@ into binary files that can be loaded and executed with
 in C or
 .B dofile
 in Lua.
-
+.PP
 .BR luac
 produces a single output file containing the bytecode
 for all named source files.
@@ -32,8 +32,8 @@ the output file is named
 but you can change this with the
 .B \-o 
 option.
-
-You can use "-" to indicate stdin as a source file.
+.PP
+You can use ``\-'' to indicate stdin as a source file.
 .SH OPTIONS
 .LP
 .TP 1i
