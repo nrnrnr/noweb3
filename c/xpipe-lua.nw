@@ -49,15 +49,17 @@ corresponding call to the C version of [[Pipeline_program]].
 static void XPipe_create_lua(void) {
   char** array;
   extern char** environ;
-  lua_Object stage, arg;
-  lua_get_args("XPipe.stage", 2, LUA_STRING | FUNCTION, &stage, ANY, &arg);
+  lua_Object stage, arg, name;
+  lua_get_args("XPipe.dostage", 3,
+	       LUA_STRING | FUNCTION, &stage, ANY, &arg, LUA_STRING | OPTIONAL, &name);
   if (lua_isstring(stage)) {
-    lua_get_args("XPipe.stage", 2, LUA_STRING, &stage, LUA_TABLE, &arg);
+    lua_get_args("XPipe.dostage", 2, LUA_STRING, &stage, LUA_TABLE, &arg);
     array = (char**)List_toArray(lua_makestringlist(arg), NULL);
     lua_pushusertag(XPipe_program(lua_getstring(stage), array, environ), XPIPE);
   } else if (lua_isfunction(stage)) {
     lua_pushusertag(XPipe_function(apply_application,
-				   build_app_from_lua_args("XPipe.stage")),
+				   build_app_from_lua_args("XPipe.dostage"),
+				   lua_getstring(name)),
 		    XPIPE);
   }
 }
@@ -205,7 +207,7 @@ lua programs.
 
 <<Lua registration of functions>>=
 void XPipe_open(void) {
-  lua_module_register("XPipe", "stage",   XPipe_create_lua);
+  lua_module_register("XPipe", "dostage", XPipe_create_lua);
   lua_module_register("XPipe", "connect", XPipe_connect_lua);
   lua_module_register("XPipe", "print",   XPipe_print_lua);
   lua_module_register("XPipe", "run",     XPipe_execute_lua);
