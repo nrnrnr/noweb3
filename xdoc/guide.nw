@@ -838,7 +838,7 @@ Each file is represented by a ``{\tt @file~{\rm\it filename}}'' line,
 followed by a sequence of chunks.
 {\tt markup} numbers chunks consecutively, starting at~0.
 It also recognizes and undoes the escape sequence for double brackets,
-e.g.~converting ``{\tt @<<}'' to ``{\tt <<}''.
+e.g.~converting ``{\tt @{}<<}'' to ``{\tt <<}''.
 The only tagging keywords found in its output are \ikw{defn} or
 \ikw{nl}; despite what's written about it, \ikw{use} never appears.
 
@@ -1209,7 +1209,11 @@ Takes three arguments (buffer, key, value) and appends the key-value
 pair to the end of the buffer.
 The value may be omitted and defaults to nil.
 It is not specified whether calling \texttt{NWB.put} to append to a
-buffer changes the sequence returned by a previously created reader.\\
+buffer changes the sequence returned by a previously created reader.
+This means if you write code that writes to and reads from the same
+buffer at the same time, your code shouldn't depend on whether what
+you write shows up when you read.
+\\
 NWB.pull&
 Takes one argument, a buffer, and returns \emph{two} results: the final
 key and value in the buffer.
@@ -1472,8 +1476,9 @@ END {
 
 \noindent
 The \verb+BEGIN+ code forces \verb+codecount+ and
-\verb+docscount+ to be associative arrays; without it the increment
-operator would fail.
+\verb+docscount+ to be associative arrays; without it, bugs in some
+versions of Awk would cause the increment
+operations associated with \verb+@nl+ to fail.
 \end{figure}
 
 \section{Acknowledgements}

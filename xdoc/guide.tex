@@ -836,7 +836,7 @@ Each file is represented by a ``{\tt @file~{\rm\it filename}}'' line,
 followed by a sequence of chunks.
 {\tt markup} numbers chunks consecutively, starting at~0.
 It also recognizes and undoes the escape sequence for double brackets,
-e.g.~converting ``{\tt <<}'' to ``{\tt <<}''.
+e.g.~converting ``{\tt @{}<<}'' to ``{\tt <<}''.
 The only tagging keywords found in its output are \ikw{defn} or
 \ikw{nl}; despite what's written about it, \ikw{use} never appears.
 
@@ -1207,7 +1207,11 @@ Takes three arguments (buffer, key, value) and appends the key-value
 pair to the end of the buffer.
 The value may be omitted and defaults to nil.
 It is not specified whether calling \texttt{NWB.put} to append to a
-buffer changes the sequence returned by a previously created reader.\\
+buffer changes the sequence returned by a previously created reader.
+This means if you write code that writes to and reads from the same
+buffer at the same time, your code shouldn't depend on whether what
+you write shows up when you read.
+\\
 NWB.pull&
 Takes one argument, a buffer, and returns \emph{two} results: the final
 key and value in the buffer.
@@ -1372,6 +1376,7 @@ In addition to these operators,
 the following functions are provided:\\
 \begin{luafuns}
 List.length&Number of elements in a list.\\
+List.is&Returns non-nil if the argument is a list.\\
 List.get&
 Removes and returns the first element of a list.
 Side-effects the list.\\
@@ -1393,6 +1398,8 @@ List.tostring&
 Concatenates list elements as strings.
 Takes a list and a second argument, the ``separator.''
 Separator defaults to a space.\\
+List.fromstring&
+Takes a string, splits it on white space, and makes a list of the results.\\
 \end{luafuns}
 
 \paragraph{Sets}
@@ -1453,7 +1460,7 @@ Each file is represented by a ``{\tt @file~{\rm\it filename}}'' line,
 followed by a sequence of chunks.
 {\tt Stages.markup} numbers chunks consecutively, starting at~0.
 It also recognizes and undoes the escape sequence for double brackets,
-e.g.~converting ``{\tt <<}'' to ``{\tt <<}''.
+e.g.~converting ``{\tt @{}<<}'' to ``{\tt <<}''.
 The only tagging keywords found in its output are \ikw{defn} or
 \ikw{nl}; despite what's written about it, \ikw{use} never appears.
 \subsubsection{The source \texttt{Stages.fromascii}}
@@ -1529,6 +1536,48 @@ The arbitrary argument is the file to which the ASCII should be written; if omit
 it defaults to the current Lua output file.
 Most people won't need to use this stage explicitly;
  the ``mixed pipeline'' abstraction inserts it automatically where needed.
+\subsubsection{The filter \texttt{Stages.cond}}
+
+The filter \texttt{Stages.cond} enables the Noweb programmer to
+include code chunks conditionally.
+The filter is sensitive to chunk definitions in the following form:
+\begin{quote}
+\texttt{<<\textrm{\emph{name}} ((\textrm{\emph{condition}}))>>=}
+\end{quote}
+where \emph{name} is the name of the chunk, as usual, and
+\emph{condition} is a restricted Boolean expression in Lua.
+The \emph{condition} may not include function calls, and it may not
+use Lua reserved words other than [[and]], [[or]], and~[[not]].
+
+The arbitrary argument is a list of identifiers; when the
+\emph{condition} is evaluated, those identifiers are
+taken to be non-nil, and all other identifiers are taken to be nil.
+The chunk definition is included in
+the output from \texttt{tangle} if and only 
+if the \emph{condition} is true.
+(The inclusion is implemented using Lee Wittenberg's trick of renaming
+the definition to \texttt{<<\textrm{\emph{name}}>>}.)
+
+\subsubsection{The filter \texttt{Stages.stripconds}}
+
+The filter \texttt{Stages.stripconds} enables the Noweb programmer to
+include code chunks conditionally.
+The filter is sensitive to chunk definitions in the following form:
+\begin{quote}
+\texttt{<<\textrm{\emph{name}} ((\textrm{\emph{condition}}))>>=}
+\end{quote}
+where \emph{name} is the name of the chunk, as usual, and
+\emph{condition} is a simple identifier.
+
+The arbitrary argument is a list of identifiers; if
+\emph{condition} is one of the identifiers, it is removed from the
+definition, arranging that the chunk becomes a definition of
+\texttt{<<\textrm{\emph{name}}>>}.
+The effect is that
+the chunk definition is included in
+the output from \texttt{tangle} if and only 
+if the \emph{condition} is one of the identifiers passed to 
+\texttt{Stages.stripconds}.
 \subsubsection{The sink \texttt{Stages.tohtml}}
 
 This back end emits HTML.
@@ -1585,6 +1634,26 @@ actually appears in a code chunk named
 \emph{$\langle$hackers: subsections for internal filters$\rangle$}.
 To prepare internal documentation for the stages, we use
 \texttt{Stages.elide} with the argument \texttt{hackers:*}.
+
+Also undocumented \texttt{-eat} option.
+
+\subsubsection{The filters \texttt{Stages.droptext} and \texttt{Stages.eattext}}
+The filters \texttt{Stages.droptext} and \texttt{Stages.eattext}
+remove text fragments chunks from a stream.
+They are normally used early in the pipeline so as to remove whole lines.
+For both filters, the arbitrary argument is either a single string or 
+a list of strings.
+Each string is a Lua string pattern, as documented on page~19 of the 
+Lua~2.5$+$nw manual.
+\texttt{Stages.droptext} simply removes text parts matching the pattern.
+Because it preserves newlines, it can be used to ``blank out'' 
+(replace with an empty line) code that is not wanted when tangling.
+\texttt{Stages.eattext} replaces the matching text with
+\verb+\eatline+.
+It is useful for making lines disappear during weaving, without throwing off the 
+line numbers in the \TeX\ file.
+These filters exist only because they preserve newlines; otherwise, 
+it would be simpler to use \texttt{grep~-v}.
 \subsubsection{The filter \texttt{Stages.noidx}}
 
 \texttt{Stages.noidx} computes all the index and cross-reference information
@@ -1615,6 +1684,14 @@ This option is used to create anchors suitable for the HTML back end.
 Its effect  is to jump the documentation preceding a code chunk 
 rather than to the code chunk itself.
 
+The \texttt{-dbout \emph{file}} option causes the filter to emit, on
+\emph{file}, information about the first and last definitions of
+chunks in this file.
+(What about uses?)
+
+The \texttt{-dbin file} option notes that chunks may be linked in from
+a preceding or succeeding file, as determined by
+whether \texttt{-dbin} precedes or succeeds \texttt{-dbout}.
 
 \section{Examples}
 
@@ -1716,8 +1793,9 @@ END {
 
 \noindent
 The \verb+BEGIN+ code forces \verb+codecount+ and
-\verb+docscount+ to be associative arrays; without it the increment
-operator would fail.
+\verb+docscount+ to be associative arrays; without it, bugs in some
+versions of Awk would cause the increment
+operations associated with \verb+@nl+ to fail.
 \end{figure}
 
 \section{Acknowledgements}

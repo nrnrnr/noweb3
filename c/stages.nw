@@ -51,7 +51,7 @@ Each file is represented by a ``{\tt @file~{\rm\it filename}}'' line,
 followed by a sequence of chunks.
 {\tt Stages.markup} numbers chunks consecutively, starting at~0.
 It also recognizes and undoes the escape sequence for double brackets,
-e.g.~converting ``{\tt @<<}'' to ``{\tt <<}''.
+e.g.~converting ``{\tt @{}<<}'' to ``{\tt <<}''.
 The only tagging keywords found in its output are \ikw{defn} or
 \ikw{nl}; despite what's written about it, \ikw{use} never appears.
 @ 
