@@ -2,6 +2,7 @@
 This ``prettyprinter'' builds a code brick.
 <<*>>=
 static char rcsid[] = "$Id$";
+static char rcsname[] = "$Name$";
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
