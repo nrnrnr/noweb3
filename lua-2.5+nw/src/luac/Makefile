@@ -1,8 +1,9 @@
 # makefile for lua distribution (compiler)
 
-LUA= ../..
+LUA=../..
 
-include $(LUA)/config
+include ../../../nwconfig
+include ../../config
 
 INCS= -I$(INC) $(EXTRA_INCS) -I..
 OBJS= dump.o luac.o print.o
@@ -11,8 +12,8 @@ T=$(BIN)/luac
 
 all: $T
 
-$T: $(OBJS)
-	$(CC) -o $@ $(OBJS) -L$(LIB) -llua
+$T: $(OBJS) $(LIB)/liblua.a
+	$(CC) -o $@ $(OBJS) -L$(LIB) -llua $(LIBEXTRA)
 
 clean:
 	rm -f $(OBJS) $T
