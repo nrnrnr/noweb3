@@ -68,12 +68,12 @@ CPIF=>
 # metarules so you don't need a new rule for each .c and .h
 
 .SUFFIXES: .nw .tex .dvi .h .html .dvi .ps
-.nw.tex: ;	noweave -filter 'elide hackers:*' $*.nw >$*.tex
+.nw.tex: ;	no weave -ifilter "Stages.elide, 'hackers:*'" $*.nw >$*.tex
 .nw.c: ;	$(NOTANGLE) $(TANGLEOPTS) -L $*.nw >$*.c
 .nw.o: ;	$(NOTANGLE) $(TANGLEOPTS) -L $*.nw >$*.c
 		$(CC) $(CFLAGS) -c $*.c
 .nw.h: ;	$(NOTANGLE) $(TANGLEOPTS) -L -Rheader $*.nw $(CPIF) $*.h
-.nw.html: ;	noweave -filter 'elide hackers:*' -filter l2h -autodefs c -index -html $*.nw >$*.html
+.nw.html: ;	no weave -ifilter "Stages.elide, 'hackers:*'" -filter l2h -autodefs c -index -html $*.nw >$*.html
 .tex.dvi: ;	latex '\scrollmode \input{$*}' ;
 		latex '\scrollmode \input{$*}'
 .dvi.ps: ;	dvips -o $*.ps $*.dvi
@@ -122,7 +122,7 @@ doc.tex:	doc.nw
 	cp doc.nw doc.tex
 
 allcode.tex: $(FILES)
-	noweave -filter 'elide hackers:*' -n -index $(FILES) > allcode.tex
+	no weave -ifilter "Stages.elide, 'hackers:*'" -n -index $(FILES) > allcode.tex
 
 doc.dvi:	doc.tex allcode.tex
 	latex doc
@@ -141,7 +141,7 @@ fakepretty: $(FPOBJS)
 ################################################################
 
 overview.tex: overview.nw
-	noweave -delay overview.nw > overview.tex
+	no weave -delay overview.nw > overview.tex
 
 depend:
 	gcc $(CFLAGS) -MM -MG *.c
