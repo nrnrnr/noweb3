@@ -61,7 +61,7 @@ extern T    XPipe_function     (int (*f)(void *cl, FILE *in, FILE *out), void *c
 extern T    XPipe_program      (char* path, char** argv, char** envp);
 extern T    XPipe_connect      (T left, T right);
 extern void XPipe_print        (FILE* fp, T pipeline);
-extern int  XPipe_run      (T pipeline);
+extern int  XPipe_run      (T pipeline, FILE *in, FILE *out);
 extern void XPipe_free         (T* pipeline);
 
 #undef T
@@ -117,9 +117,9 @@ but the [[XPipe_run]] function and its helper functions.
 building, and printing of the pipeline.
 
 <<*>>=
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "xpipe.h"
 #include "list.h"
 #include "mem.h"
@@ -291,7 +291,10 @@ be different for different kinds of Unix.
 #include "util.h"
 
 <<private Unix prototypes>>
+<<Unix run-program prototypes>>
+<<private Unix functions>>
 <<Unix functions>>
+<<Unix run-program functions>>
 @ 
 The pipeline structure implemented here is a tree of UNIX processes
 with leaf nodes corresponding to executable programs that are part of
@@ -312,8 +315,9 @@ of the [[XPipe_run]] function in Unix.  Two functions are
 created that will wait for the specified child process or processes to
 terminate, and then return their exit status.  It is a checked runtime
 error for any other child process to terminate first.
-<<private Unix prototypes>>=
+<<Unix run-program prototypes>>=
 static int waitfor(int pid);
+<<private Unix prototypes>>=
 static int waitfor2(int pid1, int pid2);
 @ 
 The next set of functions facilitate the manipulation of file descriptors.
@@ -327,9 +331,10 @@ passed to them; it is a checked runtime error to pass 1 to
 The third function in this set simply closes the file descriptors
 passed to it as a parameter.  Passing NULL into the [[pipefds]]
 parameter results in a no-op.
-<<private Unix prototypes>>=
+<<Unix run-program prototypes>>=
 static void makeInput(int fd);    /* make standard input a copy of fd */
 static void makeOutput(int fd);   /* make standard output a copy of fd */
+<<private Unix prototypes>>=
 static void close_pair(int* pipefds);
 @ 
 The following functions fork the left and right halves of the tree and
@@ -354,7 +359,7 @@ not to close either of them prematurely.  It is an unchecked runtime error
 for [[pipefds[0]]] or [[pipefds[1]]] to be 0 or 1.
 
 <<private Unix prototypes>>=
-static int forkPipelineFrom(List_T l, int infd, int *pipefds);
+static int forkPipelineFrom(List_T l, int infd, int outfd, int *pipefds);
 static int forkStageTo(struct XPipe_Stage *prog, int outfd, int *pipefds);
 @ 
 
@@ -366,8 +371,9 @@ because we want the first stage of the pipeline to read from
 [[stdin]]. The [[pipefds]] parameter is NULL because there are no file
 descriptors to close at the time of the first call to [[forkPipelineFrom]].
 <<Unix functions>>=
-int XPipe_run(XPipe pipeline) {
-  return waitfor(forkPipelineFrom(pipeline->stages, 0, (int *)0));
+int XPipe_run(XPipe_T pipeline, FILE *infp, FILE *outfp) {
+  return waitfor(
+    forkPipelineFrom(pipeline->stages, fileno(infp), fileno(outfp), NULL));
 }
 @
 For an internal node, we fork a child, which in turn forks its left
@@ -376,7 +382,7 @@ the last internal node, the [[outfd]] parameter in [[forkStageTo]] is
 set to 1 ([[stdout]]) so that the last program may pass its results to
 [[stdout]].
 <<Unix functions>>=
-static int forkPipelineFrom(List_T l, int infd, int *surplus) {
+static int forkPipelineFrom(List_T l, int infd, int outfd, int *surplus) {
   assert(l);
   if (l->rest) {
     int pid;
@@ -386,14 +392,14 @@ static int forkPipelineFrom(List_T l, int infd, int *surplus) {
       makeInput(infd);  /* must do before closing surplus */
       close_pair(surplus);
       lpid = forkStageTo(l->first, fd[1], fd);
-      rpid = forkPipelineFrom(l->rest, fd[0], fd);
+      rpid = forkPipelineFrom(l->rest, fd[0], outfd, fd);
       close_pair(fd);
       exit(waitfor2(lpid, rpid));
     } else 
       return pid;
   } else {
     makeInput(infd);
-    return forkStageTo(l->first, 1, surplus);
+    return forkStageTo(l->first, outfd, surplus);
   }
 }
 @ 
@@ -465,13 +471,13 @@ The first two helper functions, [[waitfor]] and [[waitfor2]], return the
 exit status of a child process or a pair of child processes, respectively,
 that function is to wait for.  If an unexpected process terminates before
 one of the awaited processes, then the functions return an error and abort.
-<<Unix functions>>=
+<<Unix run-program functions>>=
 static int waitfor(int pid) {
   int status;
   assert(pid == wait(&status));
   return WEXITSTATUS(status);
 }
-
+<<private Unix functions>>=
 static int waitfor2(int pid1, int pid2) {
   int status;
   int pid;
@@ -484,7 +490,7 @@ static int waitfor2(int pid1, int pid2) {
 to them already equal [[stdin]] and [[stdout]], respectively.  Otherwise,
 they return an error if an attempt is made to turn [[stdout]] into [[stdin]]
 or vice-versa.
-<<Unix functions>>=
+<<Unix run-program functions>>=
 static void makeInput(int fd) {
   if (fd == 0) return;
   assert(fd != 1);
@@ -517,22 +523,26 @@ static void close_pair(int *surplus) {
 Useful on systems that can't fork.
 Also useful for debugging!
 <<* ((tmpfiles))>>=
-#include <stdio.h>
+#include "util.h"
+#include "errors.h"
+#include <fmt.h>
 
 <<private temporary-file prototypes>>
+<<Unix run-program prototypes>>
 <<temporary-file functions>>
+<<Unix run-program functions>>
 @ 
 We walk a list of stages with input and output files given.
 <<private temporary-file prototypes>>=
 static int do_stage (XPipe_Stage stage, FILE *in, FILE *out);
 static int do_stages(List_T stages, FILE *in, FILE *out);
 <<temporary-file functions>>=
-int XPipe_run(XPipe pipeline) {
-  return do_stages(pipeline->stages, stdin, stdout);
+int XPipe_run(XPipe_T pipeline, FILE *in, FILE *out) {
+  return do_stages(pipeline->stages, in, out);
 }
 @
 <<temporary-file functions>>=
-static int forkPipelineFrom(List_T l, FILE *in, FILE *out) {
+static int do_stages(List_T l, FILE *in, FILE *out) {
   int n;
   assert(l);
   if (l->rest) {
@@ -549,6 +559,7 @@ static int forkPipelineFrom(List_T l, FILE *in, FILE *out) {
   } else {
     return do_stage(l->first, in, out);
   }
+}
 @ 
 The leaf nodes are the stages of the pipeline; processes to execute
 these stages are called from within [[forkStageTo]].
@@ -560,11 +571,20 @@ static int do_stage(struct XPipe_Stage *stage, FILE *in, FILE *out) {
       return stage->u.fun.f(stage->u.fun.arg, in, out);
     case Prog:
       return run_program(&stage->u.prog, in, out);
+    default:
+      assert(0); return -1;
   }
 }
 @ 
+<<private temporary-file prototypes>>=
+static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out);
 <<temporary-file functions>>=
-static int run_program(XPipe_program prog, FILE *in, FILE *out) {
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include "sys.h"
+
+static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
   char** new_argv;
   int pid;
   if ((pid = fork()) == 0) {
@@ -582,38 +602,6 @@ static int run_program(XPipe_program prog, FILE *in, FILE *out) {
   } else {
     return waitfor(pid);
   }
-}
-@ 
-The first two helper functions, [[waitfor]] and [[waitfor2]], return the
-exit status of a child process or a pair of child processes, respectively,
-that function is to wait for.  If an unexpected process terminates before
-one of the awaited processes, then the functions return an error and abort.
-<<temporary-file functions>>=
-static int waitfor(int pid) {
-  int status;
-  assert(pid == wait(&status));
-  return WEXITSTATUS(status);
-}
-@
-[[makeInput]] and [[makeOutput]] return immediately if the parameters passed
-to them already equal [[stdin]] and [[stdout]], respectively.  Otherwise,
-they return an error if an attempt is made to turn [[stdout]] into [[stdin]]
-or vice-versa.
-<<temporary-file functions>>=
-static void makeInput(int fd) {
-  if (fd == 0) return;
-  assert(fd != 1);
-  assert(close(0) == 0);
-  assert(dup(fd) == 0);
-  return;
-}
-
-static void makeOutput(int fd) {
-  if (fd == 1) return;
-  assert(fd != 0);
-  assert(close(1) == 0);
-  assert(dup(fd) == 1);
-  return;
 }
 @ 
 Temporary files are POSIX.

@@ -209,13 +209,16 @@ static int do_run(XPipe_T ext, IPipe_T ints, struct list *pipeline) {
   }
 }
 @ 
+It's not entirely clear if we should run the external pipeline on
+[[stdin]] and [[stdout]] or whether [[lua_infile]] and [[lua_outfile]]
+would be better.
 <<run [[ext]] followed by [[ints]]>>=
 if (!ext)
   return IPipe_run(ints, NULL, NULL);
 else if (!ints)
-  return XPipe_run(ext);
+  return XPipe_run(ext, stdin, stdout); 
 else
-  return XPipe_run(combine_XI(ext, ints, 1));
+  return XPipe_run(combine_XI(ext, ints, 1), stdin, stdout);
 @ 
 I don't think this is quite going to work --- we have to connect
 [[fromascii]] and [[toascii]] to the correct files.

@@ -57,7 +57,7 @@ static void XPipe_create_lua(void) {
     lua_pushusertag(XPipe_program(lua_getstring(stage), array, environ), XPIPE);
   } else if (lua_isfunction(stage)) {
     lua_pushusertag(XPipe_function(apply_application,
-				   build_app_from_lua_args("XPipe.create")),
+				   build_app_from_lua_args("XPipe.stage")),
 		    XPIPE);
   }
 }
@@ -164,12 +164,13 @@ that lua parameter into a C [[XPipe]] and passes that to the C
 version of [[XPipe_execute]].
 
 <<XPipe-execute>>=
+extern FILE *lua_infile, *lua_outfile;
 static void XPipe_execute_lua(void) {
   lua_Object pipeline_o = lua_getparam(1);
   XPipe_T to_execute;
   <<insist on exactly 1 parameter>>
   to_execute = lua_getuserdata(pipeline_o);
-  lua_pushnumber((double)XPipe_run(to_execute));
+  lua_pushnumber((double)XPipe_run(to_execute, lua_infile, lua_outfile));
 }
 
 @ 
