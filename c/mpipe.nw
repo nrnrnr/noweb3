@@ -18,7 +18,6 @@ in [[ipipe.h]].
 #define MPIPE_H
 
 #include "nwbuffer.h"
-#include "toascii.h"
 #include "fromascii.h"
 
 typedef struct MSource* MSource;
@@ -292,7 +291,7 @@ static int do_exec_start(MSource left, MSink right);
 int MPipe_execute(MPipe p) {
   if (!fromascii) {
     fromascii = Source_create(readascii, stdin);
-    toascii   = Sink_create(toascii_sink, stdout);
+    toascii   = Sink_create(NowebBuffer_toascii, stdout);
   }
   return do_exec_start(p->source, p->sink);
 }

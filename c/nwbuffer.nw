@@ -40,7 +40,9 @@ It is a checked runtime error to pass a NULL value to this function.
 returns an abstraction that enables sequential reading of the pairs in
 the buffer.  [[NowebBuffer_read]] returns the elements one by one,
 returning [[NULL]] when the buffer is empty.
-<<nwbuffer.h>>=
+
+[[NowebBuffer_toascii]] writes the contents of a buffer on an output file passed as an argument.
+<<header>>=
 #ifndef NWBUFFER_H
 #define NWBUFFER_H
 
@@ -60,6 +62,7 @@ extern NowebPair  NowebBuffer_read    (NowebReader);
 extern void NowebBuffer_free          (T* nwbuffer);
 
 extern int  NowebBuffer_is_index(NowebKey key);
+extern int NowebBuffer_toascii(void * /*output file*/, NowebBuffer);
 #undef T
 #endif
 @ 
@@ -75,6 +78,7 @@ Values may be omitted, in which case the corresponding pointers are
 [[NULL]].
 All [[value]] fields are immutable and must be atoms in the sense of
 the [[Atom]] interface.
+ Keys, if string-like, must be atoms.
 <<definition of [[struct NowebPair]]>>=
 struct NowebPair {
   NowebKey key;			/* predefined keys */
@@ -94,73 +98,79 @@ The idea of the [[NowebKey]]s is that they are compile-time constants
 and therefore can be checked much more efficiently than strings--even
 strings that are atoms.  It is therefore an unchecked runtime error to
 use the string equivalent of any [[NowebKey]] in the representation.
-
-For values, clients may use ordinary strings or atoms at their
-discretion.  Keys, if string-like, must be atoms.
-<<definition of [[NowebKey]]>>=
-typedef enum keys { NW_XXX_STRINGKEY, <<list of predefined keys>> } NowebKey;
+@
+We play some macro tricks to deal with the keys.
+The format is:
+[[xx(name, printf args)]]
+<<key macros>>=
+xx(NW_BEGIN_CODE,      	(fp, "@begin code %s\n", VAL))
+xx(NW_BEGIN_DOCS,       (fp, "@begin docs %s\n", VAL))
+xx(NW_END_CODE,         (fp, "@end code %s\n", VAL))
+xx(NW_END_DOCS,         (fp, "@end docs %s\n", VAL))
+xx(NW_TEXT,             (fp, "@text %s\n", VAL))
+xx(NW_NL,               (fp, "@nl\n"))
+xx(NW_DEFN,             (fp, "@defn %s\n", VAL))
+xx(NW_USE,              (fp, "@use %s\n", VAL))
+xx(NW_QUOTE,            (fp, "@quote\n"))
+xx(NW_ENDQUOTE,         (fp, "@endquote\n"))
+xx(NW_FILE,             (fp, "@file %s\n", VAL))
+xx(NW_LINE,             (fp, "@line %s\n", VAL))
+xx(NW_LANGUAGE,         (fp, "@language %s\n", VAL))
+xx(NW_HEADER,           (fp, "@header %s\n", VAL))
+xx(NW_TRAILER,          (fp, "@trailer %s\n", VAL))
+xx(NW_INDEX_DEFN,       (fp, "@index defn %s\n", VAL))
+xx(NW_INDEX_LOCALDEFN,  (fp, "@index localdefn %s\n", VAL))
+xx(NW_INDEX_USE,        (fp, "@index use %s\n", VAL))
+xx(NW_INDEX_NL,         (fp, "@index nl\n"))
+xx(NW_INDEX_BEGINDEFS,  (fp, "@index begindefs\n"))
+xx(NW_INDEX_ISUSED,     (fp, "@index isused %s\n", VAL))
+xx(NW_INDEX_DEFITEM,    (fp, "@index defitem %s\n", VAL))
+xx(NW_INDEX_ENDDEFS,    (fp, "@index endefs\n"))
+xx(NW_INDEX_BEGINUSES,  (fp, "@index beginuses\n"))
+xx(NW_INDEX_ISDEFINED,  (fp, "@index isdefined %s\n", VAL))
+xx(NW_INDEX_USEITEM,    (fp, "@index useitem %s\n", VAL))
+xx(NW_INDEX_ENDUSES,    (fp, "@index enduses\n"))
+xx(NW_INDEX_BEGININDEX, (fp, "@index beginindex\n"))
+xx(NW_INDEX_ENTRYBEGIN, (fp, "@index entrybegin %s\n", VAL))
+xx(NW_INDEX_ENTRYUSE,   (fp, "@index entryuse %s\n", VAL))
+xx(NW_INDEX_ENTRYDEFN,  (fp, "@index entrydefn %s\n", VAL))
+xx(NW_INDEX_ENTRYEND,   (fp, "@index entryend\n"))
+xx(NW_INDEX_ENDINDEX,   (fp, "@index endindex\n"))
+xx(NW_XREF_LABEL,       (fp, "@xref label %s\n", VAL))
+xx(NW_XREF_REF,         (fp, "@xref ref %s\n", VAL))
+xx(NW_XREF_PREVDEF,     (fp, "@xref prevdef %s\n", VAL))
+xx(NW_XREF_NEXTDEF,     (fp, "@xref nextdef %s\n", VAL))
+xx(NW_XREF_BEGINDEFS,   (fp, "@xref begindefs\n"))
+xx(NW_XREF_DEFITEM,     (fp, "@xref defitem %s\n", VAL))
+xx(NW_XREF_ENDDEFS,     (fp, "@xref enddefs\n"))
+xx(NW_XREF_BEGINUSES,   (fp, "@xref beginuses\n"))
+xx(NW_XREF_USEITEM,     (fp, "@xref useitem %s\n", VAL))
+xx(NW_XREF_ENDUSES,     (fp, "@xref enduses\n"))
+xx(NW_XREF_NOTUSED,     (fp, "@xref notused %s\n", VAL))
+xx(NW_XREF_BEGINCHUNKS, (fp, "@xref beginchunks\n"))
+xx(NW_XREF_CHUNKBEGIN,  (fp, "@xref chunkbegin %s\n", VAL))
+xx(NW_XREF_CHUNKUSE,    (fp, "@xref chunkuse %s\n", VAL))
+xx(NW_XREF_CHUNKDEFN,   (fp, "@xref chunkdefn %s\n", VAL))
+xx(NW_XREF_CHUNKEND,    (fp, "@xref chunkend\n"))
+xx(NW_XREF_ENDCHUNKS,   (fp, "@xref endchunks\n"))
+xx(NW_XREF_TAG,        	(fp, "@xref tag %s\n", VAL))
+xx(NW_FATAL,           	(fp, "@fatal %s\n", VAL))
 @ 
-Most structural keys take arguments; the exceptions are [[NL]],
-[[QUOTE]], and [[ENDQUOTE]].
-<<list of predefined keys>>=
-NW_BEGIN_CODE,       NW_BEGIN_DOCS,
-NW_END_CODE,         NW_END_DOCS,
-NW_TEXT,             NW_NL,
-NW_DEFN,             NW_USE,
-NW_QUOTE,            NW_ENDQUOTE,
-@ 
-All tagging keywords take arguments.
-<<list of predefined keys>>=
-NW_FILE,             NW_LINE,
-NW_LANGUAGE,
-@
-The wrapper keywords take arguments.
-<<list of predefined keys>>=
-NW_HEADER,           NW_TRAILER,
-@
-The error keyword requires an argument.
-<<list of predefined keys>>=
-NW_FATAL,
-@
-Except for the three flavors of [[BEGIN*]]/[[END*]] brackets, the
-indexing keys take arguments.
-<<list of predefined keys>>=
-NW_INDEX_DEFN,       NW_INDEX_LOCALDEFN,
-NW_INDEX_USE,        NW_INDEX_NL,
-
-NW_INDEX_BEGINDEFS,  NW_INDEX_ISUSED,
-NW_INDEX_DEFITEM,    NW_INDEX_ENDDEFS,
-
-NW_INDEX_BEGINUSES,  NW_INDEX_ISDEFINED,
-NW_INDEX_USEITEM,    NW_INDEX_ENDUSES,
-
-NW_INDEX_BEGININDEX, NW_INDEX_ENTRYBEGIN,
-NW_INDEX_ENTRYUSE,   NW_INDEX_ENTRYDEFN,
-NW_INDEX_ENTRYEND,   NW_INDEX_ENDINDEX,
+I rely on clustering to identify classes of keywords.
 <<helper functions>>=
 int NowebBuffer_is_index(NowebKey key) {
   return NW_INDEX_DEFN <= key && key <= NW_INDEX_ENDINDEX;
 } 
-@ 
-Except for [[XREF_CHUNKEND]] and for
-the three flavors of [[BEGIN*]]/[[END*]] brackets, the
-cross-reference keys take arguments.
-<<list of predefined keys>>=
-NW_XREF_LABEL,       NW_XREF_REF,
-
-NW_XREF_PREVDEF,     NW_XREF_NEXTDEF,
-
-NW_XREF_BEGINDEFS,   NW_XREF_DEFITEM,
-NW_XREF_ENDDEFS,
-
-NW_XREF_BEGINUSES,   NW_XREF_USEITEM,
-NW_XREF_ENDUSES,     NW_XREF_NOTUSED,
-
-NW_XREF_BEGINCHUNKS, NW_XREF_CHUNKBEGIN,
-NW_XREF_CHUNKUSE,    NW_XREF_CHUNKDEFN,
-NW_XREF_CHUNKEND,    NW_XREF_ENDCHUNKS,
-
-NW_XREF_TAG
+@
+For values, clients may use ordinary strings or atoms at their
+discretion. 
+<<definition of [[NowebKey]]>>=
+typedef enum keys { 
+#define xx(NAME, PRINTARGS) NAME,
+  <<key macros>>
+#undef xx
+  NW_XXX_STRINGKEY
+} NowebKey;
 @
 \section{Implementation}
 
@@ -180,11 +190,14 @@ struct NowebBuffer {
   Seq_T pairs;
 };
 @ 
-<<nwbuffer.c>>=
-#include "nwbuffer.h"
+<<*>>=
+#include <stdio.h>
 #include <assert.h>
+
 #include <seq.h>
 #include <mem.h>
+
+#include "nwbuffer.h"
 
 #define T NowebBuffer
 
@@ -193,6 +206,7 @@ struct NowebBuffer {
 
 <<helper functions>>
 <<buffer operations>>
+<<functions>>
 
 #undef T
 @ 
@@ -292,8 +306,28 @@ void NowebBuffer_free(T* nwbuffer) {
   Seq_free(&(*nwbuffer)->pairs);
   FREE(*nwbuffer);
 }
-<<*>>=
-<<nwbuffer.c>>
-<<header>>=
-<<nwbuffer.h>>
 @
+<<functions>>=
+int NowebBuffer_toascii(void *out /*output file*/, NowebBuffer in) {
+  FILE *fp = out;
+  NowebReader rdr = NowebBuffer_reader(in);
+  NowebPair pair;
+  
+  for (pair = NowebBuffer_read(rdr); pair; pair = NowebBuffer_read(rdr)) {
+    switch(pair->key) {
+      case NW_XXX_STRINGKEY:
+	fprintf(fp, "%s %s\n", pair->u.alternate->key, pair->u.alternate->value);
+	break;
+#define VAL (pair->u.value)
+#define xx(NAME, PRINTARGS) case NAME: fprintf PRINTARGS; break;
+<<key macros>>
+#undef xx
+#undef VAL
+      default: 
+        assert(0);
+    }
+  }
+  return 0;
+}
+@ 
+
