@@ -1,5 +1,5 @@
 % -*- mode: Noweb; noweb-code-mode: latex-mode -*-
-<<hackers' guide>>=
+<<hackers guide>>=
 <<edit warning>>
 \documentclass{article}
 \usepackage{nchicago,multicol,array,tabularx,afterpage}
@@ -9,12 +9,14 @@
 
 \title{The {\tt noweb} Hacker's Guide}
 \author{Norman Ramsey\thanks{Author's current address is Department of
-  Computer Science,
-  University of Virginia, Charlottesville, VA 22903, USA;
-send email to {\tt nr@cs.virginia.edu}.}\\Department of Computer Science\\
+  Electrical Engineering and Computer Science,
+  Harvard University,
+  33 Oxford Street
+  Cambridge, MA 02138, USA;
+send email to {\tt nr@eecs.harvard.edu}.}\\Department of Computer Science\\
 Princeton University}
 \date{September 1992\\(Revised August 1994, December 1997, June 1998,
-May 1999)}
+May 1999, December 2001)}
 
 \setcounter{secnumdepth}{0}
 \setcounter{tocdepth}{3}
@@ -110,12 +112,14 @@ inserting or removing pipeline stages.
 Readers should be familiar with the {\tt {\tt noweb}} man pages, which
 describe the structure of {\tt {\tt noweb}} source files.
 
-{\tt Markup}, which is the first stage in
+{\tt markup}, which is the first stage in
 every pipeline, converts {\tt noweb} source to a representation easily
 manipulated by common Unix tools like {\tt sed} and {\tt awk}, simplifying
 the construction of later pipeline stages.  Middle stages add
 information to the representation.  {\tt notangle}'s final stage converts to
 code; {\tt noweave}'s final stages convert to TeX, LaTeX or HTML.
+A final stage for GNU {\tt troff -mm} is supplied
+in the distribution, but is not supported.
 Middle stages are called {\em filters}, by analogy with Unix filters.
 Final stages are called {\em back ends}, by analogy with
 compilers---they don't transform {\tt {\tt noweb}}'s intermediate
@@ -161,7 +165,7 @@ as well as external ones; and Lua code can replace Icon code for  many
 purposes.
 An implementation of Lua is distributed with Version~3.
 Therefore, when the Icon code is replaced, it will be possible to
-distribute Noweb as a single binary, plus scripts written in Lua.
+distribute \texttt{noweb} as a single binary, plus scripts written in Lua.
 (The source code will, of course, continue to be available.)
 
 
@@ -170,15 +174,18 @@ distribute Noweb as a single binary, plus scripts written in Lua.
 In the external pipeline, stages pass information by reading and
 writing ASCII files.
 In such files,
-every line begins with an at sign and one of the
+every line begins with an at sign (\texttt{@}) and one of the
 keywords shown in Table~\ref{table:keywords}.
+
 The structural keywords 
 represent the {\tt noweb} source syntax directly.
 They must appear in particular orders that reflect the
 structure of the source.
+
 The tagging keywords can be inserted
 essentially anywhere (within reason), and with some exceptions, they are not generated
 by {\tt markup}.
+
 The wrapper keywords
 mark the beginning and end of file,
 and they carry information about what formatters are supposed to do in
@@ -359,6 +366,7 @@ the files to which they will be extracted, and to use the same naming
 conventions as \texttt{make} to figure out what the contents are.)
 A \texttt{noweb} filter will tag non-root chunks with the appropriate
 \kw{language} by propagating information from uses to definitions.
+(This filter does not currently exist. Contributions gratefully accepted.)
 
 
 
@@ -380,7 +388,7 @@ label refers to a particular code chunk, and all references to that
 chunk use the same label.
 
 An \ident\ refers to a source-language identifier.
-{\tt Noweb}'s concept of identifier is general; an identifier is
+{\tt noweb}'s concept of identifier is general; an identifier is
 an arbitrary string.
 It can even contain whitespace.
 Identifiers are used as keys in the index; references to the same
@@ -390,7 +398,7 @@ string are assumed to denote the same identifier.
 cross-reference in the final document.
 For example, Classic {\tt WEB} uses consecutive ``section numbers'' to
 refer to chunks.
-{\tt Noweb}, by default, uses ``sub-page references,'' e.g., ``24b''
+{\tt noweb}, by default, uses ``sub-page references,'' e.g., ``24b''
 for the second chunk appearing on page~24.
 The HTML back end doesn't use any tags at all; instead, it
 implements cross-referencing using the ``hot link'' mechanism.
@@ -476,8 +484,9 @@ output handy when studying this and the next section.
 
 \paragraph{Definitions, uses, and {\tt @ \%def}}
 
-\ikw{defn}, \ikw{use}, and \ikw{nl} are the only
-\kw{index} keywords that appear in {\tt markup}'s output, and thus
+The \kw{index} keywords
+\ikw{defn}, \ikw{use}, and \ikw{nl} are the only ones
+that appear in {\tt markup}'s output, and thus
 which can appear in any program.
 They may appear only within the boundaries of a code chunk (\kws{begin
 code}{end code}).
@@ -686,8 +695,8 @@ these are the ones used by the standard filters.
 Most back ends use the chunk as the basic unit of cross-reference, so
 the labels of \kw{defn} are the ones that are most often used.
 The HTML back end, however, does something a little different---it
-uses labels that refer to documentation preceding a chunk, because the
-typical HTML browser (Mosaic) places the label%
+uses labels that refer to documentation preceding a chunk, because
+typical HTML browsers place the label%
 \footnote{The HTML terminology calls a label an ``anchor.''}
 at the top of the screen, and using the label of the \kw{defn} would
 lose the documentation immediately preceding a chunk.
@@ -762,6 +771,7 @@ formatting engines to do the job.
 The {\LaTeX} back end uses an elaborate macro package to compute
 sub-page numbers, and the HTML back end arranges for ``hot links'' to
 be used instead of textual tags.
+
 Some people have argued that literate-programming tools shouldn't require
 elaborate macro packages, that they should use the basic facilities
 provided by a formatter.  Nuweb, for example, uses standard {\LaTeX}
@@ -866,7 +876,11 @@ None of these filters has any command-line options.
 Using code contributed by Preston Briggs, this filter makes two passes
 over its input.
 The first pass reads in all the \ikw{defn} and \ikw{localdefn} lines and builds an
-Aho-Corasick recognizer for the identifiers named therein.
+Aho-Corasick recognizer%
+\footnote{A.V.~Aho and M.~Corasick.
+Efficient string matching: An aid to bibliographic search. Comm. ACM, 18(6):333--340, 1975.
+This is the algorithm used for the Unix \texttt{fgrep} program.}
+for the identifiers named therein.
 The second pass copies the input, searching for these identifiers in
 each \kw{text} line that is code.
 When it finds an identifier, {\tt finduses} breaks the \kw{text} line
@@ -1000,6 +1014,22 @@ The {\tt -noindex} option suppresses output relating to the index of
 identifiers; it is used to implement {\tt noweave -x}.
 {\hfuzz=1.2pt\par}
 
+\subsection{\tt toroff}
+
+The {\emph unsupported} {\tt toroff} back end generates {\tt troff} output,
+suitable for use with both the {\tt -mm} and {\tt -ms} macro packages.
+It uses its own set of additional macros. This macro package is designed
+for use with GNU {\tt troff}; it has not been tested with standard Unix
+{\tt troff}.
+
+The {\tt noroff} program handles invoking {\tt noweb} correctly, as well
+as actually running {\tt troff}.  The {\tt -delay} command line
+option allows the initial document chunk to be processed
+before invoking the ``begin document'' macro,
+so that necessary initialization may
+be performed.  The only commands which are useful in such an initial chunk
+are bare {\tt troff} commands.
+
 \subsection{\tt unmarkup}
 
 {\tt unmarkup} attempts to  be the inverse of markup---a document
@@ -1057,63 +1087,6 @@ script, passing the \emph{arguments} in a Lua variable named
 Look at \texttt{lua/weave.nw} and \texttt{lua/tangle.nw} for examples.
 (Weave is way too complicated.)
 
-
-
-\begin{figure}[p]
-\begin{verbatim}
-awk 'BEGIN { line = 0; capture = 0
-             format = sprintf("'"$format"'",'"$width"')
-           }
-function comment(s) {
-    '"$subst"'
-    return sprintf(format,s)
-}
-
-function grab(s) {
-  if (capture==0) print
-  else holding[line] = holding[line] s
-}
-   
-/^@end doc/ { capture = 0; holding[++line] = "" ; next }
-/^@begin doc/ { capture = 1; next }
-
-/^@text /     { grab(substr($0,7)); next}
-/^@quote$/    { grab("[[") ; next}
-/^@endquote$/ { grab("]]") ; next}
-
-/^@nl$/ { if (capture !=0 ) {
-            holding[++line] = ""
-          } else if (defn_pending != 0) {
-            print "@nl"
-            for (i=0; i<=line && holding[i] ~ /^ *$/; i++) i=i
-            for (; i<=line; i++) 
-              printf "@text %s\n@nl\n", comment(holding[i])
-            line = 0; holding[0] = ""
-            defn_pending = 0
-          } else print
-          next  
-        }
-
-/^@defn / { holding[line] = holding[line] "<"substr($0,7)">="
-            print ; defn_pending = 1 ; next }
-{ print }'
-\end{verbatim}
-\caption{{\tt awk} command used to transform documentation to comments}
-
-\smallskip
-\noindent
-\verb+$subst+, \verb+$format+, and \verb+$width+ are shell variables used
-to adapt the script for different languages.
-executing \verb+$subst+ eliminates comment-end markers (if any) from
-the documentation, and the initial \verb+sprintf+ that creates the
-{\tt awk}
-variable \verb+format+ gives the format used to print a line of
-documentation as a comment.
-
-\label{fig:nountangle}
-\end{figure}
-
-\afterpage{\clearpage} % force figures out
 
 \section{The internal pipeline representation}
 
@@ -1210,7 +1183,7 @@ pair to the end of the buffer.
 The value may be omitted and defaults to nil.
 It is not specified whether calling \texttt{NWB.put} to append to a
 buffer changes the sequence returned by a previously created reader.
-This means if you write code that writes to and reads from the same
+This means that if you write code that writes to and reads from the same
 buffer at the same time, your code shouldn't depend on whether what
 you write shows up when you read.
 \\
@@ -1257,7 +1230,7 @@ the second argument should be a
 list of strings to be used as arguments.
 If the first argument is a Lua function, it is run as an internal
 pipeline stage, and the second argument is passed to it (along with a
-buffer into which information should be emitted.\\
+buffer into which information should be emitted).\\
 MPipe.xsource&
 Like \texttt{MPipe.source}, except even Lua functions are run in
 external pipeline stages.\\
@@ -1301,14 +1274,14 @@ modules.
 
 \subsection{Miscellaneous Lua functions}
 
-The noweb  binary includes the following functions:\\
+The {\tt noweb}  binary includes the following functions:\\
 \begin{luafuns}
 <<hackers: entries for miscellaneous functions>>
 \end{luafuns}
 
 \medskip
 \noindent
-The noweb binary also loads the following functions written in Lua
+The {\tt noweb} binary also loads the following functions written in Lua
 itself:\\
 \begin{luafuns}
 <<hackers: entries for Lua functions>>
@@ -1350,7 +1323,7 @@ a list by running \texttt{no} without arguments, and typing
 
 Internal sources take two arguments: a buffer into which information
 should be emitted, and an arbitrary argument used to pass
-source-specific informations.
+source-specific information.
 In C~versions of internal stages, the arbitrary argument is a value of
 type~\texttt{void~*}; in Lua versions, it may be a value of any type.
 Internal sinks also take a buffer and an arbitrary argument, but
@@ -1421,11 +1394,68 @@ program into a traditional commented program, without loss of
 information and with only a modest penalty in readability.
 
 
-As a demonstration, and to help convert nuweb programs to {\tt
+\begin{figure}[p]
+\begin{verbatim}
+awk 'BEGIN { line = 0; capture = 0
+             format = sprintf("'"$format"'",'"$width"')
+           }
+function comment(s) {
+    '"$subst"'
+    return sprintf(format,s)
+}
+
+function grab(s) {
+  if (capture==0) print
+  else holding[line] = holding[line] s
+}
+   
+/^@end doc/ { capture = 0; holding[++line] = "" ; next }
+/^@begin doc/ { capture = 1; next }
+
+/^@text /     { grab(substr($0,7)); next}
+/^@quote$/    { grab("[[") ; next}
+/^@endquote$/ { grab("]]") ; next}
+
+/^@nl$/ { if (capture !=0 ) {
+            holding[++line] = ""
+          } else if (defn_pending != 0) {
+            print "@nl"
+            for (i=0; i<=line && holding[i] ~ /^ *$/; i++) i=i
+            for (; i<=line; i++) 
+              printf "@text %s\n@nl\n", comment(holding[i])
+            line = 0; holding[0] = ""
+            defn_pending = 0
+          } else print
+          next  
+        }
+
+/^@defn / { holding[line] = holding[line] "<"substr($0,7)">="
+            print ; defn_pending = 1 ; next }
+{ print }'
+\end{verbatim}
+\caption{{\tt awk} command used to transform documentation to comments}
+
+\smallskip
+\noindent
+\verb+$subst+, \verb+$format+, and \verb+$width+ are shell variables used
+to adapt the script for different languages.
+Executing \verb+$subst+ eliminates comment-end markers (if any) from
+the documentation, and the initial \verb+sprintf+ that creates the
+{\tt awk}
+variable \verb+format+ gives the format used to print a line of
+documentation as a comment.
+
+\label{fig:nountangle}
+\end{figure}
+
+\afterpage{\clearpage} % force figures out
+
+
+As a demonstration, and to help convert Nuweb programs to {\tt
 noweb}, I wrote a
 a 55-line Icon program that makes it possible to abbreviate chunk names
 using a trailing ellipsis, as in {\tt WEB}; it appears in the {\tt
-noweb} distribution as
+noweb} 2 distribution as
 \verb+icon/disambiguate.nw+. 
 
 Kostas Oikonomou of AT\&T Bell Labs and Conrado Martinez-Parra of 

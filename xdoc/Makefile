@@ -2,7 +2,7 @@ guide.ps: guide.dvi
 	dvips -D 300 -o guide.ps guide
 
 guide.tex: guide.nw
-	notangle -R"hackers' guide" guide.nw ../c/*.nw ../lua/*.nw > guide.tex
+	notangle -R"hackers guide" guide.nw ../c/*.nw ../lua/*.nw > guide.tex
 
 guide.dvi: guide.tex
 	latex '\scrollmode \input '"guide"
