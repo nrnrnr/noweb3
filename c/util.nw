@@ -33,6 +33,7 @@ extern List_T pathsplit(const char *path);
 <<*>>=
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <list.h>
 #include <atom.h>
@@ -54,6 +55,10 @@ int load_nwfile(const char *filename) {
   List_T p;
   char *fname;
   int rc;
+  
+  if (strstr(filename, Sys_dirsep)) /* no search on relative paths */
+    return lua_dofile((char *)filename);
+
   <<if [[searchpath]] is null, set it>>
 
   for (p = searchpath; p; p = p->rest) {
