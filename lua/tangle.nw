@@ -31,6 +31,7 @@ while List.length(argv) > 0 do
   | "-w[0-9]", "-w[0-9][0-9]*" =>  -- ignore arg meant for nountangle
   | "-L*" => List.put(markopt, "-t"); List.put(opt, "-t"); List.put(opt, a)
   | "-"   => List.put(arg, a)
+  | "-cpif", "-cp" => List.put(opt, a); List.put(opt, List.get(argv))
   | "-*"  => List.put(opt, a)
   | "*"   => List.put(arg, a)
   else => error("This can't happen! Arg did not match *: " .. a)
@@ -46,13 +47,21 @@ end
 -- write("opt has length ", List.length(opt), "\n")
 -- write("markopt has length ", List.length(markopt), "\n")
 -- write("arg has length ", List.length(arg), "\n")
+-- write("opt = ", image(opt), '\n')
+-- write("arg = ", image(arg), '\n')
+-- write("markopt = ", image(markopt), '\n')
 
 p = P.source(markup, markopt .. arg)
 while List.length(filters) > 0 do 
   p = P.connect(p, List.get(filters))
 end
 p = P.connect(p, P.sink(nt, opt))
-if verbose then P.print(p); local out = writetox(stderr); write("\n"); writeto(out) end
+if verbose then 
+  local out = writetox(stderr)
+  P.print(p)
+  write("\n")
+  writeto(out)
+end
 exit(P.run(p))
 @ 
 This goo makes it a shell script
