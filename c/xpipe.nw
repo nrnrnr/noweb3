@@ -53,11 +53,16 @@ the larger pipeline as well.
 #define XPIPE_H
 
 #include <stdio.h>
+#ifndef fileno
+extern int fileno(FILE *);  /* needed on linux ?! */
+#endif
+#include "atom.h"
 
 #define T XPipe_T
 typedef struct T* T;
 
-extern T    XPipe_function     (int (*f)(void *cl, FILE *in, FILE *out), void *cl);
+extern T    XPipe_function     (int (*f)(void *cl, FILE *in, FILE *out), void *cl,
+                                char *name);
 extern T    XPipe_program      (char* path, char** argv, char** envp);
 extern T    XPipe_connect      (T left, T right);
 extern void XPipe_print        (FILE* fp, T pipeline);
@@ -86,13 +91,14 @@ later) from the interface.
 
 <<definition of [[struct XPipe_Stage]]>>=
 struct XPipe_Program {
-  char* path;
+  const char* path;
   char** argv;
   char** envp;
 };
 struct XPipe_Function {
   int (*f)(void *, FILE *in, FILE *out);
   void *arg;
+  const char *name;
 };
 struct XPipe_Stage {
   enum { Prog, Fun } tag;
@@ -147,27 +153,27 @@ T XPipe_program(char* path, char** argv, char** envp) {
   NEW(new_stage);
   NEW(new_pipeline);
   new_stage->tag = Prog;
-  new_stage->u.prog.path = path;
+  new_stage->u.prog.path = Atom_string(path);
   new_stage->u.prog.argv = argv;
   new_stage->u.prog.envp = envp;
   new_pipeline->stages = List_list(new_stage, NULL);
   return new_pipeline;
 }
 <<common functions>>=
-T XPipe_function(int (*f)(void *, FILE *in, FILE *out), void *arg) {
+T XPipe_function(int (*f)(void *, FILE *in, FILE *out), void *arg, char *name) {
   XPipe_Stage new_stage;
   T new_pipeline;
   assert(f);
   NEW(new_stage);
   NEW(new_pipeline);
   new_stage->tag = Fun;
-  new_stage->u.fun.f = f;
-  new_stage->u.fun.arg = arg;
+  new_stage->u.fun.f    = f;
+  new_stage->u.fun.arg  = arg;
+  new_stage->u.fun.name = Atom_string(name);
   new_pipeline->stages = List_list(new_stage, NULL);
   return new_pipeline;
 }
 @ 
-
 [[XPipe_connect]] uses the [[List_T]] data structure and its list
 manipulation mechanisms to connect two pipelines together.
 [[List_copy]] is used because [[List_append]] is destructive--it
@@ -181,7 +187,6 @@ connected pipeline is later freed from memory, the original left
 pipeline still exists--but it contains NULL stages in its list.  An
 attempt to call [[XPipe_free]] on this list will then result in an
 error.
-
 <<common functions>>=
 T XPipe_connect(T left, T right) {
   T new_pipeline;
@@ -192,14 +197,12 @@ T XPipe_connect(T left, T right) {
   return new_pipeline;
 }
 @ 
-
 [[PrintQuotedString]] is used to convert any string containing a
 single quotation mark, double quotation mark, space, or backslash into
 a ``quoted'' string.  This new string is enclosed in single quotes,
 and every other single quote that was part of the original string is
 enclosed in its own set of double quotes.  This function is used by
 [[XPipe_print]].
-
 <<common functions>>=
 char* PrintQuotedString(char* string) {
   int i = 1;
@@ -221,28 +224,24 @@ char* PrintQuotedString(char* string) {
   else return string;
 }
 @ 
-
-[[XPipe_print]] prints a graphical representation of the pipeline
+[[XPipe_print]] prints an ASCII representation of the pipeline
 structure to the file pointed to by [[fp]].
-
 <<common functions>>=
 void XPipe_print(FILE* fp, T pipeline) {
-  XPipe_Stage stage;
-  List_T list_ptr = pipeline->stages;
-  while (list_ptr) {
-    stage = list_ptr->first;
+  List_T l = pipeline->stages;
+  while (l) {
+    XPipe_Stage stage = l->first;
     switch (stage->tag) {
       case Prog:
-	fprintf(fp, "%s ", stage->u.prog.path);
+	fprintf(fp, "%s", stage->u.prog.path);
 	<<print out the elements of [[stage->u.prog.argv]], separated by spaces>>
 	break;
       case Fun:
-	fprintf(fp, "<function>");    
+	fprintf(fp, stage->u.fun.name);    
 	break;
     }
-    list_ptr = list_ptr->rest;
-    if (list_ptr) fprintf(fp, "|\n");
-    else fprintf(fp, "\n");
+    l = l->rest;
+    if (l) fprintf(fp, "\n| ");
   }
 }
 @  
@@ -252,7 +251,7 @@ the above description of [[PrintQuotedString]] for an explanation.
 {
   int i;
   for(i = 0; stage->u.prog.argv[i] != NULL; i++)
-    fprintf(fp, "%s ", PrintQuotedString(stage->u.prog.argv[i]));
+    fprintf(fp, " %s", PrintQuotedString(stage->u.prog.argv[i]));
 }
 @ 
 [[XPipe_free]] frees all memory allocated to the pipeline stages.
@@ -372,6 +371,9 @@ because we want the first stage of the pipeline to read from
 descriptors to close at the time of the first call to [[forkPipelineFrom]].
 <<Unix functions>>=
 int XPipe_run(XPipe_T pipeline, FILE *infp, FILE *outfp) {
+#if 0
+  fprintf(stderr, "unix running "); XPipe_print(stderr, pipeline); fflush(stderr);
+#endif
   return waitfor(
     forkPipelineFrom(pipeline->stages, fileno(infp), fileno(outfp), NULL));
 }
@@ -383,6 +385,11 @@ set to 1 ([[stdout]]) so that the last program may pass its results to
 [[stdout]].
 <<Unix functions>>=
 static int forkPipelineFrom(List_T l, int infd, int outfd, int *surplus) {
+  struct XPipe_T pl;
+  pl.stages = l;
+#if 0
+  fprintf(stderr, "forking pipeline from "); XPipe_print(stderr, &pl); fflush(stderr);
+#endif
   assert(l);
   if (l->rest) {
     int pid;
@@ -451,7 +458,7 @@ the program by either successful execution or a Noweb fatal error.
   int i, n;
   for (n = 0; prog->argv[n] != NULL; n++);  /* set n to length of argv */
   new_argv = ALLOC((n + 2) * sizeof(char*));
-  new_argv[0] = prog->path;
+  new_argv[0] = (char *)prog->path;
   for (i = 1; i <= n; i++) {
     new_argv[i] = prog->argv[i - 1];
   }
@@ -460,7 +467,12 @@ the program by either successful execution or a Noweb fatal error.
 @ 
 The program is looked up from each directory in the PATH, in order.
 <<lookup [[prog->path]] on PATH and execute>>=
-{ List_T path = pathsplit(getenv("PATH"));
+{ char *pathstring = getenv("PATH");
+  List_T path;
+  if (!pathstring)
+    errormsg(Fatal, "%s: cannot run external pipeline "
+             "with no PATH environment variable", progname);
+  path = pathsplit(pathstring);
   for ( ; path; path = path->rest) {
     char* pathname = Fmt_string("%s%s%s", path->first, Sys_dirsep, prog->path);
     execve(pathname, new_argv, prog->envp);
@@ -538,6 +550,7 @@ static int do_stage (XPipe_Stage stage, FILE *in, FILE *out);
 static int do_stages(List_T stages, FILE *in, FILE *out);
 <<temporary-file functions>>=
 int XPipe_run(XPipe_T pipeline, FILE *in, FILE *out) {
+  fprintf(stderr, "tmp running "); XPipe_print(stderr, pipeline); putc('\n', stderr); fflush(stderr);
   return do_stages(pipeline->stages, in, out);
 }
 @
@@ -568,8 +581,10 @@ static int do_stage(struct XPipe_Stage *stage, FILE *in, FILE *out) {
   switch (stage->tag) {
     case Fun:
       assert(stage->u.fun.f);
+fprintf(stderr, "running function %s in xpipe\n", stage->u.fun.name);
       return stage->u.fun.f(stage->u.fun.arg, in, out);
     case Prog:
+fprintf(stderr, "running program %s in xpipe\n", stage->u.prog.path);
       return run_program(&stage->u.prog, in, out);
     default:
       assert(0); return -1;
@@ -597,16 +612,17 @@ static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
       <<lookup [[prog->path]] on PATH and execute>>
     }
     errormsg(Fatal, "Could not execute %s", prog->path);
-    exit(-1);
+    exit(EXIT_FAILURE);
     return -1; /* prevents warning */
   } else {
     return waitfor(pid);
   }
 }
 @ 
-Temporary files are POSIX.
+Temporary files are supported using [[tmpfile]], which is ISO~C.
+N.B.~The file is automatically deleted on closure.
 <<set [[tmp]] to a suitable temporary file>>=
-tmp = fopen(tmpnam(NULL), "w+");
+tmp = tmpfile();
 assert(tmp);
 <<recover resources associated with [[tmp]]>>=
 (void) fclose(tmp);
