@@ -280,7 +280,7 @@ definitions for the UNIX versions of the functions that will execute
 the pipeline.  The [[#include]]s are for Linux, and they may have to
 be different for different kinds of Unix.
 
-<<* ((pipe))>>=
+<<* ((fork))>>=
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -507,9 +507,6 @@ static int waitfor2(int pid1, int pid2) {
              "then exec'ed no without waiting?\n", pid1, pid2, pid);
   return WEXITSTATUS(status) | waitfor(pid == pid1 ? pid2 : pid1);
 }
-<<private Unix functions>>=
-static void unexpected_pid(int pid) {
-  fprintf(stderr, "Surprised by pid %d when waiting for child
 @
 [[makeInput]] and [[makeOutput]] return immediately if the parameters passed
 to them already equal [[stdin]] and [[stdout]], respectively.  Otherwise,
