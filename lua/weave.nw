@@ -18,7 +18,7 @@ I'm assuming we defined a [[concat]] fallback that works on lists.
 <<utilities>>
 <<initialization>>
 <<scan options and arguments>>
-if verbose then
+if nil and verbose then -- no longer interesting
   local oldoutput = writetox(stderr)
   write("backopts = "); show(backopts); write("\n")
   write("noindex = ") show(noindex) write("\n")
