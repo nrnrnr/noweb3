@@ -23,12 +23,12 @@ Argument may be a pattern or a list of patterns.
 <<*>>=
 -- remove texts containing the evil string
 function Stages.droptext(inbuf, outbuf, evil)
-  if type(evil) == "string" then evil = List.new({evil}) end
+  if type(evil) == "string" then evil = List.fromstring(evil) end
   local n = List.length(evil)
   local r = NWB.reader(inbuf)
   local key, arg = NWB.read(r)
   while key do
-    if key == NW_TEXT and Lines.strfind(arg, evil, n) then
+    if key == NW_TEXT and Lines.strfindlist(arg, evil, n) then
       -- do nothing; drop this text
     else
       NWB.put(outbuf, key, arg)
@@ -36,6 +36,17 @@ function Stages.droptext(inbuf, outbuf, evil)
     key, arg = NWB.read(r)
   end
   return 0
+end
+
+Lines = Lines or { }
+function Lines.strfindlist(haystack, needles, n)
+  local i = 1
+  while i <= n do
+    local v, w = strfind(haystack, needles[n])
+    if v then return v, w end
+    i = i + 1
+  end
+  return nil
 end
 @ 
 [[Stages.eattext]] replaces matching texts with a literal [[\eatline]].
