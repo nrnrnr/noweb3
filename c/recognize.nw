@@ -58,17 +58,17 @@ A copy is made of the string pointed to by [[id]].
 It won't hurt to add the same identifier multiple times to a given
 recognizer.
 <<Exported prototypes>>=
-void add_ident(Recognizer r, char *id);
+void add_ident(Recognizer r, const char *id);
 void stop_adding(Recognizer r);
 @ %def add_ident stop_adding
 <<Exported prototypes>>=
-void search_for_ident(Recognizer r, char *input, Callback f, void *closure);
+void search_for_ident(Recognizer r, const char *input, Callback f, void *closure);
 @ %def search_for_ident
 
 [[instance]] is a pointer to the place within [[input]] that we
 saw the identifier.
 <<Exported type definitions>>=
-typedef void (*Callback) (void *closure, char *id, char *instance);
+typedef void (*Callback) (void *closure, const char *id, const char *instance);
 @ %def Callback
 @
 
@@ -119,7 +119,7 @@ We need a function that, given the current state and a character, will
 return the next state as directed by the ``goto table.'' If there is
 no defined entry in the table, the function returns [[NULL]].
 <<Function definitions>>=
-static Goto_Node *goto_lookup(char c, Goto_Node *g)
+static Goto_Node *goto_lookup(unsigned char c, Goto_Node *g)
 {
   Move_Node *m = g->moves;
   while (m && m->c != c)
@@ -149,10 +149,10 @@ Recognizer new_recognizer(char *alphanum, char *symbols)
 
 We assume [[id]] is at least 1 character long.
 <<Function definitions>>=
-void add_ident(Recognizer r, char *id)
+void add_ident(Recognizer r, const char *id)
 {
   int depth = 2;
-  char *p = id;
+  const unsigned char *p = (const unsigned char *)id;
   unsigned char c = *p++;
   Goto_Node *q = r->root[c];
   if (!q) 
@@ -256,10 +256,10 @@ void stop_adding(Recognizer r)
 \subsubsection{Using the Automata}
 
 <<Function definitions>>=
-void search_for_ident(Recognizer r, char *input, Callback f, void *closure)
+void search_for_ident(Recognizer r, const char *input, Callback f, void *closure)
 {
   Goto_Node *state = NULL;
-  char *current = input;
+  const char *current = input;
   unsigned char c = (unsigned char) *current++;
   while (c) {
     <<Goto the next state>>
@@ -307,7 +307,7 @@ language-dependent, so we may be occasionally mistaken.
 For the present, we'll consider the mechanism an experiment.
 
 <<Function definitions>>=
-int reject_match(Recognizer r, char *id, char *input, char *current)
+int reject_match(Recognizer r, const char *id, const char *input, const char *current)
 {
   int len = strlen(id);
   char first = id[0];
@@ -317,15 +317,19 @@ int reject_match(Recognizer r, char *id, char *input, char *current)
   current = current - len - 1;
   if (input <= current)
     prev = *current;
-  if (strchr(r->alphas, first) && strchr(r->alphas, prev)) return 1;
-  if (strchr(r->alphas, last ) && strchr(r->alphas, next)) return 1;
-  if (strchr(r->syms,   first) && strchr(r->syms,   prev)) return 1;
-  if (strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
+  if (prev && strchr(r->alphas, first) && strchr(r->alphas, prev)) return 1;
+  if (next && strchr(r->alphas, last ) && strchr(r->alphas, next)) return 1;
+  if (prev && strchr(r->syms,   first) && strchr(r->syms,   prev)) return 1;
+  if (next && strchr(r->syms,   last ) && strchr(r->syms,   next)) return 1;
   return 0;
 }
 @ %def reject_match
+Note we never reject a zero [[prev]] or [[next]], since some
+implementations of [[strchr]] always return true when searching for a
+zero character. 
+@
 We need a prototype for [[reject_match]], since it's referenced
 before its definition.
 
 <<Prototypes>>=
-int reject_match(Recognizer r, char *id, char *input, char *current);
+int reject_match(Recognizer r, const char *id, const char *input, const char *current);
