@@ -1,0 +1,56 @@
+<<copyright notice>>=
+# Copyright 1991 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+@
+<<notangle.lua>>=
+markup = LIB .. "/markup"   -- not portable to dos
+  -- should be changed to internal markup
+opt = {}
+arg = {}
+markopt = {}
+filters = {}
+
+while length(argv) > 0 do
+  a = get(argv)
+  globmatch a of
+  | "-ml", "-m3", "-awk", "-icn", "-icon", "-pascal", 
+    "-c", "-c++", "-f77", "-f90", "-tex" => -- deliberately ignore nountangle args
+  | "-t" => -- this is the default
+  | "-t*" =>   -- copy tabs at markup, use width given in notangle
+	      put(markopt, "-t")
+      	      put(opt, a)
+  | "-filter" => put(filters, Filter_Createx(get(argv)))
+                    -- actually this arg probably has to be parsed?
+  | "-markup" => markup = get(argv)
+  | "-w[0-9]", "-w[0-9][0-9]*" =>  -- ignore arg meant for nountangle
+  | "-L*" => put(markopt, "-t"); put(opt, "-t"); put(opt, a)
+  | "-"   => put(arg, a)
+  | "-*"  => put(opt, a)
+  | "*"   => put(arg, a)
+  end
+end
+
+putenv("PATH=" .. getenv("PATH") .. ":" .. LIB)
+
+p = Source_create(markup, concat(markopt, arg))
+while length(filters) > 0 do 
+  p = Source_extend(p, get(filters))
+end
+nt = Sink_Create(LIB .. "/nt", -- not portable to DOS
+                       opt)
+  -- should be replaced with internal version at some point
+p = Pipeline_connect(p, nt)
+Pipeline_print(p)
+exit(Pipeline_execute(p))
+@ 
+This goo makes it a shell script
+<<notangle>>=
+#!/bin/sh
+<<copyright notice>>
+# $Id$
+# $Name$
+LIB=|LIBDIR|
+$LIB/nosh ${1+"$@"} << EOF
+<<notangle.lua>>
+EOF
+@ 
