@@ -1,7 +1,7 @@
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 <<header>>=
-char *strsave (char *s);        /* returns a pointer to a fresh copy of s */
+const char *strsave (const char *s);     /* returns a pointer to a fresh copy of s */
 <<*>>=
 static char rcsid[] = "$Id$";
 static char rcsname[] = "$Name$";
@@ -9,11 +9,10 @@ static char rcsname[] = "$Name$";
 #include <string.h>
 #include <stdlib.h>
 #include "strsave.h"
-#include "errors.h"
+#include "atom.h"
 
-char *strsave (char *s) {
-    char *t = malloc (strlen(s)+1);
-    checkptr(t);
-    strcpy(t,s);
-    return t;
+
+const char *strsave (const char *s) {
+    (void) rcsname; (void) rcsid;
+    return Atom_string(s);
 }
