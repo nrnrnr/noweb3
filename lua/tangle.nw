@@ -69,14 +69,3 @@ if verbose then
 end
 exit(P.run(p))
 @ 
-This goo makes it a shell script
-<<notangle>>=
-#!/bin/sh
-<<copyright notice>>
-# $Id$
-# $Name$
-LIB=|LIBDIR|
-$LIB/nosh ${1+"$@"} << EOF
-<<notangle.lua>>
-EOF
-@ 
