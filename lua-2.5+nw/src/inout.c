@@ -168,7 +168,7 @@ static char *tostring (lua_Object obj)
       sprintf(buff, "nil");
       break;
     default:
-      sprintf(buff, "userdata: %p", lua_getuserdata(obj));
+      sprintf(buff, "userdata: %p, tag = %d", lua_getuserdata(obj), lua_type(obj));
       break;
   }
   return buff;
