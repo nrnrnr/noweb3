@@ -42,7 +42,7 @@ Takes a set and an item, and adds the item to the set.\\
 Set.delete&
 Takes a set and an item, and removes the item from the set, if present.\\
 Set.member&
-Takes a set and an item, and returns non-null if an only if the item
+Takes a set and an item, and returns non-null if and only if the item
 is in the set.\\
 <<*>>=
 function Set.insert(set, item)

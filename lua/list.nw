@@ -33,7 +33,7 @@ end
 <<hackers: entries for list functions>>=
 List.get&
 Removes and returns the first element of a list.
-Side-effects the list.\\
+Side-effects (modifies) the list.\\
 <<*>>=
 function List.get(list)
   local x, n, i
@@ -70,8 +70,7 @@ end
 @ 
 <<hackers: entries for list functions>>=
 List.concat&
-Appends two lists.
-\texttt{tostring}, and concatenates them.\\
+Concatenates two lists, returning the new list as a result.\\
 <<*>>=
 function List.concat(l1, l2)
   local l, i, n, m
