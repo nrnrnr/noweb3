@@ -29,7 +29,6 @@ static char rcsname[] = "$Name$";
 #include <ctype.h>
 #include <assert.h>
 #include "markup.h"
-#include "strsave.h"
 #include "errors.h"
 
 <<data definitions>>
@@ -148,6 +147,13 @@ int starts_code (char *line, char *filename, int lineno) {
     if (*tail++ != '=') return 0;
     while (isspace(*tail)) tail++;
     return (*tail == '\0');
+}
+
+static char *strsave(char *p) {
+  char *s = malloc(strlen(p)+1);
+  assert(s);
+  strcpy(s, p);
+  return s;
 }
 
 void getmodname(char *dest, int size, char *source) {
