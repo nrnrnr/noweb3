@@ -10,6 +10,12 @@
 <<functions>>
 @ 
 <<functions>>=
+static void new_lua(void) {
+  lua_Object buf;
+  lua_get_args("NWB.new", 0);
+  lua_pushusertag(NowebBuffer_create(), NWBUFFER);
+}
+<<functions>>=
 static void reader_lua(void) {
   lua_Object buf;
   lua_get_args("NWB.reader", 1, NWBUFFER, &buf);
@@ -68,6 +74,7 @@ static void pull_lua(void) {
 }
 <<functions>>=
 void nwbuffer_open(void) {
+  lua_module_register("NWB", "new",    new_lua);
   lua_module_register("NWB", "reader", reader_lua);
   lua_module_register("NWB", "read",   read_lua);
   lua_module_register("NWB", "put", put_lua);
