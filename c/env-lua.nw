@@ -68,8 +68,24 @@ static void fflush_lua(void) {
   else assert(0);
   lua_pushnumber((double)rc);
 }
-
-
+@ 
+<<hackers: entries for miscellaneous functions>>=
+System.abort&
+Abort the current process with a core dump.\\
+System.getenv&
+The C~\texttt{getenv} call---returns the value of an environment
+variable.\\ 
+System.putenv&
+Adds a binding to the environment.
+Takes one argument, a string of the form
+\textit{name}\texttt{=}\textit{value}.\\
+System.abort&
+Calls  \texttt{abort()}, causing a core dump.\\
+System.fflush&
+Takes one argument, the file to be flushed---or with no argument,
+flushes the current Lua output file.
+Returns the return code from the C~\texttt{fflush} call.\\
+@
 <<Lua registration of functions>>=
 int posix_open(void) {
   lua_module_register("System", "getenv", getenv_lua);
