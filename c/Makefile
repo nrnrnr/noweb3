@@ -38,7 +38,9 @@ FILES=markparse.nw markup.nw \
       main.nw notangle.nw match.nw mnt.nw modules.nw modtrees.nw \
       finduses.nw recognize.nw cpif.nw \
       getline.nw columns.nw errors.nw strsave.nw \
-      xpipe.nw xpipe-lua.nw nwprocess.nw lua-main.nw
+      nwbuffer.nw nwbuffer-lua.nw \
+      ipipe.nw ipipe-lua.nw xpipe.nw xpipe-lua.nw mpipe.nw mpipe-lua.nw \
+      nwprocess.nw lua-main.nw
 
 # sources to build when distributing C code
 #   (add all generated .c and .h files to this list)
@@ -121,7 +123,7 @@ checkin:	$(FILES) doc.nw
 doc.tex:	doc.nw
 	cp doc.nw doc.tex
 
-allcode.tex: $(FILES)
+allcode.tex: $(FILES) Makefile
 	no weave -ifilter "Stages.elide, 'hackers:*'" -n -index $(FILES) > allcode.tex
 
 doc.dvi:	doc.tex allcode.tex
