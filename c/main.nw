@@ -215,7 +215,7 @@ All options except \texttt{-t} are handled on the second pass.
         case 'L': /* have a #line number format  */
             break;
         default:
-            errormsg(Warning, "Ignoring unknown option %s", argv[i]);
+            errormsg(Error, "Unknown option %s", argv[i]);
      }
 @
 <<handle argument in argument [[i]]>>=
