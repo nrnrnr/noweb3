@@ -19,10 +19,12 @@ I'm assuming we defined a [[concat]] fallback that works on lists.
 <<initialization>>
 <<scan options and arguments>>
 if verbose then
+  local oldoutput = writetox(stderr)
   write("backopts = "); show(backopts); write("\n")
   write("noindex = ") show(noindex) write("\n")
   write("delay = ") show(delay) write("\n")
   write("shortxref = ") show(shortxref) write("\n")
+  writetox(oldoutput)
 end
 ---- function foo (a, b)
 ----   if type(b) == "table" then b = nil end
@@ -33,20 +35,29 @@ backend  = P.sink(backend, backopts .. noindex .. delay .. shortxref)
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>
 pipeline = P.connect(P.connect(src, filters), backend)
 if verbose then
+  oldoutput=writetox(stderr)
   P.print(pipeline)
+  write("\n")
+  writetox(oldoutput)
 end
-System.putenv("PATH="..LIB..":"..System.getenv("PATH"))
+if System.getenv("PATH") then
+  System.putenv("PATH="..LIB..":"..System.getenv("PATH"))
+end
 exit(P.run(pipeline))
 @ 
 <<utilities>>=
 <<initialization>>=
 markup = libFile("markup")  -- could be internal
 backend = libFile("totex")  -- could be internal
-Defaults = { tohtml = libFile("tohtml") }
+Defaults = { tohtml = libFile("tohtml"), noidx = libFile("noidx"),
+             finduses = libFile("finduses")
+           }
 function internalDefaults ()
   backend = Stages.totex
   markup = Stages.markup
---  Defaults.tohtml = Stages.tohtml
+  Defaults.noidx = Stages.noidx
+  Defaults.tohtml = Stages.tohtml
+  Defaults.finduses = Stages.finduses
 end
 backopts = List.new {}
 wrapper = nil
@@ -58,6 +69,7 @@ autodefs = nil
 verbose = false
 shortxref = false
 noquote= List.new {"-noquote"}
+noquote = List.new { }  -- with hyperref, uses in quoted code are helpful
 docanchor= List.new {}
 noindex="-noindex"
 filters = P.identityFilter
@@ -69,6 +81,7 @@ i = 1
 while i <= List.length(argv) do
   globmatch argv[i] of
   | "-internaldefaults" => internalDefaults()
+  | "-e" => i = i + 1; dostring(argv[i])
   <<first pass {\tt noweave} options>>
   | "-"  => List.put(args, "-")
   | "-*" => errormsg {"Unrecognized option ", argv[i]}
@@ -198,7 +211,7 @@ end
 using_index=nil; using_xref=nil
 @ 
 <<first pass {\tt noweave} options>>=
-| "-filter" => i = i+1
+| "-filter", "-ifilter"  => i = i+1
 | "-x" =>                           using_xref=1 
 | "-index" =>            noindex=nil ; using_index=1
 | "-indexfrom" => i=i+1; noindex=nil ; using_index=1
@@ -206,14 +219,18 @@ using_index=nil; using_xref=nil
 | "-filter" => 
     filters = P.connect(filters, MD.stringFilter(argv[i+1]))
     i = i + 1
+| "-ifilter" =>
+    dostring("if 1 then local f, arg = " .. argv[i+1] .. 
+             "; filters = P.connect(filters, MPipe.filter(f, arg)) end")
+    i = i + 1
 | "-x" => 
-    filters = P.connect(filters, P.filter(libFile("noidx"), docanchor .. delay))
+    filters = P.connect(filters, P.filter(Defaults.noidx, docanchor .. delay))
 | "-index" =>  
-  filters = P.connect(filters, P.filter(libFile("finduses"), noquote))
-  filters = P.connect(filters, P.filter(libFile("noidx"), docanchor .. delay))
+  filters = P.connect(filters, P.filter(Defaults.finduses, noquote))
+  filters = P.connect(filters, P.filter(Defaults.noidx, docanchor .. delay))
 | "-indexfrom" =>
-  filters = P.connect(filters, P.filter(libFile("finduses"), noquote .. {argv[i+1]}))
-  filters = P.connect(filters, P.filter(libFile("noidx"), docanchor .. delay))
+  filters = P.connect(filters, P.filter(Defaults.finduses, noquote .. {argv[i+1]}))
+  filters = P.connect(filters, P.filter(Defaults.noidx, docanchor .. delay))
   i = i + 1
 <<option printout for usage>>=
 errormsg("-x		Use the default cross-referencer (needs LaTeX or HTML).")
@@ -518,7 +535,6 @@ function internal_src (buf, t)
 end
 @
 With an external source, much harder --- I need an explicit [[fromascii]].
-
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>=
 function external_src(t)
   case t.wrapper of
@@ -528,6 +544,7 @@ function external_src(t)
   end
   System.fflush()
   rc = XPipe.run(XPipe.stage(t.fun, t.arg))  -- probably wrong
+  System.fflush()
   case t.wrapper of 
   | "none"  => 
   else => write("@trailer ", wrapper, '\n')
@@ -552,7 +569,8 @@ end
 
 -- this looks wrong
 if type(markup) == "string" then
-  s = P.xsource(external_src, {wrapper=wrapper, fun=markup, arg=markopts .. args})
+  s = P.xsource(external_src, {wrapper=wrapper, fun=markup, arg=markopts .. args},
+                "<external " .. markup .. ' ' .. List.tostring(markopts..args) .. ">")
 else 
   s = P.source(internal_src, {wrapper=wrapper, fun=markup, arg=markopts .. args})
 end
