@@ -311,9 +311,19 @@ static int do_exec_start(MSource left, MSink right) {
       return -1; /* should not happen */
   }
 }
-static int ipipe_exec_and_free(IPipe p) {
+static int ipipe_exec_and_free(IPipe p, FILE *in, FILE *out) {
   int rc = IPipe_execute(p);
+  FILE *oldin = stdin;
+  FILE *oldout = stdout;
+/*
+  stdin = in;
+  stdout = out;
+*/
   IPipe_free(&p);
+/*
+  stdin = oldin;
+  stdout = oldout;
+*/
   return rc;
 }
 
@@ -329,7 +339,7 @@ static int do_exec(XPipe ext, Source ints, MSink rest) {
       { IPipe intp = IPipe_create(ints ? ints : fromascii, rest->u.internal);
         if (ext)
 	  return XPipe_execute(XPipe_connect(ext,
-			         XPipe_function((int (*)(void*))ipipe_exec_and_free, intp)));
+			         XPipe_function((int (*)(void*, FILE*, FILE*))ipipe_exec_and_free, intp)));
 	else
 	  return ipipe_exec_and_free(intp);
       }
@@ -363,7 +373,8 @@ static int do_exec(XPipe ext, Source ints, MSink rest) {
 if (!ints) {
   start = ext;
 } else {
-  start = XPipe_function((int (*)(void *))ipipe_exec_and_free, IPipe_create(ints, toascii));
+  start = XPipe_function((int (*)(void *, FILE *, FILE *))ipipe_exec_and_free, 
+			 IPipe_create(ints, toascii));
   if (ext) start = XPipe_connect(ext, start);
 }
 
