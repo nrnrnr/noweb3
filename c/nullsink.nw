@@ -1,0 +1,37 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{nullsink}
+
+[[nullsink]] is a [[Sink]] for an internal pipe that does nothing.  It is used
+for testing purposes only.  For example, in the internal pipe containing
+[[markup]] as a [[Source]], all output in the new version of Noweb should be
+sent to a [[NowebBuffer]]; however, in the previous version it was all sent to
+[[stdout]].  So connecting that [[Source]] to a null [[Sink]] would allow
+checking for remaining output to [[stdout]].
+
+\section{Implementation}
+<<nullsink.h>>=
+#ifndef NULLSINK_H
+#define NULLSINK_H
+
+extern int null_sink(void*, NowebBuffer);
+
+#endif
+
+<<nullsink.c>>=
+#include <stdio.h>
+#include "nwbuffer.h"
+
+int null_sink(void* out, NowebBuffer in) {
+	FILE* fp = out;
+	fprintf(fp, "Executing nullsink...\n");
+	return 0;
+}
+
+<<*>>=
+<<nullsink.c>>
+<<header>>=
+<<nullsink.h>>
+@ 

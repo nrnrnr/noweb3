@@ -1,0 +1,299 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{An internal buffer for noweb files}
+
+Noweb depends on an internal pipeline structure to pass information
+from one stage to the next.  This information passing occurs in a
+[[NowebBuffer]], which is essentially a sequence of pairs as described
+below.
+
+\section{Interface}
+
+The abstract data type [[NowebBuffer]] is used to represent the
+unbounded buffer shared between stages of the internal Noweb
+pipeline.  [[NowebPair]]s, which contain a special [[NowebKey]] and a
+value, are stored in and read from this buffer.  Operations that read
+from this buffer do not alter the contents of the buffer.
+
+[[NowebBuffer_create]] takes no parameters.  It creates a new, empty
+[[NowebBuffer]].
+
+[[NowebBuffer_append]] adds the pair [[(predefined, value)]] to the end
+of [[nwbuffer]].
+
+[[NowebBuffer_append_str]] also adds a pair to the end of
+[[nwbuffer]].  In the case that the pair needed does not have a
+corresponding predefined key, this function may be used to add a
+string key to the buffer.  It first makes a call to
+[[NowebBuffer_append]] with [[NW_XXX_STRINGKEY]] as the predefined key
+(see description of {data-stuffing} below).
+
+[[NowebBuffer_read]] returns the pair at [[loc]] in [[nwbuffer]] and
+moves [[loc]] to point to the next pair in [[nwbuffer]].
+
+[[NowebBuffer_free]] deallocates all memory assigned to [[nwbuffer]].
+It is a checked runtime error to pass a NULL value to this function.
+
+[[NowebBuffer_reader]] takes a [[NowebBuffer]] as a parameter and
+returns an abstraction that enables sequential reading of the pairs in
+the buffer.  [[NowebBuffer_read]] returns the elements one by one,
+returning [[NULL]] when the buffer is empty.
+<<nwbuffer.h>>=
+#ifndef NWBUFFER_H
+#define NWBUFFER_H
+
+#define T NowebBuffer
+typedef struct T* T;
+typedef struct NowebPair* NowebPair;
+typedef struct NowebReader* NowebReader;
+
+<<definition of [[NowebKey]]>>
+<<definition of [[struct NowebPair]]>>
+
+extern T    NowebBuffer_create        (void);
+extern T    NowebBuffer_append        (T nwbuffer, NowebKey predefined, const char* value);
+extern T    NowebBuffer_append_str    (T nwbuffer, const char* new_key, const char* value);
+extern NowebReader NowebBuffer_reader (T);
+extern NowebPair  NowebBuffer_read    (NowebReader);
+extern void NowebBuffer_free          (T* nwbuffer);
+
+extern int  NowebBuffer_is_index(NowebKey key);
+#undef T
+#endif
+@ 
+
+The buffer is stored with objects of type [[NowebPair]], which contain
+a [[key]] and a [[value]].  In most cases the [[key]] will be one of a
+predefined set (a [[NowebKey]]), but the interface allows for
+extensibility through [[u.alternate]].
+If [[p.key]] is [[NW_XXX_STRINGKEY]], then [[p.u.alternate]] holds a
+pointer to a key and a value.
+Otherwise, [[p.u.value]] is the value.
+Values may be omitted, in which case the corresponding pointers are
+[[NULL]].
+All [[value]] fields are immutable and must be atoms in the sense of
+the [[Atom]] interface.
+<<definition of [[struct NowebPair]]>>=
+struct NowebPair {
+  NowebKey key;			/* predefined keys */
+  union {
+    const char *value;		/* NULL means value is omitted */
+    struct NowebExtension {
+      const char *key;		/* new keys; must be atom */
+      const char *value;
+    } *alternate;		/* pointer to key and value */
+  } u;
+};
+@ 
+
+Each [[NowebKey]] has a string equivalent, which is to be used in the
+external pipeline representation as specified in the Hackers' Guide.
+The idea of the [[NowebKey]]s is that they are compile-time constants
+and therefore can be checked much more efficiently than strings--even
+strings that are atoms.  It is therefore an unchecked runtime error to
+use the string equivalent of any [[NowebKey]] in the representation.
+
+For values, clients may use ordinary strings or atoms at their
+discretion.  Keys, if string-like, must be atoms.
+<<definition of [[NowebKey]]>>=
+typedef enum keys { NW_XXX_STRINGKEY, <<list of predefined keys>> } NowebKey;
+@ 
+Most structural keys take arguments; the exceptions are [[NL]],
+[[QUOTE]], and [[ENDQUOTE]].
+<<list of predefined keys>>=
+NW_BEGIN_CODE,       NW_BEGIN_DOCS,
+NW_END_CODE,         NW_END_DOCS,
+NW_TEXT,             NW_NL,
+NW_DEFN,             NW_USE,
+NW_QUOTE,            NW_ENDQUOTE,
+@ 
+All tagging keywords take arguments.
+<<list of predefined keys>>=
+NW_FILE,             NW_LINE,
+NW_LANGUAGE,
+@
+The wrapper keywords take arguments.
+<<list of predefined keys>>=
+NW_HEADER,           NW_TRAILER,
+@
+The error keyword requires an argument.
+<<list of predefined keys>>=
+NW_FATAL,
+@
+Except for the three flavors of [[BEGIN*]]/[[END*]] brackets, the
+indexing keys take arguments.
+<<list of predefined keys>>=
+NW_INDEX_DEFN,       NW_INDEX_LOCALDEFN,
+NW_INDEX_USE,        NW_INDEX_NL,
+
+NW_INDEX_BEGINDEFS,  NW_INDEX_ISUSED,
+NW_INDEX_DEFITEM,    NW_INDEX_ENDDEFS,
+
+NW_INDEX_BEGINUSES,  NW_INDEX_ISDEFINED,
+NW_INDEX_USEITEM,    NW_INDEX_ENDUSES,
+
+NW_INDEX_BEGININDEX, NW_INDEX_ENTRYBEGIN,
+NW_INDEX_ENTRYUSE,   NW_INDEX_ENTRYDEFN,
+NW_INDEX_ENTRYEND,   NW_INDEX_ENDINDEX,
+<<helper functions>>=
+int NowebBuffer_is_index(NowebKey key) {
+  return NW_INDEX_DEFN <= key && key <= NW_INDEX_ENDINDEX;
+} 
+@ 
+Except for [[XREF_CHUNKEND]] and for
+the three flavors of [[BEGIN*]]/[[END*]] brackets, the
+cross-reference keys take arguments.
+<<list of predefined keys>>=
+NW_XREF_LABEL,       NW_XREF_REF,
+
+NW_XREF_PREVDEF,     NW_XREF_NEXTDEF,
+
+NW_XREF_BEGINDEFS,   NW_XREF_DEFITEM,
+NW_XREF_ENDDEFS,
+
+NW_XREF_BEGINUSES,   NW_XREF_USEITEM,
+NW_XREF_ENDUSES,     NW_XREF_NOTUSED,
+
+NW_XREF_BEGINCHUNKS, NW_XREF_CHUNKBEGIN,
+NW_XREF_CHUNKUSE,    NW_XREF_CHUNKDEFN,
+NW_XREF_CHUNKEND,    NW_XREF_ENDCHUNKS,
+
+NW_XREF_TAG
+@
+\section{Implementation}
+
+The implementation would create an arena to use to allocate memory for
+pairs.  Beyond that, a simple implementation might use sequences from
+CII.  Later, we'll want a better-tailored implementation that avoids
+indirection and copying.
+
+This implementation creates and facilitates the use of the buffer type
+[[NowebBuffer]], which is defined here.  The [[NowebBuffer]] is simply
+a sequence of [[NowebPair]]s; the operations on the buffer are similar
+to operations on a sequence.
+If we improve the implementation one day, we will use
+a second sequence to store the alternate keys.
+<<definition of [[struct NowebBuffer]]>>=
+struct NowebBuffer {
+  Seq_T pairs;
+};
+@ 
+<<nwbuffer.c>>=
+#include "nwbuffer.h"
+#include <assert.h>
+#include <seq.h>
+#include <mem.h>
+
+#define T NowebBuffer
+
+<<definition of [[struct NowebBuffer]]>>
+<<definition of [[struct NowebReader]]>>
+
+<<helper functions>>
+<<buffer operations>>
+
+#undef T
+@ 
+[[NowebBuffer_create]] allocates and returns an empty buffer.  The
+initial size of the buffer is set at 500 as a result of several tests
+run on sample Noweb files.  Both the C source code for Noweb and the
+source code for Modula3, which each contain relatively small files,
+averaged 400 pair per file.  Larger programs such as the New Jersey
+Machine-Code Toolkit--both the Standard ML and Icon versions--averaged
+around 1100 pair per file.  Because of these test numbers, the
+initial size of 500 pair was chosen for the buffers.
+<<buffer operations>>=
+T NowebBuffer_create() {
+  T new_buffer = ALLOC(sizeof(struct T));
+  new_buffer->pairs = Seq_new(500);
+  return new_buffer;
+}
+@ 
+[[NowebBuffer_append]] appends a [[NowebPair]] to the end of
+[[nwbuffer]].  The pair that is added must be one containing a
+predefined key; the contents of this pair are passed as the second and
+third parameters.
+<<buffer operations>>=
+T NowebBuffer_append(T nwbuffer, NowebKey predefined, const char* value) {
+  NowebPair new_pair = ALLOC(sizeof(struct NowebPair));
+  new_pair->key = predefined;
+  new_pair->u.value = value;
+  Seq_addhi(nwbuffer->pairs, new_pair);
+  return nwbuffer;
+}
+@ 
+[[NowebBuffer_append_str]] allows a new pair to be added to the end of the
+buffer.  The key and value are stored in an alternate pair.
+<<buffer operations>>=
+T NowebBuffer_append_str(T nwbuffer, const char* new_key, const char* value) {
+  NowebPair new_pair = ALLOC(sizeof(struct NowebPair));
+  struct NowebExtension *true;
+  NEW(true);
+  true->key = new_key;
+  true->value = value;
+  new_pair->key = NW_XXX_STRINGKEY;
+  new_pair->u.alternate = true;
+  Seq_addhi(nwbuffer->pairs, new_pair);
+  return nwbuffer;
+}
+@ 
+The read function requires passing a pointer to the [[NowebReader]];
+the function uses this value to point to the current 
+sequence index to read, then increments it for the next call to read
+using that same parameter.  This prevents the read function from
+having side effects on the buffer while still allowing the calling
+procedure to know where to read next.
+
+The reader holds a pointer to the buffer, plus
+ an integer that represents an element
+in the sequence.
+<<definition of [[struct NowebReader]]>>=
+struct NowebReader {
+  NowebBuffer buf;
+  int index;
+};
+@ 
+[[NowebBuffer_reader]] points to the first element in the given buffer.  
+<<helper functions>>=
+NowebReader NowebBuffer_reader(T nwbuffer) {
+  struct NowebReader* rdr;
+  NEW(rdr);
+  rdr->buf = nwbuffer;
+  rdr->index = 0;
+  return rdr;
+}
+@
+[[NowebBuffer_read]] simply returns the pair in [[buf]] referred to
+by [[index]].  In the case that [[index]] is outside the bounds of
+[[nwbuffer]], the function returns NULL.
+<<buffer operations>>=
+NowebPair NowebBuffer_read (NowebReader rdr) {
+  Seq_T s = rdr->buf->pairs;
+  if (rdr->index < Seq_length(s))
+    return Seq_get(s, rdr->index++);
+  else return 0;
+}
+@ 
+[[NowebBuffer_free]] frees all the [[NowebPairs]] included in
+[[nwbuffer]], then makes the [[Seq_free]] call to free that buffer.
+<<buffer operations>>=
+void NowebBuffer_free(T* nwbuffer) {
+  int i;
+  NowebPair to_free;
+  assert(nwbuffer && *nwbuffer);
+  for (i = 0; i < Seq_length((*nwbuffer)->pairs); i++) {
+    to_free = Seq_get((*nwbuffer)->pairs, i);
+    if (to_free->key == NW_XXX_STRINGKEY)
+      Mem_free(to_free->u.alternate, __FILE__, __LINE__);
+    FREE(to_free);
+  }
+  Seq_free(&(*nwbuffer)->pairs);
+  FREE(*nwbuffer);
+}
+<<*>>=
+<<nwbuffer.c>>
+<<header>>=
+<<nwbuffer.h>>
+@

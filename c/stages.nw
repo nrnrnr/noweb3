@@ -1,0 +1,89 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{Internal pipeline stages for Lua}
+
+This is the Lua registration of the C internal pipeline stages.
+
+<<stages.c>>=
+#include "cargs.h"
+#include "toascii.h"
+#include "fromascii.h"
+#include "nullsink.h"
+#include "nwbuffer.h"
+#include "mem.h"
+#include "list.h"
+#include "atom.h"
+#include "lua.h"
+#include "lua-help.h"
+#include "lualib.h"
+#include <stdio.h>
+#include "markparse.h"
+#include "notangle.h"
+
+
+#ifndef NULL
+#define NULL 0
+#endif
+
+<<stages>>
+<<Lua registration of functions>>
+@ 
+
+\section{markup}
+<<stages>>=
+static void markup_lua(void) {
+  lua_Object table, buf;
+  int result;
+  lua_get_args("Stages.markup", 2, NWBUFFER, &buf, LUA_TABLE, &table);
+  result = markup_source(CArgs_fromtable("markup", table), lua_getuserdata(buf));
+  lua_pushnumber((double)result);
+}
+@ 
+<<stages>>=
+static void nt_lua(void) {
+  lua_Object table, buf;
+  int result;
+  lua_get_args("Stages.nt", 2, NWBUFFER, &buf, LUA_TABLE, &table);
+  result = notangle_sink(CArgs_fromtable("nt", table), lua_getuserdata(buf));
+  lua_pushnumber((double)result);
+}
+@ 
+<<stages>>=
+static void toascii_lua(void) {
+  lua_Object arg, buf;
+  lua_get_args("Stages.toascii", 2, NWBUFFER, &buf, LUA_USERDATA | LUA_NIL, &arg);
+  lua_pushnumber((double)toascii_sink(lua_isnil(arg) ? stdout :
+					lua_getuserdata(arg), lua_getuserdata(buf)));
+}
+
+static void fromascii_lua(void) {
+  lua_Object arg, buf;
+  lua_get_args("Stages.fromascii", 2, NWBUFFER, &buf, LUA_USERDATA | LUA_NIL, &arg);
+  lua_pushnumber((double)readascii(lua_isnil(arg) ? stdin : lua_getuserdata(arg),
+				   lua_getuserdata(buf)));
+}
+<<Lua registration of functions>>=
+int stages_open(void) {
+  lua_module_register("Stages", "markup", markup_lua);
+  lua_module_register("Stages", "nt", nt_lua);
+  lua_module_register("Stages", "toascii", toascii_lua);
+  lua_module_register("Stages", "fromascii", fromascii_lua);
+  return 1;
+}
+
+<<stages.h>>=
+#ifndef STAGES_H
+#define STAGES_H
+
+extern int stages_open(void);
+
+#endif
+
+<<*>>=
+<<stages.c>>
+<<header>>=
+<<stages.h>>
+@ 
+

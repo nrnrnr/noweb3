@@ -1,0 +1,202 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+
+\ifx\chapter\undefined\let\chapter=\section\fi
+
+\chapter{toascii}
+
+[[toascii]] is a [[Sink]] for an internal pipe that converts from the
+internal representation to the ascii representation as described in
+the Noweb Hacker's Guide.  This ascii representation may be passed
+along for further use by the external pipeline.
+
+\section{Implementation}
+<<toascii.h>>=
+#ifndef TOASCII_H
+#define TOASCII_H
+
+#include "nwbuffer.h"
+
+extern int toascii_sink(void*, NowebBuffer);
+
+#endif
+@ 
+
+<<toascii.c>>=
+#include <stdio.h>
+#include "nwbuffer.h"
+
+int toascii_sink(void* out, NowebBuffer in) {
+	FILE* fp = out;
+	NowebReader rdr = NowebBuffer_reader(in);
+	NowebPair pair;
+	for (pair = NowebBuffer_read(rdr); pair; pair = NowebBuffer_read(rdr)) {
+		switch(pair->key) {
+                        case NW_XXX_STRINGKEY:
+                                fprintf(fp, "%s %s\n", pair->u.alternate->key,
+					pair->u.alternate->value);
+                                break;
+			case NW_BEGIN_CODE:
+				fprintf(fp, "@begin code %s\n", pair->u.value);
+				break;
+			case NW_BEGIN_DOCS:
+				fprintf(fp, "@begin docs %s\n", pair->u.value);
+				break;
+			case NW_END_CODE:
+				fprintf(fp, "@end code %s\n", pair->u.value);
+				break;
+			case NW_END_DOCS:
+				fprintf(fp, "@end docs %s\n", pair->u.value);
+				break;
+			case NW_TEXT:
+				fprintf(fp, "@text %s\n", pair->u.value);
+				break;
+			case NW_NL:
+				fprintf(fp, "@nl\n");
+				break;
+			case NW_DEFN:
+				fprintf(fp, "@defn %s\n", pair->u.value);
+				break;
+                        case NW_USE:
+				fprintf(fp, "@use %s\n", pair->u.value);
+				break;
+			case NW_QUOTE:
+				fprintf(fp, "@quote\n");
+				break;
+			case NW_ENDQUOTE:
+				fprintf(fp, "@endquote\n");
+                                break;
+                        case NW_FILE:
+                                fprintf(fp, "@file %s\n", pair->u.value);
+                                break;
+                        case NW_LINE:
+                                fprintf(fp, "@line %s\n", pair->u.value);
+                                break;
+                        case NW_LANGUAGE:
+                                fprintf(fp, "@language %s\n", pair->u.value);
+                                break;
+                        case NW_HEADER:
+                                fprintf(fp, "@header %s\n", pair->u.value);
+                                break;
+                        case NW_TRAILER:
+                                fprintf(fp, "@fatal %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_DEFN:
+                                fprintf(fp, "@index defn %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_LOCALDEFN:
+                                fprintf(fp, "@index localdefn %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_USE:
+                                fprintf(fp, "@index use %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_NL:
+                                fprintf(fp, "@index nl\n");
+                                break;
+                        case NW_INDEX_BEGINDEFS:
+                                fprintf(fp, "@index begindefs\n");
+                                break;
+                        case NW_INDEX_ISUSED:
+                                fprintf(fp, "@index isused %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_DEFITEM:
+                                fprintf(fp, "@index defitem %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_ENDDEFS:
+                                fprintf(fp, "@index endefs\n");
+                                break;
+                        case NW_INDEX_BEGINUSES:
+                                fprintf(fp, "@index beginuses\n");
+                                break;
+                        case NW_INDEX_ISDEFINED:
+                                fprintf(fp, "@index isdefined %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_USEITEM:
+                                fprintf(fp, "@index useitem %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_ENDUSES:
+                                fprintf(fp, "@index enduses\n");
+                                break;
+                        case NW_INDEX_BEGININDEX:
+                                fprintf(fp, "@index beginindex\n");
+                                break;
+                        case NW_INDEX_ENTRYBEGIN:
+                                fprintf(fp, "@index entrybegin %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_ENTRYUSE:
+                                fprintf(fp, "@index entryuse %s\n", pair->u.value);
+                                break;
+                        case NW_INDEX_ENTRYDEFN:
+                                fprintf(fp, "@index entrydefn %s\n", pair->u.value); 
+                                break;
+                        case NW_INDEX_ENTRYEND:
+                                fprintf(fp, "@index entryend\n");
+                                break;
+                        case NW_INDEX_ENDINDEX:
+                                fprintf(fp, "@index endindex\n");
+                                break;
+                        case NW_XREF_LABEL:
+                                fprintf(fp, "@xref label %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_REF:
+                                fprintf(fp, "@xref ref %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_PREVDEF:
+                                fprintf(fp, "@xref prevdef %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_NEXTDEF:
+                                fprintf(fp, "@xref nextdef %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_BEGINDEFS:
+                                fprintf(fp, "@xref begindefs\n");
+                                break;
+                        case NW_XREF_DEFITEM:
+                                fprintf(fp, "@xref defitem %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_ENDDEFS:
+                                fprintf(fp, "@xref enddefs\n");
+                                break;
+                        case NW_XREF_BEGINUSES:
+                                fprintf(fp, "@xref beginuses\n");
+                                break;
+                        case NW_XREF_USEITEM:
+                                fprintf(fp, "@xref useitem %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_ENDUSES:
+                                fprintf(fp, "@xref enduses\n");
+                                break;
+                        case NW_XREF_NOTUSED:
+                                fprintf(fp, "@xref notused %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_BEGINCHUNKS:
+                                fprintf(fp, "@xref beginchunks\n");
+                                break;
+                        case NW_XREF_CHUNKBEGIN:
+                                fprintf(fp, "@xref chunkbegin %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_CHUNKUSE:
+                                fprintf(fp, "@xref chunkuse %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_CHUNKDEFN:
+                                fprintf(fp, "@xref chunkdefn %s\n", pair->u.value);
+                                break;
+                        case NW_XREF_CHUNKEND:
+                                fprintf(fp, "@xref chunkend\n");
+                                break;
+                        case NW_XREF_ENDCHUNKS:
+                                fprintf(fp, "@xref endchunks\n");
+                                break;
+                        case NW_XREF_TAG:
+                                fprintf(fp, "@xref tag %s\n", pair->u.value);
+                                break;
+                        case NW_FATAL:
+                                fprintf(fp, "@fatal %s\n", pair->u.value);
+                                break;
+		}
+	}
+        return 0;   /* success */
+}
+<<*>>=
+<<toascii.c>>
+<<header>>=
+<<toascii.h>>
+@
