@@ -1,4 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: lua-mode -*-
+% -*- mode: Noweb; noweb-code-mode: fundamental-mode -*-
 \section{Eliding unwanted code chunks}
 
 This filter removes from the pipline any code chunk
@@ -35,6 +35,7 @@ function Stages.elide(sourcebuf, sinkbuf, globs)
   local rcsinfo = "$Id$" ..
                   "$Name$"
   local r = NWB.reader(sourcebuf)
+  if type(globs) == "string" then globs = List.fromstring(globs) end
   local key, arg
   key, arg = NWB.read(r)
   while key do 
