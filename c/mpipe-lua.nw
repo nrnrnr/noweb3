@@ -53,7 +53,7 @@ of the first argument.
 <<functions>>=
 static void MSource_create_lua(void) {
   lua_Object src, arg;
-  lua_get_args("MPipe.source",  2, LUA_STRING | FUNCTION, &src, ANY, &arg);
+  lua_get_args("MPipe.source (not external)",  2, LUA_STRING | FUNCTION, &src, ANY, &arg);
   if (lua_isstring(src)) {
     lua_get_args("MPipe.source", 2, LUA_STRING, &src, LUA_TABLE, &arg);
     lua_pushusertag(
@@ -61,28 +61,29 @@ static void MSource_create_lua(void) {
          XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
       MSOURCE);
   } else {
-    lua_pushusertag(
-      MPipe_internal(IPipe_stage("(need name of lua function)",
-				 apply_msource,
-				 build_app_from_lua_args("MPipe.source"))),
-      MSOURCE);
+    struct Application *app = build_app_from_lua_args("MPipe.source");
+    lua_pushusertag(MPipe_internal(IPipe_stage(lua_funname(src), apply_msource, app)),
+                    MSOURCE);
   }
 }
 
 static void MSource_create_x_lua(void) {
-  lua_Object src, arg;
-  lua_get_args("MPipe.xsource",  2, LUA_STRING | FUNCTION, &src, ANY, &arg);
+  lua_Object src, arg, name;
+  lua_get_args("MPipe.xsource", 3,
+	       LUA_STRING | FUNCTION, &src, ANY, &arg, LUA_STRING | OPTIONAL, &name);
   if (lua_isstring(src)) {
-    lua_get_args("MPipe.source", 2, LUA_STRING, &src, LUA_TABLE, &arg);
+    lua_get_args("MPipe.xsource (string)", 2, LUA_STRING, &src, LUA_TABLE, &arg);
     lua_pushusertag(
       MPipe_external(
          XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
       MSOURCE);
   } else {
+    lua_get_args("MPipe.xsource", 3, FUNCTION, &src, ANY, &arg, LUA_STRING, &name);
     lua_pushusertag(
       MPipe_external(
         XPipe_function(apply_application,
-		       build_app_from_lua_args("MPipe.source"))), MSOURCE);
+		       build_app_from_lua_args("MPipe.xsource"),
+		       lua_getstring(name))), MSOURCE);
   }
 }
 @ 
@@ -91,7 +92,7 @@ char** array;
 char* progname;
 lua_Object progname_o, arglist_o;
 lua_get_args(2, STRING, &progname_o, TABLE, &arglist_o);
-progname = lua_getstring(progname_o);
+progname = Atom_string(lua_getstring(progname_o));
 array = (char**)List_toArray(lua_makestringlist(arglist_o), NULL);
 @ 
 <<functions>>=
@@ -117,9 +118,9 @@ static void MFilter_create_lua(void) {
 	       XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
       MFILTER);
   } else {
-     lua_pushusertag(MPipe_internal(
-	      IPipe_stage("(need-lua-name of function)", apply_mfilter,
-			  build_app_from_lua_args("MPipe.filter"))), MFILTER);
+    struct Application *app = build_app_from_lua_args("MPipe.filter");
+    lua_pushusertag(MPipe_internal(IPipe_stage(lua_funname(src), apply_mfilter, app)),
+                    MFILTER);
   }
 }
 @ 
@@ -145,17 +146,16 @@ static void MSink_create_lua(void) {
 	 XPipe_program(lua_getstring(src), lua_makestringarray(arg), environ)),
       MSINK);
   } else {
-     lua_pushusertag(MPipe_internal(IPipe_stage("(need name of lua function)", 
-						apply_msink,
-						build_app_from_lua_args("MPipe.sink"))),
-		     MSINK);
+    struct Application *app = build_app_from_lua_args("MPipe.sink");
+    lua_pushusertag(MPipe_internal(IPipe_stage(lua_funname(src), apply_msink, app)),
+                    MSINK);
   }
 }
 @ 
 <<functions>>=
 static void MPipe_execute_lua(void) {
   lua_Object pipe;
-  lua_get_args("MPipe.execute", 1, MPIPE, &pipe);
+  lua_get_args("MPipe.run", 1, MPIPE, &pipe);
   lua_pushnumber((double)MPipe_run(lua_getuserdata(pipe)));
 }
 @ 
@@ -179,6 +179,13 @@ static void MPipe_connect_lua(void) {
 }
 @ 
 <<functions>>=
+static void MPipe_print_lua(void) {
+  lua_Object p;
+  lua_get_args("MPipe.print", 1, MSOURCE | MFILTER | MSINK | MPIPE, &p);
+  MPipe_print(stderr, lua_getuserdata(p));
+}
+@ 
+<<functions>>=
 void MPipe_open(void) {
   lua_module_register("MPipe", "source",  MSource_create_lua);
   lua_module_register("MPipe", "xsource", MSource_create_x_lua);
@@ -186,5 +193,13 @@ void MPipe_open(void) {
   lua_module_register("MPipe", "filter",  MFilter_create_lua);
   lua_module_register("MPipe", "connect", MPipe_connect_lua);
   lua_module_register("MPipe", "run",     MPipe_execute_lua);
+  lua_module_register("MPipe", "print",   MPipe_print_lua);
+  lua_pushnumber(MPIPE);    lua_storeglobal("MPIPE");
+  lua_pushnumber(MSOURCE);  lua_storeglobal("MSOURCE");
+  lua_pushnumber(MFILTER);  lua_storeglobal("MFILTER");
+  lua_pushnumber(MSINK);    lua_storeglobal("MSINK");
+  IPipe_printer(apply_msource, print_application, NULL);
+  IPipe_printer(apply_mfilter, print_application, NULL);
+  IPipe_printer(apply_msink,   print_application, NULL);
 }
 @ 
