@@ -7,6 +7,9 @@
 <<header ((dos))>>=
 #define Sys_dirsep "\\"
 #define Sys_pathsep ';'
+<<header ((tmpfiles))>>=
+#define Sys_dirsep "/"
+#define Sys_pathsep ':'
 @ 
 <<*>>=
 int Sys_ignoreme;
