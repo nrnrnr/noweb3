@@ -71,6 +71,7 @@ static void pull_lua(void) {
     lua_pushnil();
   }
 }
+@ 
 <<functions>>=
 void nwbuffer_open(void) {
   lua_module_register("NWB", "new",    new_lua);
@@ -82,4 +83,5 @@ void nwbuffer_open(void) {
   lua_pushusertag((void*)NAME, NWKEY); lua_storeglobal(#NAME);
   <<key macros>>
 #undef xx
+  lua_pushnumber(NWKEY); lua_storeglobal("NWKEY");
 }  
