@@ -5,16 +5,11 @@
 \subsection{Main program}
 This conversion is exported as [[markup_source]].
 The first argument should be a pointer to [[struct c_args]].
-<<markmain.h>>=
-#ifndef MARKMAIN_H
-#define MARKMAIN_H
+<<header>>=
+#ifndef MARKPARSE_H
+#define MARKPARSE_H
 
 #include "nwbuffer.h"
-
-struct c_args {
-  int argc;
-  char** argv;
-};
 
 extern int markup_source(void*, NowebBuffer);
 
@@ -88,7 +83,7 @@ static void print_text(NowebBuffer out, char *text) {
   }
 }
 @ 
-<<markmain.c>>=
+<<*>>=
 static char rcsid[] = "$Id$";
 static char rcsname[] = "$Name$";
 #include <stdio.h>
@@ -101,7 +96,8 @@ static char rcsname[] = "$Name$";
 #include "getline.h"
 #include "columns.h"
 #include "nwbuffer.h"
-#include "markmain.h"
+#include "markparse.h"
+#include "cargs.h"
 #include <atom.h>
 
 <<state and printing definitions>>
@@ -578,7 +574,7 @@ if (quoting) {
 Finally, we give the main program, which opens each file and passes it
 to [[markup]].
 Like many main programs, it's based on K \& R [[cat]].
-<<markmain.c>>=
+<<*>>=
 int markup_source(void* arg, NowebBuffer out) {
     struct c_args* a = arg;
     FILE *fp;
@@ -615,10 +611,5 @@ else if (a->argv[i][2]==0)
     tabsize = 0;                /* no tabs */
 else 
     errormsg(Error, "%s: ill-formed option %s", progname, a->argv[i]);
-@  
-<<*>>=
-<<markmain.c>>
-<<header>>=
-<<markmain.h>>
 @ 
 
