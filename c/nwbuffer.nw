@@ -32,8 +32,16 @@ string key to the buffer.  It first makes a call to
 [[NowebBuffer_put]] with [[NW_XXX_STRINGKEY]] as the predefined key
 (see description of {data-stuffing} below).
 
+[[NowebBuffer_put_pair]] adds an existing pair to the end
+of [[nwbuffer]].
+It allocates memory to make a copy of the pair, so as not to screw up
+calls to [[NowebBuffer_free]].
+One day, we have to figure out how to handle memory management in a
+much better way.
+
 [[NowebBuffer_pull]] removes a pair from the end of [[nwbuffer]],
-returning that pair.  It is a checked runtime error to attempt to
+returning that pair, and deallocating its memory. 
+It is a checked runtime error to attempt to
 remove a pair from an empty buffer.
 
 [[NowebBuffer_read]] returns the pair at [[loc]] in [[nwbuffer]] and
@@ -60,13 +68,14 @@ typedef struct NowebReader* NowebReader;
 <<definition of [[NowebKey]]>>
 <<definition of [[struct NowebPair]]>>
 
-extern T    NowebBuffer_create        (void);
-extern int  NowebBuffer_length     (T nwbuffer);
-extern T    NowebBuffer_put        (T nwbuffer, NowebKey predefined, const char* value);
-extern T    NowebBuffer_put_str    (T nwbuffer, const char* new_key, const char* value);
-struct NowebPair NowebBuffer_pull  (T nwbuffer);
+extern T    NowebBuffer_create    (void);
+extern int  NowebBuffer_length    (T nwbuffer);
+extern T /*@alt void@*/    NowebBuffer_put       (T nwbuffer, NowebKey predefined, const char* value);
+extern T /*@alt void@*/   NowebBuffer_put_str   (T nwbuffer, const char* new_key, const char* value);
+extern T /*@alt void@*/   NowebBuffer_put_pair  (T nwbuffer, NowebPair pair);
+struct NowebPair   NowebBuffer_pull   (T nwbuffer);
 extern NowebReader NowebBuffer_reader (T);
-extern NowebPair  NowebBuffer_read    (NowebReader);
+extern NowebPair   NowebBuffer_read   (NowebReader);
 extern void NowebBuffer_free          (T* nwbuffer);
 
 extern int  NowebBuffer_is_index(NowebKey key);
@@ -267,6 +276,15 @@ T NowebBuffer_put_str(T nwbuffer, const char* new_key, const char* value) {
   return nwbuffer;
 }
 @ 
+We can also simply append pairs.
+<<buffer operations>>=
+T NowebBuffer_put_pair (T nwbuffer, NowebPair pair) {
+  NowebPair p = ALLOC(sizeof(*p));
+  *p = *pair;
+  Seq_addhi(nwbuffer->pairs, p);
+  return nwbuffer;
+}
+@ 
 When we pull a pair, we free its memory.
 <<buffer operations>>=
 struct NowebPair NowebBuffer_pull(T nwbuffer) {
@@ -341,7 +359,7 @@ int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignore
   for (pair = NowebBuffer_read(rdr); pair; pair = NowebBuffer_read(rdr)) {
     switch(pair->key) {
       case NW_XXX_STRINGKEY:
-	fprintf(fp, "%s %s\n", pair->u.alternate->key, pair->u.alternate->value);
+	fprintf(fp, "@%s %s\n", pair->u.alternate->key, pair->u.alternate->value);
 	break;
 #define VAL (pair->u.value)
 #define xx(NAME, PRINTARGS) case NAME: fprintf PRINTARGS; break;
