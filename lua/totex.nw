@@ -1,10 +1,26 @@
-% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
-\section{Converting {\tt noweb} markup to {\TeX} markup (Icon version)}
+% -*- mode: Noweb; noweb-code-mode: fundamental-mode -*-
+\section{Converting {\tt noweb} markup to {\TeX} markup (Lua version)}
 The copyright applies both to the {\tt noweb} source and to the
 generated shell script.
 <<copyright notice>>=
 -- Copyright 1991-1998 by Norman Ramsey.  All rights reserved.
 -- See file COPYRIGHT for more information.
+<<hackers: subsubsections for internal sinks>>=
+\subsubsection{The sink \texttt{Stages.totex}}
+
+{\tt Stages.totex} implements both the plain {\TeX} and {\LaTeX} back ends,
+using \kw{header tex} and \kw{header latex} to distinguish them.
+When using a {\LaTeX} header, {\tt Stages.totex} places the optional text
+following the header inside a \verb+\noweboptions+ command.
+
+The arbitrary argument is a list of options.
+The {\tt -delay} option makes {\tt Stages.totex} delay
+filename markup until after the first documentation chunk; this
+behavior makes the first documentation chunk a ``limbo''
+chunk, which can usefully contain commands like \verb+\documentclass+.
+The {\tt -noindex} option suppresses output relating to the index of
+identifiers; it is used to implement {\tt noweave -x}.
+
 @
 Here's the organization of the source:
 <<*>>=
@@ -88,7 +104,7 @@ else =>
   if type(key) == "string" then
     warn_unknown(key, value)
   else
-    noweb_error("Internal error in notangle: did not handle key ", key)
+    noweb_error("Internal error in weave (totex): did not handle key ", key)
   end
 <<header botch>>=
 noweb_error("TeX back end only knows about tex and latex headers, not ", value)
@@ -111,10 +127,23 @@ noweb_error("TeX back end only knows about tex and latex trailers, not ", value)
                     end
 <<@text>>=
 | NW_TEXT =>        text = text + strlen(value)
-                    if quoting then writes(TeXliteral(value))
-                    elseif code then writes(backslash_3(value))
+                    if quoting then
+                      writes(linked_ident("q", TeXliteral(value),
+					  not noindex and lastindexref))
+                    elseif code then 
+                      writes(linked_ident("c", backslash_3(value),
+					  not noindex and lastindexref))
                     else writes(value)
                     end
+		    lastindexref = nil
+<<*>>=
+function linked_ident(context, text, tag)
+  if tag then 
+    return "\\nwlinkedident" .. context .. "{" .. text .. "}{" .. tag .. "}"
+  else
+    return text
+  end
+end
 <<@nl>>=
 | NW_NL =>          if not code then <<print [[\nwdocspar]] if no [[text]]>> end
                     if quoting then writes("\\nwnewline") end
@@ -282,8 +311,11 @@ end
 @
 The {\LaTeX} back end ignores uses in code; they get bundled up by a previous filter
 (the cross-referencer) and handled elsewhere.
+(Note: it is not \emph{at all} clear why this shouldn't be run on
+identifiers in quoted code---indeed, that would seem its only reason
+for existence.)
 <<handle index use>>=
-if not code then
+if not code and not quoting then
   if lastxreflabel then writes("\\protect\\nosublabel{", lastxreflabel, "}") end
   name = value
   if lastxrefref then
@@ -291,6 +323,7 @@ if not code then
                 indexlabel(name), "}{", lastxrefref, "}")
   end
 end
+lastindexref = lastxrefref
 <<clear [[lastxref*]]>>
 @
 Here's the local identifier cross-reference that appears at the end of a code chunk.
