@@ -28,6 +28,7 @@ All other stages are filters.
 #define IPIPE_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "nwbuffer.h"
 
 typedef struct IPipe_stage *IPipe_T, *IPipe_Source, *IPipe_Filter, *IPipe_Sink;
@@ -36,7 +37,7 @@ typedef struct IPipe_stage *IPipe_T, *IPipe_Source, *IPipe_Filter, *IPipe_Sink;
 #endif
 @ 
 We create a stage by providing a suitable function.
-[[XPipe_connect]] performs all connections:
+[[IPipe_connect]] performs all connections:
 \newcommand\source{\mathit{source}}
 \newcommand\sink{\mathit{sink}}
 \newcommand\filter{\mathit{filter}}
@@ -54,7 +55,8 @@ We create a stage by providing a suitable function.
 This example should suggest why distinct static types were deemed
 undesirable. 
 <<exported functions and values>>=
-extern IPipe_T IPipe_stage(char *name, int (*stage)(void*, NowebBuffer, NowebBuffer),
+extern IPipe_T IPipe_stage(const char *name,
+                           int (*stage)(void*, NowebBuffer, NowebBuffer),
 			   void* arg);
 extern IPipe_T IPipe_connect(IPipe_T, IPipe_T);
 @ 
@@ -68,10 +70,14 @@ extern IPipe_Filter IPipe_identity;
 Once completed, a pipeline may be run, printed, or freed from memory.
 To be printed nicely, a pipeline should be preceded by two blanks and
 followed by a newline.
+To print an argument, a printer has to be registered.
 <<exported functions and values>>=
-extern int  IPipe_run  (IPipe_T pipe, NowebBuffer in, NowebBuffer out);
-extern void IPipe_print(FILE *fp, IPipe_T pipe);
-extern void IPipe_free (IPipe_T *pipe);
+extern int  IPipe_run    (IPipe_T pipe, NowebBuffer in, NowebBuffer out);
+extern void IPipe_print  (FILE *fp, IPipe_T pipe);
+extern void IPipe_printer(int (*stage)(void*, NowebBuffer, NowebBuffer),
+                          void (*printer)(FILE *fp, void *env, void *arg),
+                          void *env);
+extern void IPipe_free   (IPipe_T *pipe);
 @ 
 \section{Implementation}
 Here's what the implementation looks like.
@@ -83,6 +89,7 @@ Here's what the implementation looks like.
 #include <assert.h>
 
 <<type definitions>>
+<<internal prototypes>>
 <<functions>>
 @ 
 The basic data type, stage, is just a disjoint union.
@@ -94,7 +101,7 @@ struct IPipe_stage {
       IPipe_T left, right;
     } pair;
     struct {
-      char *name;		/* identifies the stage */
+      const char *name;		/* identifies the stage */
       int (*stage)(void*, NowebBuffer, NowebBuffer);
       void* arg;
     } leaf;
@@ -104,7 +111,7 @@ struct IPipe_stage {
 The create functions simply allocate space for the particular type and set
 the appropriate data members equal to the parameters.
 <<functions>>=
-IPipe_T IPipe_stage(char *name, int (*stage)(void*, NowebBuffer, NowebBuffer),
+IPipe_T IPipe_stage(const char *name, int (*stage)(void*, NowebBuffer, NowebBuffer),
                     void* arg) {
   IPipe_T p = ALLOC(sizeof(*p));
   p->isPair = 0;
@@ -141,8 +148,8 @@ clear if that's a good design decision.
 int IPipe_run(IPipe_T p, NowebBuffer in, NowebBuffer out) {
   if (p->isPair) {
     NowebBuffer pipe = NowebBuffer_create();
-    int rc = IPipe_run(p->u.pair.left, in, pipe) |
-             IPipe_run(p->u.pair.right, pipe, out);
+    int rc  = IPipe_run(p->u.pair.left,  in,   pipe);
+    rc     |= IPipe_run(p->u.pair.right, pipe, out);
     NowebBuffer_free(&pipe);
     return rc;
   } else {
@@ -160,6 +167,42 @@ void IPipe_print(FILE *fp, IPipe_T p) {
     IPipe_print(fp, p->u.pair.right);
   } else
     fprintf(fp, "%s", p->u.leaf.name);
+    print_arg(fp, p->u.leaf.stage, p->u.leaf.arg);
+}
+@ 
+<<internal prototypes>>=
+typedef int (*stagefun)(void*, NowebBuffer, NowebBuffer);
+static void print_arg (FILE *fp, stagefun stage, void*arg);
+<<functions>>=
+struct known_printer {
+    stagefun stage;
+    void (*printer)(FILE *fp, void *env, void *arg);
+    void *env;
+    struct known_printer *prev;
+};
+
+static struct known_printer *printers = NULL;
+
+void IPipe_printer(int (*stage)(void*, NowebBuffer, NowebBuffer),
+                   void (*printer)(FILE *fp, void *env, void *arg),
+                   void *env) {
+  struct known_printer *p = malloc(sizeof(*p));
+  assert(p);
+  p->stage = stage;
+  p->printer = printer;
+  p->env = env;
+  p->prev = printers;
+  printers = p;
+}
+<<functions>>=
+static void print_arg (FILE *fp, stagefun stage, void*arg) {
+  struct known_printer *p;
+  for (p = printers; p != NULL && p->stage != stage; p = p->prev)
+    ;
+  if (p) {
+    fprintf(fp, ", ");
+    p->printer(fp, p->env, arg);
+  }
 }
 @ 
 Freeing means walking the tree.
