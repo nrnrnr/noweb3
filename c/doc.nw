@@ -2,6 +2,7 @@
 
 \documentclass[twoside]{article}
 \usepackage{noweb,multicol}
+\usepackage{hyperref}
 \makeatletter
 \newenvironment{fields}{\@fields}{\crcr\egroup\par\end{quote}}
 \def\@fields{\@ifnextchar[{\@@fields}{\@@fields[4in]}}
