@@ -1,47 +1,53 @@
-<<copyright notice>>=
-# Copyright 1991 by Norman Ramsey.  All rights reserved.
-# See file COPYRIGHT for more information.
-@
-<<notangle.lua>>=
-markup = LIB .. "/markup"   -- not portable to dos
-  -- should be changed to internal markup
-opt = {}
-arg = {}
-markopt = {}
-filters = {}
 
-while length(argv) > 0 do
-  a = get(argv)
+<<*>>=
+-- Copyright 1991 by Norman Ramsey.  All rights reserved.
+-- See file COPYRIGHT for more information.
+$debug
+markup = Stages.markup; nt = Stages.nt
+opt = List.new {}
+arg = List.new {}
+markopt = List.new {}
+filters = List.new {}
+verbose = nil
+
+while List.length(argv) > 0 do
+  a = List.get(argv)
   globmatch a of
+  | "-internal" => markup = Stages.markup; nt = Stages.nt
+  | "-external" => markup = libFile("markup"); nt = libFile("nt")
+  | "-v" => verbose = 1
   | "-ml", "-m3", "-awk", "-icn", "-icon", "-pascal", 
     "-c", "-c++", "-f77", "-f90", "-tex" => -- deliberately ignore nountangle args
   | "-t" => -- this is the default
   | "-t*" =>   -- copy tabs at markup, use width given in notangle
-	      put(markopt, "-t")
-      	      put(opt, a)
-  | "-filter" => put(filters, Filter_Createx(get(argv)))
-                    -- actually this arg probably has to be parsed?
-  | "-markup" => markup = get(argv)
+	      List.put(markopt, "-t")
+      	      List.put(opt, a)
+  | "-filter" => List.put(filters, MD.stringFilter(List.get(argv)))
+  | "-markup" => markup = List.get(argv)
   | "-w[0-9]", "-w[0-9][0-9]*" =>  -- ignore arg meant for nountangle
-  | "-L*" => put(markopt, "-t"); put(opt, "-t"); put(opt, a)
-  | "-"   => put(arg, a)
-  | "-*"  => put(opt, a)
-  | "*"   => put(arg, a)
+  | "-L*" => List.put(markopt, "-t"); List.put(opt, "-t"); List.put(opt, a)
+  | "-"   => List.put(arg, a)
+  | "-*"  => List.put(opt, a)
+  | "*"   => List.put(arg, a)
+  else => error("This can't happen! Arg did not match *: " .. a)
   end
 end
 
-putenv("PATH=" .. getenv("PATH") .. ":" .. LIB)
+P = MPipe
 
-p = Source_create(markup, concat(markopt, arg))
-while length(filters) > 0 do 
-  p = Source_extend(p, get(filters))
+System.putenv("PATH=" .. System.getenv("PATH") .. ":" .. LIB)
+
+-- write("opt has length ", List.length(opt), "\n")
+-- write("markopt has length ", List.length(markopt), "\n")
+-- write("arg has length ", List.length(arg), "\n")
+
+p = P.source(markup, markopt .. arg)
+while List.length(filters) > 0 do 
+  p = P.connect(p, List.get(filters))
 end
-nt = Sink_Create(LIB .. "/nt", -- not portable to DOS
-                       opt)
-  -- should be replaced with internal version at some point
-p = Pipeline_connect(p, nt)
-Pipeline_print(p)
-exit(Pipeline_execute(p))
+p = P.connect(p, P.sink(nt, opt))
+if verbose then P.print(p, stderr) end
+exit(P.run(p))
 @ 
 This goo makes it a shell script
 <<notangle>>=
