@@ -84,7 +84,7 @@ of the loop and the connected pipeline is pushed back onto the lua stack.
 <<XPipe-connect>>=
 static void XPipe_connect_lua(void) {
   lua_Object o;
-  XPipe pipe;
+  XPipe_T pipe;
   int i;
   <<insist on 2 or more parameters>>
   o = lua_getparam(1);
@@ -132,7 +132,7 @@ a C [[XPipe]] and then passed to the C version of [[XPipe_print]].
 <<XPipe-print>>=
 static void XPipe_print_lua(void) {
   lua_Object pipeline_o = lua_getparam(1);
-  XPipe to_print;
+  XPipe_T to_print;
   <<insist on exactly 1 parameter>>
   to_print = lua_getuserdata(pipeline_o);
   XPipe_print(stderr, to_print);
@@ -166,10 +166,10 @@ version of [[XPipe_execute]].
 <<XPipe-execute>>=
 static void XPipe_execute_lua(void) {
   lua_Object pipeline_o = lua_getparam(1);
-  XPipe to_execute;
+  XPipe_T to_execute;
   <<insist on exactly 1 parameter>>
   to_execute = lua_getuserdata(pipeline_o);
-  lua_pushnumber((double)XPipe_execute(to_execute));
+  lua_pushnumber((double)XPipe_run(to_execute));
 }
 
 @ 
@@ -189,7 +189,7 @@ then translates it into a C [[XPipe]] and passes the result to
 <<XPipe-free>>=
 static void XPipe_free_lua(void) {
   lua_Object pipeline_o = lua_getparam(1);
-  XPipe to_free;
+  XPipe_T to_free;
   <<insist on exactly 1 parameter>>
   to_free = lua_getuserdata(pipeline_o);
   XPipe_free(&to_free);
