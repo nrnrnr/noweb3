@@ -48,7 +48,7 @@ pipeline should not be freed using [[XPipe_free]].  If they are,
 all stages that are associated with the freed pipeline will be lost in
 the larger pipeline as well.
 
-<<xpipe.h>>=
+<<header>>=
 #ifndef XPIPE_H
 #define XPIPE_H
 
@@ -110,13 +110,13 @@ struct XPipe {
 The [[List_T]] data type was chosen because, as pipelines are lists of
 programs, they seem to match well with this data structure.
 
-[[<<xpipe.c>>]] is intended to contain all the platform-independent
+[[<<*>>]] is intended to contain all the platform-independent
 implementation of the pipeline structure; this is basically everything
 but the [[XPipe_execute]] function and its helper functions.
-[[<<xpipe.c>>]] includes information regarding the representation,
+[[<<*>>]] includes information regarding the representation,
 building, and printing of the pipeline.
 
-<<xpipe.c>>=
+<<*>>=
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -246,10 +246,8 @@ void XPipe_print(FILE* fp, T pipeline) {
   }
 }
 @  
-
 Each argument in the list is converted to be quoted if necessary.  See
 the above description of [[PrintQuotedString]] for an explanation.
-
 <<print out the elements of [[stage->u.prog.argv]], separated by spaces>>=
 {
   int i;
@@ -257,10 +255,8 @@ the above description of [[PrintQuotedString]] for an explanation.
     fprintf(fp, "%s ", PrintQuotedString(stage->u.prog.argv[i]));
 }
 @ 
-
 [[XPipe_free]] frees all memory allocated to the pipeline stages.
 [[List_free]] takes care of freeing the list structure.  
-
 <<common functions>>=
 void XPipe_free(T* pipeline) {
   List_T next;
@@ -285,24 +281,16 @@ definitions for the UNIX versions of the functions that will execute
 the pipeline.  The [[#include]]s are for Linux, and they may have to
 be different for different kinds of Unix.
 
-<<xpipe-unx.c>>=
-#include <assert.h>
+<<* ((unx))>>=
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include "xpipe.h"
-#include "list.h"
-#include "mem.h"
-#include "str.h"
+#include "errors.h"
+#include "sys.h"
 
-<<definition of [[struct XPipe_Stage]]>>
-<<definition of [[struct XPipe]]>>
 <<private Unix prototypes>>
 <<Unix functions>>
 @ 
-
 The pipeline structure implemented here is a tree of UNIX processes
 with leaf nodes corresponding to executable programs that are part of
 the pipeline and internal nodes corresponding to subsets of the
@@ -322,12 +310,10 @@ of the [[XPipe_execute]] function in Unix.  Two functions are
 created that will wait for the specified child process or processes to
 terminate, and then return their exit status.  It is a checked runtime
 error for any other child process to terminate first.
-
 <<private Unix prototypes>>=
 static int waitfor(int pid);
 static int waitfor2(int pid1, int pid2);
 @ 
-
 The next set of functions facilitate the manipulation of file descriptors.
 The first two set standard input and standard output for a given stage
 of the pipeline to allow that stage to receive information from
@@ -339,13 +325,11 @@ passed to them; it is a checked runtime error to pass 1 to
 The third function in this set simply closes the file descriptors
 passed to it as a parameter.  Passing NULL into the [[pipefds]]
 parameter results in a no-op.
-
 <<private Unix prototypes>>=
 static void makeInput(int fd);    /* make standard input a copy of fd */
 static void makeOutput(int fd);   /* make standard output a copy of fd */
 static void close_pair(int* pipefds);
 @ 
-
 The following functions fork the left and right halves of the tree and
 set up the input/output file descriptors.
 
@@ -372,14 +356,6 @@ static int forkPipelineFrom(List_T l, int infd, int *pipefds);
 static int forkStageTo(struct XPipe_Stage *prog, int outfd, int *pipefds);
 @ 
 
-Finally, there is a function [[fatal]] to handle errors; it prints an
-error message to [[stderr]] and aborts.
-
-<<private Unix prototypes>>=
-static void fatal(char *msg, ...);
-
-@ 
-
 \section{Definition of UNIX pipeline execution functions}
 
 Given all this machinery, a pipeline is executed by forking a process, then
@@ -387,20 +363,16 @@ waiting for it.  The [[infd]] parameter is initially 0 ([[stdin]])
 because we want the first stage of the pipeline to read from
 [[stdin]]. The [[pipefds]] parameter is NULL because there are no file
 descriptors to close at the time of the first call to [[forkPipelineFrom]].
-
 <<Unix functions>>=
 int XPipe_execute(XPipe pipeline) {
   return waitfor(forkPipelineFrom(pipeline->stages, 0, (int *)0));
 }
-
 @
-
 For an internal node, we fork a child, which in turn forks its left
 and right children and waits for them.  For the case in which this is
 the last internal node, the [[outfd]] parameter in [[forkStageTo]] is
 set to 1 ([[stdout]]) so that the last program may pass its results to
 [[stdout]].
-
 <<Unix functions>>=
 static int forkPipelineFrom(List_T l, int infd, int *surplus) {
   assert(l);
@@ -422,12 +394,9 @@ static int forkPipelineFrom(List_T l, int infd, int *surplus) {
     return forkStageTo(l->first, 1, surplus);
   }
 }
-
 @ 
-
 The leaf nodes are the stages of the pipeline; processes to execute
 these stages are called from within [[forkStageTo]].
-
 <<Unix functions>>=
 static int forkStageTo(struct XPipe_Stage *stage, int outfd, int *pipefds) {
   int pid;
@@ -436,8 +405,7 @@ static int forkStageTo(struct XPipe_Stage *stage, int outfd, int *pipefds) {
     close_pair(pipefds);
     <<execute [[stage]] and cause process to exit with suitable status>>
     return -1; /* prevents warning */
-  }
-  else {                           /* parent process */
+  } else {                           /* parent process */
     assert(pid > 0);
     return pid;
   }
@@ -449,13 +417,12 @@ switch (stage->tag) {
     { struct XPipe_Program *prog = &stage->u.prog;
       char** new_argv;
       <<add program name to [[argv]]>>
-      if (Str_chr(prog->path, 1, 0, '/'))
+      if (Str_find(prog->path, 1, 0, Sys_dirsep))
 	execve(prog->path, new_argv, prog->envp);
       else {
 	<<lookup [[prog->path]] on PATH and execute>>
       }
-      fatal("Could not execute %s", prog->path);
-      exit(1);
+      errormsg(Fatal, "Could not execute %s", prog->path);
       return -1; /* prevents warning */
     }
   case Fun:
@@ -469,8 +436,7 @@ so the copy is required here for the call to [[execve]].  A new list
 of arguments is allocated, then [[prog->name]] and [[prog->argv]] are
 copied onto it.  It is not necessary to free this memory because a
 call to [[execve]] will follow immediately, resulting in completion of
-the program by either successful execution or a call to [[fatal]].
-
+the program by either successful execution or a Noweb fatal error.
 <<add program name to [[argv]]>>=
 {
   int i, n;
@@ -483,7 +449,6 @@ the program by either successful execution or a call to [[fatal]].
   new_argv[n + 1] = NULL;
 }
 @ 
-
 The program is looked up from each directory in the PATH, in order.
 [[Str_chr]] results in a checked runtime error if there is no PATH
 defined.  If PATH is defined but empty, an attempt is made to execute
@@ -494,7 +459,6 @@ and the program is not successfully executed.
 Note: for each search on [[path]], [[i]] points to the beginning of
 the directory name to search and [[j]] points to the end, just before
 the next semicolon or the end of the string.
-
 <<lookup [[prog->path]] on PATH and execute>>=
 {
   int i = 1;
@@ -513,14 +477,11 @@ the next semicolon or the end of the string.
     execve(which_prog, new_argv, prog->envp);
   } while (j != 0);
 } 
-  
 @ 
-
 The first two helper functions, [[waitfor]] and [[waitfor2]], return the
 exit status of a child process or a pair of child processes, respectively,
 that function is to wait for.  If an unexpected process terminates before
 one of the awaited processes, then the functions return an error and abort.
-
 <<Unix functions>>=
 static int waitfor(int pid) {
   int status;
@@ -535,14 +496,11 @@ static int waitfor2(int pid1, int pid2) {
   assert((pid == pid1) || (pid == pid2));
   return WEXITSTATUS(status) | waitfor(pid == pid1 ? pid2 : pid1);
 }
-
 @
-
 [[makeInput]] and [[makeOutput]] return immediately if the parameters passed
 to them already equal [[stdin]] and [[stdout]], respectively.  Otherwise,
 they return an error if an attempt is made to turn [[stdout]] into [[stdin]]
 or vice-versa.
-
 <<Unix functions>>=
 static void makeInput(int fd) {
   if (fd == 0) return;
@@ -559,12 +517,9 @@ static void makeOutput(int fd) {
   assert(dup(fd) == 1);
   return;
 }
-
 @ 
-
 [[close_pair]] simply close the file descriptors passed to it and
 assert the success of the call to [[close]].
-
 <<Unix functions>>=
 static void close_pair(int *surplus) {
   if (surplus) {
@@ -573,43 +528,4 @@ static void close_pair(int *surplus) {
     n = close(surplus[1]); assert(n == 0);
   }
 }
-
 @ 
-
-[[fatal]] uses [[fprintf]] to print the [[msg]] paramter to
-[[stderr]].  The program ends after a call to [[fatal]].
-
-<<Unix functions>>=
-static void fatal(char *msg,...) {   /* see K&R, page 174 */
-  va_list args;
-  va_start(args,msg);
-  vfprintf(stderr, msg, args);
-  fprintf(stderr,"\n");
-  va_end(args);
-}
-@ 
-
-\section{Test code}
-
-The following is code used solely to test the UNIX pipeline implementation.
-
-<<xpipe-tst.c>>=
-#include <stdio.h>
-#include "xpipe.h"
-
-int main(int argc, char *argv[]) {
-  char* argv_array1[] = {"-l", NULL};
-  char* argv_array2[] = {NULL};
-  char* argv_array3[] = {"html", NULL};
-  extern char **environ;
-  XPipe stage1 = XPipe_program("ls", argv_array1, environ);
-  XPipe stage2 = XPipe_program("more", argv_array2, environ);
-  XPipe stage3 = XPipe_program("grep", argv_array3, environ);
-  XPipe to_run = XPipe_connect(stage1, argc > 1 ? stage2 : stage3);
-  return XPipe_execute(to_run);
-}
-<<*>>=
-<<xpipe.c>>
-<<header>>=
-<<xpipe.h>>
-@
