@@ -61,9 +61,10 @@ static void abort_lua(void) {
 static void fflush_lua(void) {
   lua_Object var;
   int rc;
+  extern FILE* lua_outfile; /* from lua iolib.c */
   lua_get_args("System.fflush", 1, LUA_USERDATA | LUA_NIL | OPTIONAL, &var);
   if (lua_isuserdata(var)) rc = fflush(lua_getuserdata(var));
-  else if (lua_isnil(var)) rc = fflush(stdout);
+  else if (lua_isnil(var)) rc = fflush(lua_outfile);
   else assert(0);
   lua_pushnumber((double)rc);
 }
