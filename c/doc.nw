@@ -1,6 +1,7 @@
 % $Id$
 
-\documentstyle[noweb,multicol,twoside]{article}
+\documentclass[twoside]{article}
+\usepackage{noweb,multicol}
 \makeatletter
 \newenvironment{fields}{\@fields}{\crcr\egroup\par\end{quote}}
 \def\@fields{\@ifnextchar[{\@@fields}{\@@fields[4in]}}
