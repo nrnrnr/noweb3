@@ -15,7 +15,9 @@ extern void misc_open(void);
 #include <assert.h>
 #include <ctype.h>
 
+#include <list.h>
 #include "lua.h"
+#include "luadebug.h"
 #include "lua-help.h"
 <<header>>
 <<functions>>
@@ -107,8 +109,37 @@ static void alphacmp(void) {
   lua_pushnumber((float)n);
 }
 @ 
+Tracings
+<<functions>>=
+static void nwcalltrace(lua_Function f, char *file, int line) {
+  static List_T callstack;
+  char *class, *name;
+  void *s = NULL;
+  if (f != LUA_NOOBJECT) {
+    class = lua_getobjname(f, &name);
+    callstack = List_push(callstack, name);
+    fprintf(stderr, "Entering %s %s at %s:%d\n", class, name, file, line);
+  } else {
+    callstack = List_pop(callstack, &s);
+    fprintf(stderr, "Leaving function %s\n", s ? (char*)s : "<untraced>");
+  }
+}
+
+static void trace(void) {
+  static List_T hooks;
+  lua_Object n;
+  lua_get_args("trace", 1, ANY, &n);
+  if (!lua_isnil(n)) {
+    hooks = List_push(hooks, (void*)lua_callhook);
+    lua_callhook = nwcalltrace;
+  } else {
+    hooks = List_pop(hooks, (void**)&lua_callhook);
+  }
+}
+
 <<functions>>=
 void misc_open(void) {
   lua_register("sort", sort);
   lua_register("alphacmp", alphacmp);
+  lua_register("calltrace", trace);
 }  
