@@ -6,6 +6,8 @@ Because I can't easily create comparison functions in Lua (no
 closure), and also because I'm tempted by looping thoughts, 
 I write a Lua sort that uses C comparisons.
 
+I also provide CRC code.
+
 <<header>>=
 extern void misc_open(void);
 @ 
@@ -136,10 +138,84 @@ static void trace(void) {
     hooks = List_pop(hooks, (void**)&lua_callhook);
   }
 }
+@ 
+<<functions>>=
+/* 32-bit Cyclic Redundancy Code  implemented by A. Appel 1986  
+ 
+   this works only if POLY is a prime polynomial in the field
+   of integers modulo 2, of order 32.  Since the representation of this
+   won't fit in a 32-bit word, the high-order bit is implicit.
+   IT MUST ALSO BE THE CASE that the coefficients of orders 31 down to 25
+   are zero.  Fortunately, we have a candidate, from
+	E. J. Watson, "Primitive Polynomials (Mod 2)", Math. Comp 16 (1962).
+   It is:  x^32 + x^7 + x^5 + x^3 + x^2 + x^1 + x^0
 
+   Now we reverse the bits to get:
+	111101010000000000000000000000001  in binary  (but drop the last 1)
+           f   5   0   0   0   0   0   0  in hex
+*/
+
+#define POLY 0xf5000000
+
+static unsigned long table[256];
+
+static void init_crc(void)
+{int i,j; unsigned long sum;
+ for (i=0; i<256; i++)
+   {sum=0;
+    for(j= 8-1; j>=0; j=j-1)
+     if (i&(1@<<j)) sum ^= ((unsigned long)POLY)@>>j;
+    table[i]=sum;
+   }
+}
+
+static unsigned long crc(char *s) {
+  unsigned long sum=0, c;
+  while ((c = *(unsigned char*)s++)) sum =  (sum>>8) ^ table[(sum^c)&0xff];
+  return sum;
+}
+@ 
+Lua numbers don't have enough bits of precision to represent a 32-bit
+CRC.
+<<functions>>=
+static char alphacodes[] = 
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+#define NUMCODES ((unsigned long)(sizeof(alphacodes)-1))
+
+static void alphacode_crc(void) {
+  unsigned long sum = crc(lua_getstring(lua_getparam(1)));
+  char code[10], *s;
+
+  s = &code[sizeof(code)];
+  *--s = '\0';
+  while (sum >= NUMCODES) {
+    *--s = alphacodes[sum % NUMCODES];
+    sum = sum / NUMCODES;
+  }
+  *--s = alphacodes[sum];
+  assert(s >= code);
+  lua_pushstring(s);
+}
 <<functions>>=
 void misc_open(void) {
+  init_crc();
   lua_register("sort", sort);
   lua_register("alphacmp", alphacmp);
   lua_register("calltrace", trace);
+  lua_register("alphacode_crc", alphacode_crc);
 }  
+<<hackers: entries for miscellaneous functions>>=
+alphacmp&
+A comparison function for sorting.
+Strings that differ only in case are treated as different, but they are
+sorted adjacently.\\
+calltrace&
+If the argument is non-nil, traces every call and return of a Lua
+function.
+If the argument is nil, turns off tracing.\\
+sort&
+Takes a comparison function and a table, and sorts the table using the
+C~library quicksort.\\
+@ 
+
