@@ -430,7 +430,7 @@ void lua_parse (TFunc *tf)
 
 %token WRONGTOKEN
 %token NIL
-%token IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL CASE OF END
+%token IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL CASE GLOBMATCH OF END
 %token RETURN
 %token LOCAL
 %token FUNCTION
@@ -440,8 +440,8 @@ void lua_parse (TFunc *tf)
 %token <vWord>  STRING
 %token <pTStr>  NAME 
 
-%type <vLong> PrepJump, PrepIfEqJump
-%type <vLong> tagged_arm_and_body /* label just before ARROW */
+%type <vLong> PrepJump, PrepIfEqJump, PrepIfGlobJump
+%type <vLong> tagged_arm_and_body, glob_arm_and_body /* label just before ARROW */
 %type <vLong> exprlist, exprlist1  /* if > 0, points to function return
 	counter (which has list length); if <= 0, -list lenght */
 %type <vLong> functioncall, expr  /* if != 0, points to function return
@@ -523,6 +523,8 @@ stat   : IF expr1 THEN PrepJump block PrepJump elsepart END
 
        | CASE expr1 OF case_body END
 
+       | GLOBMATCH expr1 OF glob_body END
+
        | WHILE {$<vLong>$=pc;} expr1 DO PrepJump block PrepJump END
        {
         basepc[$5] = IFFJMP;
@@ -579,6 +581,24 @@ tagged_arm_and_body
          {codeIf($3,$7);$$=$3+3;} /* patch jumps; return label for other patch */
        ;                      
 
+ /* keeps a copy of expr1 (from CASE expr1 of) on stack until arm is chosen */
+ /* we have to insert DUP *before* tagged_arm_and_body to avoid parser confusion */
+glob_body : '|' {code_byte(DUP);} glob_arm_and_body
+          | ELSE ARROW {code_byte(POP);} block 
+          | /* empty */ {code_byte(POP); /* should code for fallback here */ }
+          ;
+
+glob_arm_and_body
+       : expr1 PrepIfGlobJump ',' /* if matches tag, will jump to backpatched label */
+         {code_byte(DUP);} glob_arm_and_body
+   	 {codeIfEqJmp($2,$5); $$=$5;}  /* backpatch and return the label */
+       | expr1 {code_byte(GLOBMATCHOP);} PrepJump ARROW /* if match, jump to block */
+         {code_byte(POP);} /* we found an arm; pop expr1 (from CASE expr1 OF) */
+         block PrepJump    /* execute block, then jump to end of case stmt */
+         case_body 
+         {codeIf($3,$7);$$=$3+3;} /* patch jumps; return label for other patch */
+       ;                      
+
 block    : {$<vInt>$ = nlocalvar;} statlist ret 
          {
 	  if (nlocalvar != $<vInt>1)
@@ -611,6 +631,12 @@ PrepJump : /* empty */
 	   
 PrepIfEqJump : /* empty --- returns address to patch label */ 
              { code_byte(EQOP); code_byte(NOTOP); code_byte(IFFJMP); 
+               $$ = pc; code_word(0);
+             }
+             ;
+
+PrepIfGlobJump : /* empty --- returns address to patch label */ 
+             { code_byte(GLOBMATCHOP); code_byte(NOTOP); code_byte(IFFJMP); 
                $$ = pc; code_word(0);
              }
              ;
