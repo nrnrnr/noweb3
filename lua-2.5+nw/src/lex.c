@@ -48,15 +48,18 @@ static struct
     int token;
   } reserved [] = {
       {"and", AND},
+      {"case", CASE},
       {"do", DO},
       {"else", ELSE},
       {"elseif", ELSEIF},
       {"end", END},
       {"function", FUNCTION},
+      {"globmatch", GLOBMATCH},
       {"if", IF},
       {"local", LOCAL},
       {"nil", NIL},
       {"not", NOT},
+      {"of", OF},
       {"or", OR},
       {"repeat", REPEAT},
       {"return", RETURN},
@@ -187,8 +190,9 @@ int luaY_lex (void)
 
       case '=':
         save_and_next();
-        if (current != '=') return '=';
-        else { save_and_next(); return EQ; }
+        if (current == '>') { save_and_next(); return ARROW; }
+        else if (current == '=') { save_and_next(); return EQ; }
+        else return '=';
 
       case '<':
         save_and_next();
