@@ -12,7 +12,6 @@ static int xglobmatch (char *string, char *exp) {
                         return 0;
             case '?':   if (!*sp) return 0;
                         break;
-            case '\\':  ep++; /* fall through */
             case '[':   { char c = *sp;
                           char matched = 0;
                           ep++;
@@ -28,6 +27,7 @@ static int xglobmatch (char *string, char *exp) {
                           } while (*ep && *ep != ']');
                           if (*ep != ']' || !matched) return 0;
                         }; break;
+            case '\\':  ep++; /* fall through */
             default:    if (*sp != *ep) return 0;
                         if (*sp == 0) return 1;
                         break;
