@@ -29,11 +29,11 @@ static void read_lua(void) {
   p = NowebBuffer_read(lua_getuserdata(rdr));
   if (p) {
     if (p->key == NW_XXX_STRINGKEY) {
-      lua_pushstring((char *)p->u.alternate->key);
-      lua_pushoptstring(p->u.alternate->value);
+      lua_pushstring((char *)p->keystr);
+      lua_pushoptstring(p->value);
     } else {
       lua_pushusertag((void *)p->key, NWKEY);
-      lua_pushoptstring(p->u.value);
+      lua_pushoptstring(p->value);
     }
   } else {
     lua_pushnil();
@@ -61,11 +61,11 @@ static void pull_lua(void) {
   if (NowebBuffer_length(lua_getuserdata(buf)) > 0) {
     struct NowebPair pair = NowebBuffer_pull(lua_getuserdata(buf));
     if (pair.key == NW_XXX_STRINGKEY) {
-      lua_pushstring((char *)pair.u.alternate->key);
-      lua_pushoptstring(pair.u.alternate->value);
+      lua_pushstring((char *)pair.keystr);
+      lua_pushoptstring(pair.value);
     } else {
       lua_pushusertag((void *)pair.key, NWKEY);
-      lua_pushoptstring(pair.u.value);
+      lua_pushoptstring(pair.value);
     }
   } else { 
     lua_pushnil();
@@ -87,4 +87,4 @@ void nwbuffer_open(void) {
   lua_pushnumber(NWKEY);    lua_storeglobal("NWKEY");
   lua_pushnumber(NWBUFFER); lua_storeglobal("NWBUFFER");
   lua_pushnumber(NWREADER); lua_storeglobal("NWREADER");
-}  
+}

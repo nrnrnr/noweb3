@@ -83,7 +83,7 @@ static void read_ids(FILE *in) {
     while ((p = NowebBuffer_read(rdr))) {
       switch (p->key) {
         case NW_INDEX_DEFN: case NW_INDEX_LOCALDEFN:
-	  add_ident(nwindex, p->u.value); break;
+	  add_ident(nwindex, p->value); break;
         case NW_FATAL:
 	  return 1;
         default:
@@ -113,12 +113,12 @@ static void add_use_markers(NowebBuffer in, NowebBuffer out) {
         else if (p->key == NW_END_CODE || p->key == NW_ENDQUOTE)
             incode = 0;
         if (incode && p->key == NW_TEXT) {
-            info.line = p->u.value;
-            search_for_ident(nwindex, p->u.value, write_index_use, &info);
+            info.line = p->value;
+            search_for_ident(nwindex, p->value, write_index_use, &info);
             if (*info.line) 
                 NowebBuffer_put(out, NW_TEXT,
-				info.line == p->u.value ? p->u.value
-				                        : Atom_string(info.line));
+				info.line == p->value ? p->value
+				                      : Atom_string(info.line));
         } else
             NowebBuffer_put_pair(out, p);
     }       

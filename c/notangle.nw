@@ -75,7 +75,7 @@ int read_defs(NowebBuffer in) {
         <<track line numbers, then [[continue]] unless [[line]] is [[@begin code]]>>
         <<repeat [[line = NowebBuffer_read(rdr);]] until EOF, [[@defn]], or [[@text]]>>
         insist(line,NW_DEFN,"code chunk had no definition line");
-        modname = line->u.value;
+        modname = line->value;
         warn_dots(modname);       /* names ending in ... aren't like web */
         modptr = insert(modname); /* find or add module in table */
 
@@ -90,11 +90,11 @@ int read_defs(NowebBuffer in) {
                 loc.lineno++;
 		break;
               case NW_TEXT:
-	        addstring(modptr, line->u.value, loc);
+	        addstring(modptr, line->value, loc);
 		break;
 	      case NW_USE:
-                warn_dots(line->u.value);
-                addmodule(modptr,line->u.value);
+                warn_dots(line->value);
+                addmodule(modptr,line->value);
 		break;
 	      case NW_INDEX_NL:
                 loc.lineno++;
@@ -134,7 +134,7 @@ the line number of the {\em following} line, not of the line on which the
 set, so that the next newline will increment it to the correct value.
 <<cases for [[@file]] and [[@line]] that adjust [[loc]]>>=
 case NW_FILE:
-    loc.filename = line->u.value;
+    loc.filename = line->value;
     loc.lineno = 1;
     break;
 case NW_LINE:
@@ -143,7 +143,7 @@ case NW_LINE:
     break;
 <<[[} else if (line]] contains [[@file]] or [[@line) {]] adjust [[loc]]>>=
 } else if (line->key == NW_FILE) {
-    loc.filename = line->u.value;
+    loc.filename = line->value;
     loc.lineno = 1;
 } else if (line->key == NW_LINE) {
     <<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>
@@ -152,14 +152,14 @@ case NW_LINE:
 When copying the module name or a file name, we have to strip the trailing newline.
 \emph{May no longer need strcpy --- just use this name?}
 <<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>=
-{ <<fail if string [[line->u.value]] contains a non-digit>>
-  loc.lineno = atoi(line->u.value);
+{ <<fail if string [[line->value]] contains a non-digit>>
+  loc.lineno = atoi(line->value);
 }
-<<fail if string [[line->u.value]] contains a non-digit>>=
+<<fail if string [[line->value]] contains a non-digit>>=
 { const char *p;
-  for (p = line->u.value; *p; p++)
+  for (p = line->value; *p; p++)
     if (!isdigit(*p)) 
-      errormsg(Error, "non-numeric line number in `@line %s'", line->u.value);
+      errormsg(Error, "non-numeric line number in `@line %s'", line->value);
 }
 @
 In {\tt WEB}, module names ending in ``...'' may be prefixes
