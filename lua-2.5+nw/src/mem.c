@@ -9,25 +9,31 @@ char *rcs_mem = "$Id$";
 
 #include "mem.h"
 #include "lua.h"
+#include <mem.h>
 
 
 void luaI_free (void *block)
 {
+  FREE(block);
+#if 0
   if (block)
   {
     *((int *)block) = -1;  /* to catch errors */
     free(block);
   }
+#endif
 }
 
 
-void *luaI_realloc (void *oldblock, unsigned long size)
+void *luaI_realloc (void *block, unsigned long size)
 {
-  void *block;
   size_t s = (size_t)size;
   if (s != size)
     lua_error("Allocation Error: Block too big");
-  block = oldblock ? realloc(oldblock, s) : malloc(s);
+  if (block)
+    RESIZE (block, s);
+  else
+    block = ALLOC(s);
   if (block == NULL)
     lua_error(memEM);
   return block;
