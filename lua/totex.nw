@@ -9,33 +9,45 @@ generated shell script.
 Here's the organization of the source:
 <<*>>=
 <<copyright notice>>
-function rcsinfo () 
-  return "$Id$" ..
-         "$Name$"
+function mywrite (l)
+  case type(l) of
+  | "string", "number" => write(l)
+  | "nil" => -- do nothing
+  | "table" => 
+      local i = 1
+      while l[i] do write(l[i]) i = i + 1 end
+  else => errormsg("bad type ", type(l), " to mywrite()") error()
+  end
+  newline()
 end
 
-function toTeX(args, sourcebuf)
+function Stages.totex(sourcebuf, args)
   local delay, name, suppressInitialComment, key, value, a, r
+  local rcsinfo =
+     "$Id$" .. "$Name$"
+
   <<initialization>>
-  while length(args) > 0 do 
-    a = get(args)
+  while List.length(args) > 0 do 
+    a = List.get(args)
     case a of
     | "-delay" => delay = 1
     | "-noindex" => noindex = 1
     | "-no-gen-comment" => suppressInitialComment = 1
     end
   end
+  writes = write
   if not suppressInitialComment then
-    realwrite = write; write = firstwrite
+    newline = firstnewline
   end
-  r = B.reader(sourcebuf)
-  key, val = r.get()
+  r = NWB.reader(sourcebuf)
+  key, value = NWB.read(r)
   while key do
     case key of
     <<cases for conversion>>
     end
+    key, value = NWB.read(r)
   end
-  write("\n")
+  mywrite("")
 end
 @ The markup carefully adds no newlines not already present in the input,
 so that the line numbers of the {\TeX} file will be the same as the
@@ -71,16 +83,17 @@ This whole code is a giant [[if ... then ... else if ...]].
 <<@index>>
 <<others>>
 | NW_FATAL => return 1
+| "literal" => writes(value)
 else =>
   if type(key) == "string" then
     warn_unknown(key, value)
   else
-    lua_error("Internal error in notangle: did not handle key ", key)
+    noweb_error("Internal error in notangle: did not handle key ", key)
   end
 <<header botch>>=
-lua_error("TeX back end only knows about tex and latex headers, not ", value)
+noweb_error("TeX back end only knows about tex and latex headers, not ", value)
 <<trailer botch>>=
-lua_error("TeX back end only knows about tex and latex trailers, not ", value)
+noweb_error("TeX back end only knows about tex and latex trailers, not ", value)
 @
 \subsection{Basic text and chunk boundaries}
 <<code chunks>>=
@@ -90,17 +103,17 @@ lua_error("TeX back end only knows about tex and latex trailers, not ", value)
                     code = nil; writes("\\nwendcode{}")
                     lastdefnlabel, pendingprev, pendingnext = nil, nil, nil
 <<docs chunks>>=
-| NW_BEGIN_DOCS =>  if delay and val == "0" then <<delay for [[@begin docs]]>>  
+| NW_BEGIN_DOCS =>  if delay and value == "0" then <<delay for [[@begin docs]]>>  
                     else text = 0; writes("\\nwbegindocs{", value, "}")
                     end
-| NW_END_DOCS   =>  if delay and val == "0" then <<delay for [[@end docs]]>> 
+| NW_END_DOCS   =>  if delay and value == "0" then <<delay for [[@end docs]]>> 
                     else writes("\\nwenddocs{}")
                     end
 <<@text>>=
 | NW_TEXT =>        text = text + strlen(value)
                     if quoting then writes(TeXliteral(value))
                     elseif code then writes(backslash_3(value))
-                    else writes(line)
+                    else writes(value)
                     end
 <<@nl>>=
 | NW_NL =>          if not code then <<print [[\nwdocspar]] if no [[text]]>> end
@@ -133,7 +146,7 @@ and [[lastxrefref]].
                    if lastxrefref then t = "~"..label2tag(lastxrefref) else t = "" end
                    thischunk = value
                    if defns[thischunk] then e = "plusendmoddef"
-                   else p = "endmoddef"
+                   else e = "endmoddef"
                    end
                    writes("\\moddef{", convquotes(value), t, "}\\", e)
                    if useitemstab[thischunk] then useitems = useitemstab[thischunk] end
@@ -172,8 +185,8 @@ defns = {}
                  else => <<header botch>>
                  end
 | NW_TRAILER  => globmatch value of
-                 | "latex *" => write("\\end{document}\n")
-                 | "tex *"   => write("\\bye\n")
+                 | "latex" => mywrite("\\end{document}")
+                 | "tex"   => mywrite("\\bye")
                  else => <<trailer botch>>
                  end
 <<write {\LaTeX} header>>=
@@ -188,7 +201,7 @@ We begin with basic cross-reference [[@xref label]] and [[@xref ref]],
 then show the chunk cross-reference that comes at the end of a code chunk.
 The {\LaTeX} back end ignores [[@xref nextdef]] and [[@xref prevdef]].
 <<reset cross-reference info>>=
-defitems = { }; useitems = { }
+defitems = List.new { }; useitems = List.new { }
 notused = nil
 @
 By resetting the cross-reference info after dumping,
@@ -203,10 +216,10 @@ if notused then writes("\\nwnotused{", notused, "}") end
 | NW_XREF_LABEL     => lastxreflabel = value
 | NW_XREF_REF       => lastxrefref   = value
 | NW_XREF_BEGINDEFS =>
-| NW_XREF_DEFITEM   => put(defitems, value)
+| NW_XREF_DEFITEM   => List.put(defitems, value)
 | NW_XREF_ENDDEFS   =>
 | NW_XREF_BEGINUSES => useitems = {}
-| NW_XREF_USEITEM   => put(useitems, value)
+| NW_XREF_USEITEM   => List.put(useitems, value)
 | NW_XREF_ENDUSES   => useitemstab[thischunk] = useitems
 | NW_XREF_NOTUSED   => notused = value
 | NW_XREF_NEXTDEF   => pendingnext = value
@@ -232,10 +245,10 @@ lastxreflabel, lastxrefref = nil, nil
 <<*>>=
 function dumpitems(items, cs)
   local i, n 
-  if items and length(items) > 0 then
-    i, n = 0, length(items)
+  if items and List.length(items) > 0 then
+    i, n = 1, List.length(items)
     writes("\\", cs, "{")
-    while i < n do
+    while i <= n do
       writes("\\\\{", items[i], "}")
       i = i + 1
     end
@@ -248,7 +261,7 @@ This first round of stuff just handles the basics: definitions, uses, and newlin
 Unless it's OK to show the index (by \LA{}SI\RA), we handle nothing but 
 \hbox{[[@index nl]]}.
 <<@index>>=
-| NW_INDEX_NL    =>     if code then write("\\eatline\n") else write("%\n") end
+| NW_INDEX_NL    =>     if code then mywrite("\\eatline") else mywrite("%") end
 | NW_INDEX_DEFN, NW_INDEX_LOCALDEFN => if not noindex then <<handle index defn>> end
 | NW_INDEX_USE                      => if not noindex then <<handle index use>>  end
 @
@@ -291,14 +304,14 @@ Here's the local identifier cross-reference that appears at the end of a code ch
                                             writes("\\nwidentuses{"); ulist = {}   end
 | NW_INDEX_ISDEFINED => -- "latex finds the definitions"
 | NW_INDEX_USEITEM   => if not noindex then i = value; <<write [[i]] with [[\\]]>> 
-                                            put(ulist, i)                          end
+                                            List.put(ulist, i)                     end
 | NW_INDEX_ENDUSES   => if not noindex then writes("}"); <<write [[ulist]]>>       end
 <<write [[i]] with [[\\]]>>=
 writes("\\\\{{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}}") 
 <<write [[ulist]]>>=
 if lastdefnlabel then
-    k = 0
-    while k < length(ulist) do
+    k = 1
+    while k <= List.length(ulist) do
       i = ulist[k]
       writes("\\nwindexuse{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}",
              "{", lastdefnlabel, "}")
@@ -317,14 +330,14 @@ The real cross-referencing is done by the underlying {\LaTeX} code.
                                  "{", label, "}{")
 | NW_XREF_CHUNKUSE    =>  writes("\\nwixu{", value, "}")
 | NW_XREF_CHUNKDEFN   =>  writes("\\nwixd{", value, "}")
-| NW_XREF_CHUNKEND    =>  write("}}%\n")
+| NW_XREF_CHUNKEND    =>  mywrite("}}%")
 | NW_XREF_ENDCHUNKS   => 
 <<@index>>=
 | NW_INDEX_BEGININDEX =>
 | NW_INDEX_ENTRYBEGIN => if not noindex then
-                           label, name = splitFirstSpace(value)
-                           write("\\nwixlogsorted{i}{{\\nwixident{", TeXliteral(name),
-                           "}}{", indexlabel(name), "}}%\n")
+                           label, name = split_first_space(value)
+                           mywrite {"\\nwixlogsorted{i}{{\\nwixident{", TeXliteral(name),
+                           "}}{", indexlabel(name), "}}%"}
                          end	
 | NW_INDEX_ENTRYUSE   =>    -- handled by latex
 | NW_INDEX_ENTRYDEFN  =>    -- handled by latex
@@ -350,7 +363,6 @@ function backslash_3(line)
   return gsub(line, "([\\{}])", "\\%1")
 end
 <<*>>=
-TeXspecials = "[\\{}$&#^_ ~%%]"
 @
 I can't use [[\\char`\%]] and similar sequences with latex2e, because
 [[`]] is an active character that suppresses ligatures.  So I got TeX to print out the
@@ -386,11 +398,18 @@ function init_codes ()
   c["~"]  = "char126"
 end
 function replace_code(s)
-  return TeXliteral_codes[s]
+  if TeXliteral_codes[s] then
+    return "{\\" .. (TeXliteral_codes[s]) .. "}"
+  else
+    return "\\" .. s
+  end
 end
+TeXspecials = "([\\{}$&#^_ ~%%])"
 function TeXliteral(l) 
-  gsub(l, TeXspecials, replace_code)
+  return gsub(l, TeXspecials, replace_code)
 end
+<<initialization>>=
+init_codes()
 @
 A special function is used to implement {\tt noweb}'s quoting 
 convention within chunk names.
@@ -399,12 +418,12 @@ function convquotes(s)
   answer = ""
   l, r = strfind(s, "%[%[")
   while l do
-    answer = answer .. strsub(s, 1, l) .. "\\code{}"
+    answer = answer .. strsub(s, 1, l-1) .. "\\code{}"
     s = strsub(s, l+2)
     l, r = strfind(s, "%]%]%]*")
     if l then
-      answer = answer .. TeXliteral(substr(s, 1, r-2)) .. "\\edoc{}"
-      s = substr(s, r)
+      answer = answer .. TeXliteral(strsub(s, 1, r-2)) .. "\\edoc{}"
+      s = strsub(s, r+1)
     else
       answer = answer .. s .. "\\edoc{}"
       s = ""
@@ -420,7 +439,7 @@ function warn_unknown(tag, value)
   local v
   if value then v = " " .. value else v = "" end
   if not warned[tag] then
-    write(errout, "Warning: unrecognized escape @", tag, v, "\n")
+    errormsg("Warning: unrecognized escape ", format("%q", "@" .. tag .. v)) 
     warned[tag] = 1
   end
 end
@@ -435,7 +454,7 @@ function indexlabel(ident)
 end
 <<*>>=
 trans = {}
-transpat = "[ #$%%&,:\\^_{}~]"
+transpat = "([ #$%%&,:\\^_{}~])"
 trans[" "] = "sp"      -- space
 trans["#"] = "has"     -- hash
 trans["$"] = "do"      -- dollar
@@ -449,6 +468,16 @@ trans["_"] = "un"      -- underscore
 trans["{"] = "lb"      -- left brace
 trans["}"] = "rb"      -- right brace
 trans["~"] = "ti"      -- tilde
+@ 
+<<*>>=
+function split_first_space(s)
+  local start, fin = strfind(s, ' ')
+  if start then
+    return strsub(s, 1, start-1), strsub(s, fin+1)
+  else
+    return s, nil
+  end
+end
 @ 
 <<totex.lua>>=
 <<*>>
