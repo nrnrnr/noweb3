@@ -36,12 +36,13 @@ int readascii(void *arg, NowebBuffer buf) {
 @ 
 <<scan to first blank (if any) and call [[NowebBuffer_append_str]]>>=
 { char *bl;
+  p[n] = '\0';
   for (bl = p+1; *bl && !isspace(*bl); bl++);
   if (*bl) {
     *bl = '\0';
-    NowebBuffer_append_str(buf, p, bl+1);
+    NowebBuffer_append_str(buf, Atom_string(p+1), Atom_string(bl+1));
   } else {
-    NowebBuffer_append_str(buf, p, NULL);
+    NowebBuffer_append_str(buf, Atom_string(p+1), NULL);
   }
 }
 @ 
@@ -86,7 +87,7 @@ switch (p[1]) {
   break;
   case 'f':
     if (p[2] == 'a' && p[3] == 't' && p[4] == 'a' && p[5] == 'l' && p[6] == ' ') {
-      NowebBuffer_append(buf, NW_TRAILER, ARG_AT(7));
+      NowebBuffer_append(buf, NW_FATAL, ARG_AT(7));
     } else
     if (p[2] == 'i' && p[3] == 'l' && p[4] == 'e' && p[5] == ' ') {
       NowebBuffer_append(buf, NW_FILE, ARG_AT(6));
@@ -124,7 +125,7 @@ switch (p[1]) {
       } else
       if (p[7] == 'e' && p[8] == 'n') {
         if (p[9] == 'd') {
-          if (p[10] == 'e' && p[11] == 'f' && p[12] == 's' && p[13] == '\n') {
+          if (p[10] == 'd' && p[11] == 'e' && p[12] == 'f' && p[13] == 's' && p[14] == '\n') {
             NowebBuffer_append(buf, NW_INDEX_ENDDEFS, NULL);
           } else
           if (p[10] == 'i' && p[11] == 'n' && p[12] == 'd' && p[13] == 'e' && p[14] == 'x' && p[15] == '\n') {
@@ -205,7 +206,11 @@ switch (p[1]) {
     if (p[2] == 'e' && p[3] == 'x' && p[4] == 't' && p[5] == ' ') {
       NowebBuffer_append(buf, NW_TEXT, ARG_AT(6));
     } else
-      goto string;
+    if (p[2] == 'r' && p[3] == 'a' && p[4] == 'i' && p[5] == 'l' && p[6] == 'e' 
+&& p[7] == 'r' && p[8] == ' ') {
+      NowebBuffer_append(buf, NW_TRAILER, ARG_AT(9));
+    } else
+    goto string;
   break;
   case 'u':
     if (p[2] == 's' && p[3] == 'e' && p[4] == ' ') {
