@@ -14,7 +14,7 @@ The structure of module references must be a dag or else [[expand]] will
 complain about a cycle.
 <<header>>=
 typedef struct location {       /* identify lines of source */
-    char *filename;
+    const char *filename;
     int lineno;
 } Location;
 
@@ -22,7 +22,7 @@ typedef enum parttype {STRING=1, MODULE, NEWLINE} Parttype;
 
 struct modpart {
     Parttype ptype;             /* type of fragment: STRING, MODULE, NEWLINE */
-    char *contents;
+    const char *contents;
     Location loc;               /* for String, where's it from ? */
     struct modpart *next;
 };
@@ -31,18 +31,20 @@ In order to facilitate expansion of all roots (and to identify roots),
 I keep a use counter in each module.
 <<header>>=
 typedef struct module {
-    char *name;
+    const char *name;
     int usecount;
     struct modpart *head, *tail;
 } *Module;
 @ %def module Module
+Chunk names passed to [[newmodule]] must be in permanent memory (e.g.,
+atoms).
 <<header>>=
-Module newmodule(char *modname);         /* create a new, blank module */
+Module newmodule(const char *modname);         /* create a new, blank module */
 <<C functions>>=
-Module newmodule (char *modname) {
+Module newmodule (const char *modname) {
     Module p = (Module) malloc (sizeof (struct module));
     checkptr(p);
-    p->name = strsave(modname);
+    p->name = modname; 
     p->usecount = 0;
     p->head = p->tail = NULL;
     return p;
@@ -55,40 +57,41 @@ static char rcsname[] = "$Name$";
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+
+#include <atom.h>
+
 #include "modules.h"
 #include "modtrees.h"
 #include "errors.h"
 #include "columns.h"
-#include "strsave.h"
 
 <<Function declarations>>
 <<local data>>
 <<C functions>>
 @
+Strings passed to [[add_part]] must be in permanent memory (e.g., atoms).
 <<header>>=
 #define addstring(MP,S,L) add_part(MP,S,STRING,&L)
         /* add a string to a module definition (stripping final newline) */
 #define addmodule(MP,S) add_part(MP,S,MODULE,0)
         /* add a module reference to a module definition (stripping final newline) */
 #define addnewline(MP) add_part(MP,0,NEWLINE,0)
-void add_part (Module mp, char *s, Parttype type, Location *loc);
+void add_part (Module mp, const char *s, Parttype type, Location *loc);
 @ %def addstring addmodule addnewline
 <<C functions>>=
-void add_part (Module mp, char *s, Parttype type, Location *loc) {
+void add_part (Module mp, const char *s, Parttype type, Location *loc) {
     struct modpart *p = newmodpart(type,s,loc);
     append (mp,p);
+    (void) rcsname; (void) rcsid;
 }
 @ %def add_part
 <<C functions>>=
 static struct modpart *
-newmodpart(int type, char *s, Location *loc) {
+newmodpart(int type, const char *s, Location *loc) {
     struct modpart *p = (struct modpart *) malloc (sizeof (struct modpart));
     checkptr(p);
     p->ptype = type;
-    if (s) {
-        p->contents = strsave(s);
-        <<strip final newline from p->contents>>
-    }
+    p->contents = s;
     if (loc) p->loc = *loc;
     p->next = NULL;
     return p;
@@ -108,13 +111,13 @@ void append(Module mp, struct modpart *p) {
 @ %def append
 <<strip final newline from p->contents>>=
 { int k = strlen(p->contents)-1;
-  if (p->contents[k] == '\n') p->contents[k] = '\0';
+  if (p->contents[k] == '\n') p->contents = Atom_new(p->contents, k);
   else impossible("input line doesn't end with newline");
 }
 @
 <<Function declarations>>=
 static struct modpart *
-newmodpart(int type, char *s, Location *loc);   /* create a new module part */
+newmodpart(int type, const char *s, Location *loc);   /* create a new module part */
 
 static
 void append(Module mp, struct modpart *p);
@@ -136,7 +139,7 @@ int expand (Module mp, int indent, int partial_distance, Parent parent,
         /* expand a module, writing to file out */
 @ %def Parent
 <<local data>>=
-static char *lastfilename = 0;
+static const char *lastfilename = 0;
 static int lastlineno = -1;
 @ %def lastfilename lastlineno
 <<header>>=
