@@ -65,11 +65,13 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
 
   Noidx.prevdb = nil  -- definitions preceding this file
   Noidx.nextdb = nil  -- definitions following this file
+  Noidx.usedb  = nil  -- uses preceding and following this file
   <<initialization>>
   delay = nil
   <<swallow [[args]]>>
   local prevdb = Noidx.prevdb or { }
   local nextdb = Noidx.nextdb or { }
+  local usedb  = Noidx.usedb  or { }
 
   r = NWB.reader(sourcebuf)
   local newbuf = NWB.new()
@@ -106,6 +108,7 @@ while List.length(args) > 0 do
                   Noidx.prevdb = Noidx.nextdb; Noidx.nextdb = nil
                 end
   | "-dbin" =>  Noidx.nextdb = Noidx.nextdb or { }
+                Noidx.usedb = Noidx.usedb or { }
                 dofile(List.get(args))
   else => noweb_error("unknown argument ", a)
   end
@@ -114,10 +117,21 @@ end
 <<*>>=
 function Noidx.add_db_defns(chunk, first, last)
   local db = Noidx.nextdb
-  if db[chunk] then
-    db[chunk].last = last
+  local mine = db[chunk]
+  if mine then
+    mine.last = last
   else
     db[chunk] = { first = first, last = last }
+  end
+end
+<<*>>=
+function Noidx.add_db_use(chunk, use)
+  local db = Noidx.usedb
+  local mine = db[chunk]
+  if mine then
+    List.put(mine, use)
+  else
+    db[chunk] = List.new { use }
   end
 end
 <<*>>=
@@ -181,6 +195,15 @@ if dboutfile then
       write(format('  Noidx.add_db_defns(%q, %q, %q)\n', chunk, v[1], v[n]))
     end
     chunk, v = next(defanchors, chunk)
+  end
+  chunk, v = next(uses, chunk)
+  while chunk do
+    local n = 1
+    while v[n] do
+      write(format('  Noidx.add_db_use(%q, %q)\n', chunk, v[n]))
+      n = n + 1
+    end
+    chunk, v = next(uses, chunk)
   end
   writeto(oldout)
 end
@@ -373,11 +396,12 @@ if List.length(defanchors[thischunk]) > 1 then
   end
   NWB.put(sinkbuf, NW_XREF_ENDDEFS)
 end
-if uses[thischunk] then
+if uses[thischunk] or usedb[thischunk] then
+  local l = uses[thischunk] .. usedb[thischunk]
   NWB.put(sinkbuf, NW_XREF_BEGINUSES)
-  k = 1
-  while k <= List.length(uses[thischunk]) do
-    NWB.put(sinkbuf, NW_XREF_USEITEM, uses[thischunk][k])
+  local k = 1
+  while l[k] do
+    NWB.put(sinkbuf, NW_XREF_USEITEM, l[k])
     k = k + 1
   end
   NWB.put(sinkbuf, NW_XREF_ENDUSES)
