@@ -14,7 +14,7 @@ external pipeline commands built in [[xpipe-lua.nw]] and [[xpipe.nw]].
 #ifdef _POSIX_SOURCE
 #include <unistd.h>
 #else
-#define isatty(x)	(x==0) /* assume stdin is a tty */
+#define isatty(x)	((x)==0) /* assume stdin is a tty */
 #endif
 
 #include "lua.h"
