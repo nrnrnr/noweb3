@@ -1,3 +1,4 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode; c-indent-level: 4 -*-
 % Copyright 1991 by Norman Ramsey.  All rights reserved.
 % See file COPYRIGHT for more information.
 @ 
@@ -13,11 +14,11 @@ The module definition information will be stored statically
 in a table supplied by [[modtrees.h]]; we'll cover the
 details later.
 <<header>>=
-void emit_module_named (FILE *out, char *rootname, char *locformat);
+int emit_module_named (FILE *out, char *rootname, char *locformat);
+int notangle_sink(void *arg, NowebBuffer in);   /* expects cargs structure */
 <<*>>=
 static char rcsid[] = "$Id$";
 static char rcsname[] = "$Name$";
-#define MAX_MODNAME 255
 @
 <<*>>=
 #include <stdio.h>
@@ -30,17 +31,21 @@ static char rcsname[] = "$Name$";
 #include "modtrees.h"
 #include "errors.h"
 #include "match.h"
+#include "nwbuffer.h"
 #include "notangle.h"
 
 <<Function declarations>>
 
-void emit_module_named (FILE *out, char *rootname, char *locformat) {
+int emit_module_named (FILE *out, char *rootname, char *locformat) {
     Module root = NULL; /* ptr to root module */
 
+    (void) rcsid; (void) rcsname;  /* eliminate warning */
+
     root = lookup(rootname);
-    <<quit if we couldn't find the root>>
+    <<error message and return nonzero if we couldn't find the root>>
     (void) expand(root,0,0,0,locformat,out);
     putc('\n',out);                     /* make output end with newline */
+    return 0;
 }
 @ %def notangle
 
@@ -52,99 +57,106 @@ we see a terminator.
 After we see the terminator we start all over again looking for another code
 chunk.
 <<header>>=
-void read_defs(FILE *in);              /* read module definitions */
+int read_defs(NowebBuffer in);              /* read module definitions */
 <<*>>=
-void read_defs(FILE *in) {
-    char modname[MAX_MODNAME+1] = ""; /* name of module currently being read, 
-                                         [[""]] if no module is being read */ 
-    Module modptr = NULL;       /* ptr to current module, or NULL */
-    char *line = NULL;          /* buffer for input */
+int read_defs(NowebBuffer in) {
+    const char *modname = NULL; /* name of chunk currently being read, 
+				   [[NULL]] if no chunk is being read */ 
+    Module modptr = NULL;       /* ptr to current chunk, or NULL */
+    NowebPair line;		/* input */
+    NowebReader rdr = NowebBuffer_reader(in);
     Location loc;
 
-    while ((line = getline(in)) != NULL) {
-        if (is_keyword(line, "fatal")) exit(1);
+    while ((line = NowebBuffer_read(rdr)) != NULL) {
+        if (line->key == NW_FATAL) return 1; /* obsolete */
         <<track line numbers, then [[continue]] unless [[line]] is [[@begin code]]>>
-        <<repeat [[line = getline(in);]] until EOF, [[@defn]], or [[@text]]>>
-        insist(line,"defn","code chunk had no definition line");
-        <<copy module name into [[modname]]>>
+        <<repeat [[line = NowebBuffer_read(rdr);]] until EOF, [[@defn]], or [[@text]]>>
+        insist(line,NW_DEFN,"code chunk had no definition line");
+        modname = line->u.value;
         warn_dots(modname);       /* names ending in ... aren't like web */
         modptr = insert(modname); /* find or add module in table */
 
-        line = getline(in);
-        insist(line,"nl","definition line not followed by newline");
+        line = NowebBuffer_read(rdr);
+        insist(line,NW_NL,"definition line not followed by newline");
         loc.lineno++;
-        line = getline(in);
-        while (line != NULL && !is_end(line,"code")) {
-            if (is_keyword(line,"nl")) {
+        line = NowebBuffer_read(rdr);
+        while ((line != NULL) && line->key != NW_END_CODE) {
+	    switch (line->key) {
+	      case NW_NL:
                 addnewline(modptr);
                 loc.lineno++;
-            } else if (is_keyword(line,"text")) {
-                addstring(modptr,line+1+4+1,loc);
-            } else if (is_keyword(line,"use")) {
-                warn_dots(line+1+3+5);
-                addmodule(modptr,line+1+3+1);
-            } else if (is_index(line, "nl")) {
+		break;
+              case NW_TEXT:
+	        addstring(modptr, line->u.value, loc);
+		break;
+	      case NW_USE:
+                warn_dots(line->u.value);
+                addmodule(modptr,line->u.value);
+		break;
+	      case NW_INDEX_NL:
                 loc.lineno++;
-            <<[[} else if (line]] contains [[@file]] or [[@line) {]] adjust [[loc]]>>
-            } else if (!is_keyword(line, "index"))
-                <<complain of botched code chunk>>
-            line = getline(in);
+		break;
+              <<cases for [[@file]] and [[@line]] that adjust [[loc]]>>
+              default:
+                if (!NowebBuffer_is_index(line->key)) {
+                  <<complain of botched code chunk>>
+	        }
+	    }
+            line = NowebBuffer_read(rdr);
         }
         <<if [[line==NULL]] die of premature end of file>>
     }
+    return 0;
 }
 @ %def read_defs
-<<repeat [[line = getline(in);]] until EOF, [[@defn]], or [[@text]]>>=
-do { line = getline(in);
-} while (line != NULL && !is_keyword(line,"defn") && !is_keyword(line,"text"));
+<<repeat [[line = NowebBuffer_read(rdr);]] until EOF, [[@defn]], or [[@text]]>>=
+do { line = NowebBuffer_read(rdr);
+} while (line && line->key != NW_DEFN && line->key != NW_TEXT);
 @
 <<track line numbers, then [[continue]] unless [[line]] is [[@begin code]]>>=
-if (is_keyword(line, "nl") || is_index(line, "nl")) {
+switch (line->key) {
+  case NW_NL: case NW_INDEX_NL:
     loc.lineno++;
-<<[[} else if (line]] contains [[@file]] or [[@line) {]] adjust [[loc]]>>
+    break;
+  <<cases for [[@file]] and [[@line]] that adjust [[loc]]>>
+  default:
+    break;
 } 
-if (!is_begin(line, "code"))
+if (line->key != NW_BEGIN_CODE)
     continue;
 @
 The only tricky bit with the line numbers is to note that [[@line]] gives
 the line number of the {\em following} line, not of the line on which the
 [[@line]] appears.  That means [[loc.lineno]] must be decremented after it is 
 set, so that the next newline will increment it to the correct value.
-<<[[} else if (line]] contains [[@file]] or [[@line) {]] adjust [[loc]]>>=
-} else if (is_keyword(line,"file")) {
-    <<save name from [[line]] ([[@file ...]]) into [[loc.filename]]>>
+<<cases for [[@file]] and [[@line]] that adjust [[loc]]>>=
+case NW_FILE:
+    loc.filename = line->u.value;
     loc.lineno = 1;
-} else if (is_keyword(line, "line")) {
+    break;
+case NW_LINE:
+    <<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>
+    loc.lineno--;
+    break;
+<<[[} else if (line]] contains [[@file]] or [[@line) {]] adjust [[loc]]>>=
+} else if (line->key == NW_FILE) {
+    loc.filename = line->u.value;
+    loc.lineno = 1;
+} else if (line->key == NW_LINE) {
     <<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>
     loc.lineno--;
 @
-When copying the module name or a file name,
-we have to strip the trailing newline.
-<<copy module name into [[modname]]>>=
-strcpy(modname,line+strlen("@defn "));
-modname[strlen(modname)-1]='\0';
-<<save name from [[line]] ([[@file ...]]) into [[loc.filename]]>>=
-{ char temp[MAX_MODNAME+1];
-  if (strlen(line) >= MAX_MODNAME + strlen("@file "))
-    overflow("file name size");
-  strcpy(temp,line+strlen("@file "));
-  temp[strlen(temp)-1]='\0';
-  loc.filename = strsave(temp);
-}
+When copying the module name or a file name, we have to strip the trailing newline.
+\emph{May no longer need strcpy --- just use this name?}
 <<save line number from [[line]] ([[@line ...]]) into [[loc.lineno]]>>=
-{ char temp[MAX_MODNAME+1];
-  if (strlen(line) >= MAX_MODNAME + strlen("@line "))
-    overflow("file name size");
-  strcpy(temp,line+strlen("@line "));
-  temp[strlen(temp)-1]='\0';
-  <<fail if string [[temp]] contains a non-digit>>
-  loc.lineno = atoi(temp);
+{ <<fail if string [[line->u.value]] contains a non-digit>>
+  loc.lineno = atoi(line->u.value);
 }
-<<fail if string [[temp]] contains a non-digit>>=
-{ char *p;
-  for (p = temp; *p; p++)
+<<fail if string [[line->u.value]] contains a non-digit>>=
+{ const char *p;
+  for (p = line->u.value; *p; p++)
     if (!isdigit(*p)) 
-      errormsg(Error, "non-numeric line number in `@line %s'", temp);
+      errormsg(Error, "non-numeric line number in `@line %s'", line->u.value);
 }
 @
 In {\tt WEB}, module names ending in ``...'' may be prefixes
@@ -153,33 +165,33 @@ We don't do anything like that here, but we do warn the user about
 ``...'' in case he's got a file converted from {\tt WEB}.
 <<*>>=
 static
-void warn_dots(char *modname) {
+void warn_dots(const char *modname) {
   if (!strcmp(modname+strlen(modname)-3,"...")) 
-    errormsg(Warning, "Module name @<<%s@>> isn't completed as in web", 
+    errormsg(Warning, "Chunk name @<<%s@>> isn't completed as in web", 
              modname);
 }
 @ %def warn_dots
 <<Function declarations>>=
-static void warn_dots(char *modname);          /* warn about names ending in ... */
-
-@ Error checking is perenially dull.
-<<quit if we couldn't find the root>>=
+static void warn_dots(const char *modname);          /* warn about names ending in ... */
+@ 
+Error checking is perenially dull.
+<<error message and return nonzero if we couldn't find the root>>=
 if (root==NULL) {
-    errormsg(Fatal, "The root module @<<%s@>> was not defined.", rootname);
-    return;
+    errormsg(Fatal, "The root chunk @<<%s@>> was not defined.", rootname);
+    return 1;
 }
 <<*>>=
-void insist(char *line, char *keyword, char *msg) {
+static void insist(NowebPair line, NowebKey keyword, char *msg) {
   <<if [[line==NULL]] die of premature end of file>>
-  if (!is_keyword(line,keyword))
+  if (line->key != keyword)
     impossible(msg);
 }
 @ %def insist
 <<if [[line==NULL]] die of premature end of file>>=
 if (line==NULL) {
-    impossible("End of file occurred in mid-module");
+    impossible("End of file occurred in mid-chunk");
 }
 <<Function declarations>>=
-void insist(char *line, char *keyword, char *msg);
+static void insist(NowebPair line, NowebKey keyword, char *msg);
 <<complain of botched code chunk>>=
 errorat(loc.filename, loc.lineno, Error, "botched code chunk `%s'", line);
