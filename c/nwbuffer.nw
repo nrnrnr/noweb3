@@ -1,4 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: c-mode -*-
+% -*- mode: Noweb; noweb-code-mode: c-mode; c-indent-level: 8 -*-
 
 \ifx\chapter\undefined\let\chapter=\section\fi
 
@@ -78,6 +78,8 @@ extern void NowebBuffer_free          (T* nwbuffer);
 extern int  NowebBuffer_is_index(NowebKey key);
 extern int NowebBuffer_toascii(void * /*output file*/, NowebBuffer buf,
 			       NowebBuffer ignored);
+extern char *NowebBuffer_pairstring(NowebPair pair);
+         /* malloc and return string rep of pair -- likely to be expensive */
 #undef T
 #endif
 @ 
@@ -415,5 +417,56 @@ int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignore
   }
   return 0;
 }
+@ 
+<<nwbuffer functions>>=
+static int pairbufsize(NowebPair p, char *fmt, ...) {
+  switch (p->key) {
+  case NW_XXX_STRINGKEY:
+    return 4 + strlen(p->keystr) + strlen(p->value);
+  default:
+    if (strstr(fmt, "%s"))
+      return 4 + strlen(fmt) + strlen(p->value);
+    else
+      return 4 + strlen(fmt);
+  }
+}
+
+char *NowebBuffer_pairstring(NowebPair pair) {
+  char *fp;
+  int bufsize, n;
+
+  <<set [[bufsize]] for [[pair]]>>
+  fp = ALLOC(bufsize);
+  assert(fp);
+  switch(pair->key) {
+    case NW_XXX_STRINGKEY:
+	n = sprintf(fp, "@%s %s\n", pair->keystr, pair->value);
+	break;
+#define VAL (pair->value)
+#define xx(NAME, PRINTARGS) case NAME: n = sprintf PRINTARGS; break;
+<<key macros>>
+#undef xx
+#undef VAL
+      default: 
+        assert(0);
+  }
+  assert (n < bufsize);
+  if (fp[strlen(fp)-1] == '\n')
+    fp[strlen(fp)-1] = '\0';
+  return fp;
+}
+
+<<set [[bufsize]] for [[pair]]>>=
+switch (pair->key) {
+#define VAL (pair->value)
+#define fp pair
+#define xx(NAME, PRINTARGS) case NAME: bufsize = pairbufsize PRINTARGS; break;
+<<key macros>>
+#undef xx
+#undef fp
+#undef VAL
+default : bufsize = pairbufsize(pair, ""); break;
+}
+@ 
 @ 
 

@@ -489,22 +489,34 @@ child, doesn't wait for it, and then execs Noweb.%
 <<Unix run-program functions>>=
 static int waitfor(int pid) {
   int status, childpid;
+#if 0
+  fprintf(stderr, "Waiting for pid %d...\n", pid);
+#endif
   childpid = wait(&status);
   if (childpid != pid)
     errormsg(Impossible, "Fatal error: waiting for process %d to finish; "
              "found process %d.\n\tCould you have forked a child, "
              "then exec'ed no without waiting?\n", pid, childpid);
+#if 0
+  fprintf(stderr, "Waiting for process %d got status %d\n", pid, WEXITSTATUS(status));
+#endif
   return WEXITSTATUS(status);
 }
 <<private Unix functions>>=
 static int waitfor2(int pid1, int pid2) {
   int status;
   int pid;
+#if 0
+  fprintf(stderr, "Waiting for pid %d or pid %d...\n", pid1, pid2);
+#endif
   pid = wait(&status);
   if ((pid != pid1) && (pid != pid2))
     errormsg(Impossible, "Fatal error: waiting for process %d or %d to finish; "
              "found process %d.\n\tCould you have forked a child, "
              "then exec'ed no without waiting?\n", pid1, pid2, pid);
+#if 0
+  fprintf(stderr, "Waiting for process %d got status %d\n", pid, WEXITSTATUS(status));
+#endif
   return WEXITSTATUS(status) | waitfor(pid == pid1 ? pid2 : pid1);
 }
 @
@@ -516,16 +528,14 @@ or vice-versa.
 static void makeInput(int fd) {
   if (fd == 0) return;
   assert(fd != 1);
-  assert(close(0) == 0);
-  assert(dup(fd) == 0);
+  assert(dup2(fd, 0) == 0);
   return;
 }
 
 static void makeOutput(int fd) {
   if (fd == 1) return;
   assert(fd != 0);
-  assert(close(1) == 0);
-  assert(dup(fd) == 1);
+  assert(dup2(fd, 1) == 1);
   return;
 }
 @ 
@@ -643,3 +653,46 @@ tmp = tmpfile();
 assert(tmp);
 <<recover resources associated with [[tmp]]>>=
 (void) fclose(tmp);
+@ 
+\subsection{Possible help for Windows}
+
+Got this useful code from Patrick McPhee:
+<<windows code to start  process with pipes>>=
+int start_command(const char * const cmd, fdesc_t * fd)
+{
+   STARTUPINFO si;
+   PROCESS_INFORMATION pi;
+   SECURITY_ATTRIBUTES sa;
+   HANDLE inh, outh, errh;
+   int rc = 0;
+
+   sa.nLength = sizeof(sa);
+   sa.lpSecurityDescriptor = NULL;
+   sa.bInheritHandle = TRUE;
+   
+   si.cb = sizeof(sinfo);
+   si.dwFlags = STARTF_USESTDHANDLES ;
+   if (!CreatePipe(&si.hStdInput, &inh, &sa, (DWORD)0) ||
+       !CreatePipe(&outh, &si.hStdOutput, &sa, (DWORD)0) ||
+       !CreatePipe(&errh, &si.hStdError, &sa, (DWORD)0))
+      return 0;
+
+   if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+      CloseHandle(&inh);
+      CloseHandle(&outh);
+      CloseHandle(&errh);
+      rc = 0;
+   }
+   else {
+      fd->inh = fdopen(inh, "wb");
+      fd->outh = fdopen(outh, "rb");
+      fd->errh = fdopen(errh, "rb");
+      rc = 1;
+   }
+      
+   CloseHandle(&si.hStdInput);
+   CloseHandle(&si.hStdOutput);
+   CloseHandle(&si.hStdError);
+       
+   return rc;
+}

@@ -197,4 +197,5 @@ if (line==NULL) {
 <<Function declarations>>=
 static void insist(NowebPair line, NowebKey keyword, char *msg);
 <<complain of botched code chunk>>=
-errorat(loc.filename, loc.lineno, Error, "botched code chunk `%s'", line);
+errorat(loc.filename, loc.lineno, Error, "botched code chunk `%s'",
+        NowebBuffer_pairstring(line));

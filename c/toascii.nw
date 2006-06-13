@@ -4,6 +4,9 @@
 
 \chapter{toascii}
 
+THIS FILE APPEARS TO BE OBSOLETE --- THE FUNCTIONALITY IS FOLDER INTO NWBUFFER
+
+
 [[toascii]] is a [[Sink]] for an internal pipe that converts from the
 internal representation to the ascii representation as described in
 the Noweb Hacker's Guide.  This ascii representation may be passed
@@ -17,6 +20,7 @@ along for further use by the external pipeline.
 #include "nwbuffer.h"
 
 extern int toascii_sink(void*, NowebBuffer);
+extern char *toascii_pair(NowebPair p);  /* memory to be freed by caller */
 
 #endif
 @ 
@@ -24,176 +28,223 @@ extern int toascii_sink(void*, NowebBuffer);
 <<toascii.c>>=
 #include <stdio.h>
 #include "nwbuffer.h"
-
+@ 
+Central operation is converting a pair to a string.
+We do this with a buffer passed in.
+It's unsafe to pass in a buffer that's too short.
+<<toascii.c>>=
+static int goodlength(NowebPair p) {
+    switch (p->key) {
+        case NW_XXX_STRINGKEY:
+           return 2 + strlen(p->u.alternate->key) + strlen(p->u.alternate->value);
+        default:
+           return 40+strlen(p->u.value);  /* 40 is enough for any key */
+    }
+}
+@ 
+<<toascii.c>>=
+static void pairstring(char *s, int bufsize, NowebPair pair) {
+	int n;
+	switch(pair->key) {
+	        case NW_XXX_STRINGKEY:
+	                n = sprintf(s, "%s %s\n", pair->u.alternate->key,
+	                            pair->u.alternate->value);
+	                break;
+	        case NW_BEGIN_CODE:
+	                n = sprintf(s, "@begin code %s\n", pair->u.value);
+	                break;
+	        case NW_BEGIN_DOCS:
+	                n = sprintf(s, "@begin docs %s\n", pair->u.value);
+	                break;
+	        case NW_END_CODE:
+	                n = sprintf(s, "@end code %s\n", pair->u.value);
+	                break;
+	        case NW_END_DOCS:
+	                n = sprintf(s, "@end docs %s\n", pair->u.value);
+	                break;
+	        case NW_TEXT:
+	                n = sprintf(s, "@text %s\n", pair->u.value);
+	                break;
+	        case NW_NL:
+	                n = sprintf(s, "@nl\n");
+	                break;
+	        case NW_DEFN:
+	                n = sprintf(s, "@defn %s\n", pair->u.value);
+	                break;
+	        case NW_USE:
+	                n = sprintf(s, "@use %s\n", pair->u.value);
+	                break;
+	        case NW_QUOTE:
+	                n = sprintf(s, "@quote\n");
+	                break;
+	        case NW_ENDQUOTE:
+	                n = sprintf(s, "@endquote\n");
+	                break;
+	        case NW_FILE:
+	                n = sprintf(s, "@file %s\n", pair->u.value);
+	                break;
+	        case NW_LINE:
+	                n = sprintf(s, "@line %s\n", pair->u.value);
+	                break;
+	        case NW_LANGUAGE:
+	                n = sprintf(s, "@language %s\n", pair->u.value);
+	                break;
+	        case NW_HEADER:
+	                n = sprintf(s, "@header %s\n", pair->u.value);
+	                break;
+	        case NW_TRAILER:
+	                n = sprintf(s, "@fatal %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_DEFN:
+	                n = sprintf(s, "@index defn %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_LOCALDEFN:
+	                n = sprintf(s, "@index localdefn %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_USE:
+	                n = sprintf(s, "@index use %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_NL:
+	                n = sprintf(s, "@index nl\n");
+	                break;
+	        case NW_INDEX_BEGINDEFS:
+	                n = sprintf(s, "@index begindefs\n");
+	                break;
+	        case NW_INDEX_ISUSED:
+	                n = sprintf(s, "@index isused %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_DEFITEM:
+	                n = sprintf(s, "@index defitem %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_ENDDEFS:
+	                n = sprintf(s, "@index endefs\n");
+	                break;
+	        case NW_INDEX_BEGINUSES:
+	                n = sprintf(s, "@index beginuses\n");
+	                break;
+	        case NW_INDEX_ISDEFINED:
+	                n = sprintf(s, "@index isdefined %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_USEITEM:
+	                n = sprintf(s, "@index useitem %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_ENDUSES:
+	                n = sprintf(s, "@index enduses\n");
+	                break;
+	        case NW_INDEX_BEGININDEX:
+	                n = sprintf(s, "@index beginindex\n");
+	                break;
+	        case NW_INDEX_ENTRYBEGIN:
+	                n = sprintf(s, "@index entrybegin %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_ENTRYUSE:
+	                n = sprintf(s, "@index entryuse %s\n", pair->u.value);
+	                break;
+	        case NW_INDEX_ENTRYDEFN:
+	                n = sprintf(s, "@index entrydefn %s\n", pair->u.value); 
+	                break;
+	        case NW_INDEX_ENTRYEND:
+	                n = sprintf(s, "@index entryend\n");
+	                break;
+	        case NW_INDEX_ENDINDEX:
+	                n = sprintf(s, "@index endindex\n");
+	                break;
+	        case NW_XREF_LABEL:
+	                n = sprintf(s, "@xref label %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_REF:
+	                n = sprintf(s, "@xref ref %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_PREVDEF:
+	                n = sprintf(s, "@xref prevdef %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_NEXTDEF:
+	                n = sprintf(s, "@xref nextdef %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_BEGINDEFS:
+	                n = sprintf(s, "@xref begindefs\n");
+	                break;
+	        case NW_XREF_DEFITEM:
+	                n = sprintf(s, "@xref defitem %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_ENDDEFS:
+	                n = sprintf(s, "@xref enddefs\n");
+	                break;
+	        case NW_XREF_BEGINUSES:
+	                n = sprintf(s, "@xref beginuses\n");
+	                break;
+	        case NW_XREF_USEITEM:
+	                n = sprintf(s, "@xref useitem %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_ENDUSES:
+	                n = sprintf(s, "@xref enduses\n");
+	                break;
+	        case NW_XREF_NOTUSED:
+	                n = sprintf(s, "@xref notused %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_BEGINCHUNKS:
+	                n = sprintf(s, "@xref beginchunks\n");
+	                break;
+	        case NW_XREF_CHUNKBEGIN:
+	                n = sprintf(s, "@xref chunkbegin %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_CHUNKUSE:
+	                n = sprintf(s, "@xref chunkuse %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_CHUNKDEFN:
+	                n = sprintf(s, "@xref chunkdefn %s\n", pair->u.value);
+	                break;
+	        case NW_XREF_CHUNKEND:
+	                n = sprintf(s, "@xref chunkend\n");
+	                break;
+	        case NW_XREF_ENDCHUNKS:
+	                n = sprintf(s, "@xref endchunks\n");
+	                break;
+	        case NW_XREF_TAG:
+	                n = sprintf(s, "@xref tag %s\n", pair->u.value);
+	                break;
+	        case NW_FATAL:
+	                n = sprintf(s, "@fatal %s\n", pair->u.value);
+	                break;
+	}
+	assert (n < bufsize);  /* leave room for trailing \0 */     
+}
+@ 
+Allocate a sufficiently large string and let the caller free it.
+<<toascii.c>>=
+extern char *toascii_pair(NowebPair p) {
+        int n = goodlength(p);
+        char *s = malloc(n+1);
+        assert(s);
+        pairstring(s, n+1, p);
+        return s;
+}
+@ 
+Reuse one buffer to convert pairs.
+<<toascii.c>>=
 int toascii_sink(void* out, NowebBuffer in) {
 	FILE* fp = out;
 	NowebReader rdr = NowebBuffer_reader(in);
+        char *buffer;
+        int bufsize = 0;
 	NowebPair pair;
+
 	for (pair = NowebBuffer_read(rdr); pair; pair = NowebBuffer_read(rdr)) {
-		switch(pair->key) {
-                        case NW_XXX_STRINGKEY:
-                                fprintf(fp, "%s %s\n", pair->u.alternate->key,
-					pair->u.alternate->value);
-                                break;
-			case NW_BEGIN_CODE:
-				fprintf(fp, "@begin code %s\n", pair->u.value);
-				break;
-			case NW_BEGIN_DOCS:
-				fprintf(fp, "@begin docs %s\n", pair->u.value);
-				break;
-			case NW_END_CODE:
-				fprintf(fp, "@end code %s\n", pair->u.value);
-				break;
-			case NW_END_DOCS:
-				fprintf(fp, "@end docs %s\n", pair->u.value);
-				break;
-			case NW_TEXT:
-				fprintf(fp, "@text %s\n", pair->u.value);
-				break;
-			case NW_NL:
-				fprintf(fp, "@nl\n");
-				break;
-			case NW_DEFN:
-				fprintf(fp, "@defn %s\n", pair->u.value);
-				break;
-                        case NW_USE:
-				fprintf(fp, "@use %s\n", pair->u.value);
-				break;
-			case NW_QUOTE:
-				fprintf(fp, "@quote\n");
-				break;
-			case NW_ENDQUOTE:
-				fprintf(fp, "@endquote\n");
-                                break;
-                        case NW_FILE:
-                                fprintf(fp, "@file %s\n", pair->u.value);
-                                break;
-                        case NW_LINE:
-                                fprintf(fp, "@line %s\n", pair->u.value);
-                                break;
-                        case NW_LANGUAGE:
-                                fprintf(fp, "@language %s\n", pair->u.value);
-                                break;
-                        case NW_HEADER:
-                                fprintf(fp, "@header %s\n", pair->u.value);
-                                break;
-                        case NW_TRAILER:
-                                fprintf(fp, "@fatal %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_DEFN:
-                                fprintf(fp, "@index defn %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_LOCALDEFN:
-                                fprintf(fp, "@index localdefn %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_USE:
-                                fprintf(fp, "@index use %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_NL:
-                                fprintf(fp, "@index nl\n");
-                                break;
-                        case NW_INDEX_BEGINDEFS:
-                                fprintf(fp, "@index begindefs\n");
-                                break;
-                        case NW_INDEX_ISUSED:
-                                fprintf(fp, "@index isused %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_DEFITEM:
-                                fprintf(fp, "@index defitem %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_ENDDEFS:
-                                fprintf(fp, "@index endefs\n");
-                                break;
-                        case NW_INDEX_BEGINUSES:
-                                fprintf(fp, "@index beginuses\n");
-                                break;
-                        case NW_INDEX_ISDEFINED:
-                                fprintf(fp, "@index isdefined %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_USEITEM:
-                                fprintf(fp, "@index useitem %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_ENDUSES:
-                                fprintf(fp, "@index enduses\n");
-                                break;
-                        case NW_INDEX_BEGININDEX:
-                                fprintf(fp, "@index beginindex\n");
-                                break;
-                        case NW_INDEX_ENTRYBEGIN:
-                                fprintf(fp, "@index entrybegin %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_ENTRYUSE:
-                                fprintf(fp, "@index entryuse %s\n", pair->u.value);
-                                break;
-                        case NW_INDEX_ENTRYDEFN:
-                                fprintf(fp, "@index entrydefn %s\n", pair->u.value); 
-                                break;
-                        case NW_INDEX_ENTRYEND:
-                                fprintf(fp, "@index entryend\n");
-                                break;
-                        case NW_INDEX_ENDINDEX:
-                                fprintf(fp, "@index endindex\n");
-                                break;
-                        case NW_XREF_LABEL:
-                                fprintf(fp, "@xref label %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_REF:
-                                fprintf(fp, "@xref ref %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_PREVDEF:
-                                fprintf(fp, "@xref prevdef %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_NEXTDEF:
-                                fprintf(fp, "@xref nextdef %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_BEGINDEFS:
-                                fprintf(fp, "@xref begindefs\n");
-                                break;
-                        case NW_XREF_DEFITEM:
-                                fprintf(fp, "@xref defitem %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_ENDDEFS:
-                                fprintf(fp, "@xref enddefs\n");
-                                break;
-                        case NW_XREF_BEGINUSES:
-                                fprintf(fp, "@xref beginuses\n");
-                                break;
-                        case NW_XREF_USEITEM:
-                                fprintf(fp, "@xref useitem %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_ENDUSES:
-                                fprintf(fp, "@xref enduses\n");
-                                break;
-                        case NW_XREF_NOTUSED:
-                                fprintf(fp, "@xref notused %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_BEGINCHUNKS:
-                                fprintf(fp, "@xref beginchunks\n");
-                                break;
-                        case NW_XREF_CHUNKBEGIN:
-                                fprintf(fp, "@xref chunkbegin %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_CHUNKUSE:
-                                fprintf(fp, "@xref chunkuse %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_CHUNKDEFN:
-                                fprintf(fp, "@xref chunkdefn %s\n", pair->u.value);
-                                break;
-                        case NW_XREF_CHUNKEND:
-                                fprintf(fp, "@xref chunkend\n");
-                                break;
-                        case NW_XREF_ENDCHUNKS:
-                                fprintf(fp, "@xref endchunks\n");
-                                break;
-                        case NW_XREF_TAG:
-                                fprintf(fp, "@xref tag %s\n", pair->u.value);
-                                break;
-                        case NW_FATAL:
-                                fprintf(fp, "@fatal %s\n", pair->u.value);
-                                break;
-		}
+                <<make [[buffer]] large enough to write [[pair]]>>
+                pairstring(buffer, bufsize, pair);
+                fputs(s, fp);
 	}
+        if (buffer) free(buffer);
         return 0;   /* success */
+}
+<<make [[buffer]] large enough to write [[pair]]>>=
+{
+	int n = goodsize(pair);
+  	if (n < bufsize) {
+		if (buffer) free(buffer);
+		buffer = malloc(bufsize = n);
+		assert(buffer);
+	}
 }
 <<*>>=
 <<toascii.c>>

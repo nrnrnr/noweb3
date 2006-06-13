@@ -154,6 +154,7 @@ allchunks = Set.new ()
 allidents = Set.new ()
 indexlabels = { }
 defanchors = { }
+defcounts  = { }
 Noidx.defanchors = defanchors
 uses = { }
 anchorlabel = { }
@@ -408,19 +409,24 @@ if uses[thischunk] or usedb[thischunk] then
 else 
   NWB.put(sinkbuf, NW_XREF_NOTUSED, thischunk)
 end
-@
+@ 
+The following code is incompatible with Noweb 2.10c, but it produces
+better labels, which make the 152 text work better because it doesn't
+matter if files are processed together or separately.
+Noweb~2.10d has been changed to use this method, too.
 <<*>>=
 function Noidx.newdefnlabel(arg)
   defanchors[arg] = defanchors[arg] or List.new()
-  return "NW" .. curfile .. "-" .. Noidx.uniqueid(arg) .. "-" .. 
-          alphacode(1+List.length(defanchors[arg]))
+  local key = curfile .. "-" .. Noidx.uniqueid(arg)
+  defcounts[key] = (defcounts[key] or 0) + 1
+  return "NW" .. key .. "-" .. alphacode(defcounts[key])
 end
 <<initialization>>=
 Noidx.docsLabelCount = 0
 <<*>>=
 function Noidx.newdocslabel()
   Noidx.docsLabelCount = Noidx.docsLabelCount + 1
-  return "NWD" .. alphacode(Noidx.docsLabelCount)
+  return "NWD" .. curfile .. "-" .. alphacode(Noidx.docsLabelCount)
 end
 <<*>>=
 function Noidx.addlabel(tbl, arg, label)

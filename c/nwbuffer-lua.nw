@@ -53,6 +53,12 @@ static void put_lua(void) {
     NowebBuffer_put(lua_getuserdata(buf), (NowebKey)lua_getuserdata(key),
 		       lua_optatom(val));
 }
+<<functions>>=
+static void keynum_lua(void) {
+  lua_Object key;
+  lua_get_args("NWB.keynum", 1, NWKEY, &key);
+  lua_pushnumber((double)(enum keys)lua_getuserdata(key));
+}
 @ 
 <<functions>>=
 static void pull_lua(void) {
@@ -80,6 +86,7 @@ void nwbuffer_open(void) {
   lua_module_register("NWB", "read",   read_lua);
   lua_module_register("NWB", "put", put_lua);
   lua_module_register("NWB", "pull", pull_lua);
+  lua_module_register("NWB", "keynum", keynum_lua);
 #define xx(NAME, PRINTARGS) \
   lua_pushusertag((void*)NAME, NWKEY); lua_storeglobal(#NAME);
   <<key macros>>
