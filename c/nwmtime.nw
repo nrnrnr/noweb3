@@ -1,0 +1,40 @@
+This is a simple filter to spit out the modification time
+of the first file in a pipeline.
+<<*>>=
+#include <stdio.h>
+#include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "getline.h"
+
+
+int main(int argc, char *argv[]) {
+  char *line;
+  char *p;
+  int first = 1;
+  struct tm *mtime = NULL;
+
+  for (line = getline(stdin); line; line = getline(stdin)) {
+    puts(line);
+    if (first && !strncmp(line, "@file", 5) && (p = spaces(line+5))) {
+      struct stat_buf buf;
+      int rc;
+      rc = stat(p, &buf);
+      if (rc == 0)
+        tm = gmtime(&buf.st_mtime);
+      first = 0;
+    }
+  }
+  if (tm) {
+    printf("@begin code 000\n"
+           "@defn modification time of first @file\n"
+           "@nl\n"
+           "@text %s\n"
+           "@nl\n"
+           "@end code 000\n",
+           asctime(tm));
+  }
+  return 0;
+}
