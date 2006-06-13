@@ -21,12 +21,12 @@ everything: all todo.html
 install: all install-code install-scripts
 
 install-code:
-	-mkdir $(BIN) 2>/dev/null
+	-mkdir $(BIN) 2>/dev/null || true
 	cp c/no $(BIN)
 	cp c/nwmtime $(LIB3)
 
 install-scripts:
-	-mkdir $(LIB3) 2>/dev/null
+	-mkdir $(LIB3) 2>/dev/null || true
 	cd lua; make LIB2=$(LIB2) LIB3=$(LIB3) install
 
 todo.html: todo.nw

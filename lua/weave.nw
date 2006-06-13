@@ -48,6 +48,7 @@ exit(P.run(pipeline))
 -- default is to use internal filters
 backend = Stages.totex
 markup = Stages.markup
+Defaults = { }
 Defaults.noidx = Stages.noidx
 Defaults.tohtml = Stages.tohtml
 Defaults.finduses = Stages.finduses

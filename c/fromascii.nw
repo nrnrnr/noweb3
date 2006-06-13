@@ -8,6 +8,7 @@ extern int readascii(void *infile, NowebBuffer ignored, NowebBuffer buf);
 <<fromascii.c>>=
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include "errors.h"
 #include "getline.h"
 #include "nwbuffer.h"

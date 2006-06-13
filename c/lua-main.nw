@@ -10,6 +10,7 @@ external pipeline commands built in [[xpipe-lua.nw]] and [[xpipe.nw]].
 <<lua-main.c>>=
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifdef _POSIX_SOURCE
 #include <unistd.h>
