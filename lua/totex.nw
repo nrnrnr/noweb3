@@ -101,7 +101,9 @@ This whole code is a giant [[if ... then ... else if ...]].
 | NW_FATAL => return 1
 | "literal" => writes(value)
 else =>
-  if type(key) == "string" then
+  if key == NW_LINE then 
+    -- do nothing (adding another case overflows yacc's stack!!)
+  elseif type(key) == "string" then
     warn_unknown(key, value)
   else
     noweb_error("Internal error in weave (totex): did not handle key ", key)

@@ -1,4 +1,4 @@
-% -*- mode: Noweb; noweb-code-mode: icon-mode -*-
+% -*- mode: Noweb; noweb-code-mode: lua-mode -*-
 
 \section{Getting chunks from an external ``dictionary''}
 
@@ -26,6 +26,11 @@ definitions from an external database.
 The external database is itself simply a list of Noweb files.
 It's a bit more liberal than defined above; a chunk is considered
 empty if its definition contains at most whitespace.
+
+N.B. THIS CODE LACKS SUPPORT FOR THE [[-merge]] AND [[-summary]]
+OPTIONS SUPPORTED BY THE ICON VERSION. 
+
+A late-breaking bug: we need to resynchronize line numbers.
 <<*>>=
 Xchunks = { }
 
@@ -48,12 +53,14 @@ function Stages.xchunks(inbuf, outbuf, argv)
     if c.type ~= "code" or c.notEmpty or not defns[c.name] then
       Stages.cat(c.lines, outbuf)
     else
+      NWB.put(outbuf, 'crc_prefix', 'on')
       local d = defns[c.name]
       local m = List.length(d)
       local j = 1
       while j <= m do Stages.cat(d[j].lines, outbuf)
         j = j + 1
       end
+      NWB.put(outbuf, 'crc_prefix', 'off')
     end
     i = i + 1
   end
@@ -66,22 +73,29 @@ The loop logic is a little less pleasant than I would like.
 function Xchunks.readchunks(buf)
   local chunks, c
   chunks = List.new()
-  -- finish converting me to Lua...
+  local file, lnum, startline
+  lnum = 1
   local r = NWB.reader(buf)
   key, arg = NWB.read(r)
   while key do
     case key of
+    | NW_FILE => file = arg; lnum = 1
+    | NW_LINE => lnum = tonumber(arg)
     | NW_BEGIN_DOCS, NW_BEGIN_CODE =>
-        local t
-        if key == NW_BEGIN_DOCS then t = "docs" else t = "code" end
+        local t = key == NW_BEGIN_DOCS and "docs" or "code"
         local lines = NWB.new()
         c = { lines = lines , type = t }
+        if file then NWB.put(lines, NW_FILE, file) end
+        NWB.put(lines, NW_LINE, lnum)
         NWB.put(lines, key, arg)
         key, arg = NWB.read(r)
         while key and key ~= NW_END_DOCS and key ~= NW_END_CODE do
           NWB.put(lines, key, arg)
-          if key == NW_DEFN then c.name = arg end
-          if key == NW_USE or (key == NW_TEXT and strfind(arg, "%S")) then
+          if     key == NW_FILE then file = arg; lnum = 1
+          elseif key == NW_LINE then lnum = tonumber(arg)
+          elseif key == NW_NL or key == NW_INDEX_NL then lnum = lnum + 1
+          elseif key == NW_DEFN then c.name = arg 
+          elseif key == NW_USE or (key == NW_TEXT and strfind(arg, "%S")) then
             c.notEmpty = 1
           end
           key, arg = NWB.read(r)
@@ -93,6 +107,10 @@ function Xchunks.readchunks(buf)
         local lines = NWB.new()
         NWB.put(lines, key, arg)
         List.put(chunks, {lines=lines, type="unknown"})
+        if     key == NW_FILE then file = arg; lnum = 1
+        elseif key == NW_LINE then lnum = tonumber(arg)
+        elseif key == NW_NL or key == NW_INDEX_NL then lnum = lnum + 1
+        end
      end
      key, arg = NWB.read(r)
   end

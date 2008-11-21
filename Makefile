@@ -22,8 +22,9 @@ install: all install-code install-scripts
 
 install-code:
 	-mkdir $(BIN) 2>/dev/null || true
-	cp c/no $(BIN)
-	cp c/nwmtime $(LIB3)
+	-mkdir $(LIB3) 2>/dev/null || true
+	cp c/no $(BIN)/.
+	cp c/nwmtime $(LIB3)/.
 
 install-scripts:
 	-mkdir $(LIB3) 2>/dev/null || true

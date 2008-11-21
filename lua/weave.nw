@@ -84,6 +84,7 @@ i = 1
 while i <= List.length(argv) do
   globmatch argv[i] of
   | "-externaldefaults" => externalDefaults()
+  | "-internaldefaults" => -- do nothing
   | "-e" => i = i + 1; dostring(argv[i])
   <<first pass {\tt noweave} options>>
   | "-"  => List.put(args, "-")

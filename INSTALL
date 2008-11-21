@@ -54,4 +54,4 @@ it won't get overwritten by the default nwmake when you unbundle a new
 distribution.
 
 If you encounter a problem building noweb 3, please send email to
-nr@eecs.harvard.edu.
+nr@cs.tufts.edu.

@@ -17,9 +17,9 @@ PLATFORM=unix
 # BIN is where the no command lands
 # LIB2 is where external pipeline stages from Noweb 2 are stored
 # LIB3 is where Noweb 3 scripts and configuration files go
-BIN=/usr/local/bin
-LIB2=/usr/local/noweb/lib
-LIB3=/usr/local/lib/noweb3
+BIN=/h/nr/machine/amd64-linux/bin
+LIB2=/usr/lib64/noweb
+LIB3=/h/nr/machine/amd64-linux/lib/noweb3
 
 
 ################################################################

@@ -78,6 +78,7 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   key, arg = NWB.read(r)
   while key do
     case key of
+    <<case for [[crc_prefix]]>>
     <<cases for pass 1>>
     end
     NWB.put(newbuf, key, arg)
@@ -88,6 +89,7 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   key, arg = NWB.read(r)
   while key do
     case key of
+    <<case for [[crc_prefix]]>>
     <<cases for pass 2>>
     end
     key, arg = NWB.read(r)
@@ -489,11 +491,15 @@ end
 <<initialization>>=
 Noidx.idtable = {}
 Noidx.keycounts = {} -- can't make 0 default
+Noidx.crc_prefix = Noidx.crc_prefix or ''
+Noidx.active_crc_prefix = ''
+<<case for [[crc_prefix]]>>=
+| "crc_prefix" => Noidx.active_crc_prefix = arg == "on" and Noidx.crc_prefix or ""
 <<*>>=
 function Noidx.uniqueid(name)
   if not Noidx.idtable[name] then
     -- local key = Noidx.make_key(gsub(name, '[^%a%d!$%(%)%*+,%./:;=%?@|]', "*")) 
-    local key = alphacode_crc(name)
+    local key = alphacode_crc(Noidx.active_crc_prefix .. name)
     local c = Noidx.keycounts
     c[key] = (c[key] or 0) + 1
     if c[key] > 1 then
