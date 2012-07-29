@@ -58,6 +58,9 @@ FILE *lua_openfile (char *fn)
  }
  else
    fp = fopen (fn, "r");
+ if(0)
+   fprintf(stderr, "no: lua_openfile(%s); fp == %p%s\n", fn == NULL ? "NULL" : fn,
+           (void *)fp, fp == stdin ? " [stdin]" : "");
  if (fp == NULL)
    return NULL;
  lua_parsedfile = luaI_createfixedstring(fn)->str;
@@ -69,6 +72,9 @@ FILE *lua_openfile (char *fn)
 */
 void lua_closefile (void)
 {
+  if(0)
+    fprintf(stderr, "no: lua_closefile(%p) [%sstdin]\n", (void*)fp,
+            fp == stdin ? "" : "not ");
  if (fp != NULL && fp != stdin)
  {
   fclose (fp);

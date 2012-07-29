@@ -40,7 +40,7 @@ Although you would think it unnecessary to declare [[putenv]], since it
 resides in \texttt{stdlib.h}, for some unfathomable reason
 gcc complains that it is implicitly declared.
 <<putenv>>=
-extern int putenv (const char *);  /* keep gcc -Wall from complaining! */
+extern int putenv (char *);  /* keep gcc -Wall from complaining! */
 static void putenv_lua(void) {
   lua_Object var;
   lua_get_args("System.putenv", 1, LUA_STRING, &var);

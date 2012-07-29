@@ -1,13 +1,21 @@
 #ifndef lint
-static char luaY_sccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
+static const char luaY_sccsid[] = "@(#)yaccpar	1.9 (Berkeley) 02/21/93";
 #endif
+
 #define YYBYACC 1
 #define YYMAJOR 1
 #define YYMINOR 9
-#define luaY_clearin (luaY_char=(-1))
-#define luaY_errok (luaY_errflag=0)
-#define YYRECOVERING (luaY_errflag!=0)
+#define YYPATCH 20100610
+
+#define YYEMPTY        (-1)
+#define luaY_clearin      (luaY_char = YYEMPTY)
+#define luaY_errok        (luaY_errflag = 0)
+#define YYRECOVERING() (luaY_errflag != 0)
+
 #define YYPREFIX "luaY_"
+
+#define YYPURE 0
+
 #line 2 "lua.stx"
 
 char *rcs_luastx = "$Id$";
@@ -76,8 +84,23 @@ static void luaY_error (char *s)
 
 static void check_space (int i)
 {
-  if (pc+i>maxcurr-1)  /* 1 byte free to code HALT of main code */
+  if (pc+i>maxcurr-1) {  /* 1 byte free to code HALT of main code */
+	int adjust = (basepc == *initcode);
     maxcurr = growvector(&basepc, maxcurr, Byte, codeEM, MAX_INT);
+	if (adjust) {
+#if 0
+      char *token = luaI_buffer(1);
+      if (token[0] == 0)
+        token = "<eof>";
+	  fprintf(stderr,
+         "no: Adjusted code vector\n> last token read: \"%s\" at line %d in file %s\n",
+              token, lua_linenumber, lua_parsedfile);
+      fprintf(stderr, "   old vector = %p; new vector = %p\n",
+              (void *) *initcode, (void *)basepc);
+#endif
+	  *initcode = basepc; /* bugfix: don't let *initcode get stale */
+    }
+  }
 }
 
 static void code_byte (Byte c)
@@ -424,7 +447,7 @@ void lua_parse (TFunc *tf)
 }
 
 
-#line 420 "lua.stx"
+#line 435 "lua.stx"
 typedef union 
 {
  int   vInt;
@@ -435,7 +458,31 @@ typedef union
  TFunc *pFunc;
  TaggedString *pTStr;
 } YYSTYPE;
-#line 439 "y.tab.c"
+#line 461 "y.tab.c"
+/* compatibility with bison */
+#ifdef YYPARSE_PARAM
+/* compatibility with FreeBSD */
+# ifdef YYPARSE_PARAM_TYPE
+#  define YYPARSE_DECL() luaY_parse(YYPARSE_PARAM_TYPE YYPARSE_PARAM)
+# else
+#  define YYPARSE_DECL() luaY_parse(void *YYPARSE_PARAM)
+# endif
+#else
+# define YYPARSE_DECL() luaY_parse(void)
+#endif
+
+/* Parameters sent to lex. */
+#ifdef YYLEX_PARAM
+# define YYLEX_DECL() luaY_lex(void *YYLEX_PARAM)
+# define YYLEX luaY_lex(YYLEX_PARAM)
+#else
+# define YYLEX_DECL() luaY_lex(void)
+# define YYLEX luaY_lex()
+#endif
+
+extern int YYPARSE_DECL();
+extern int YYLEX_DECL();
+
 #define WRONGTOKEN 257
 #define NIL 258
 #define IF 259
@@ -468,7 +515,7 @@ typedef union
 #define UNARY 286
 #define NOT 287
 #define YYERRCODE 256
-short luaY_lhs[] = {                                        -1,
+static const short luaY_lhs[] = {                           -1,
     0,   28,   28,   28,   32,   26,   26,   27,   35,   35,
    31,   31,   30,   30,   30,   40,   30,   41,   30,   30,
    30,   30,   37,   37,   37,   42,   38,   43,   38,   38,
@@ -483,7 +530,7 @@ short luaY_lhs[] = {                                        -1,
    20,   20,   10,   10,   24,   24,   24,   25,   33,   14,
    14,   15,   15,
 };
-short luaY_len[] = {                                         2,
+static const short luaY_len[] = {                            2,
     2,    0,    3,    2,    3,    1,    3,    5,    0,    3,
     0,    1,    8,    5,    5,    0,    8,    0,    6,    3,
     1,    3,    0,    2,    7,    0,    3,    0,    4,    0,
@@ -498,7 +545,7 @@ short luaY_len[] = {                                         2,
     1,    3,    1,    3,    1,    4,    3,    1,    1,    1,
     3,    0,    2,
 };
-short luaY_defred[] = {                                      2,
+static const short luaY_defred[] = {                         2,
     0,    0,    0,   16,   18,    0,    0,    0,    0,    0,
   118,   21,    0,    0,    0,  115,    1,    0,    4,    0,
    72,   70,   71,    0,    0,    0,   73,   53,  119,    0,
@@ -523,7 +570,7 @@ short luaY_defred[] = {                                      2,
    46,   42,   46,   50,   50,   50,    0,    0,    0,   25,
    35,   45,
 };
-short luaY_dgoto[] = {                                       1,
+static const short luaY_dgoto[] = {                          1,
    97,  189,  192,  175,  178,   38,   39,   27,   28,   13,
    50,   14,  113,   43,   85,  185,  114,  169,  115,  116,
   133,  134,  135,   29,   16,   45,   87,    2,   17,   18,
@@ -531,7 +578,7 @@ short luaY_dgoto[] = {                                       1,
    35,  154,  174,  205,  190,  211,  157,  177,  207,  193,
   213,   78,   32,  140,  141,   33,  128,  146,  145,  118,
 };
-short luaY_sindex[] = {                                      0,
+static const short luaY_sindex[] = {                         0,
     0,  226,  -37,    0,    0,  -37,  -37,  -37, -247, -242,
     0,    0,  -12,   -1,    0,    0,    0,   -5,    0,  105,
     0,    0,    0,  -37,  -37,  -37,    0,    0,    0,  105,
@@ -556,7 +603,7 @@ short luaY_sindex[] = {                                      0,
     0,    0,    0,    0,    0,    0, -152, -114, -112,    0,
     0,    0,
 };
-short luaY_rindex[] = {                                      0,
+static const short luaY_rindex[] = {                         0,
     0,  200,   78,    0,    0,   78,   78,  700,    0,    0,
     0,    0,    0,   78,   45,    0,    0,  197,    0,  -15,
     0,    0,    0,   78,   78,   78,    0,    0,    0,    1,
@@ -581,7 +628,7 @@ short luaY_rindex[] = {                                      0,
     0,    0,    0,    0,    0,    0,  -56,  -67,  -62,    0,
     0,    0,
 };
-short luaY_gindex[] = {                                      0,
+static const short luaY_gindex[] = {                         0,
   800,    0,    0,   13,    9,  168,    3,   12,   58,    0,
     0,    0,    0,    0,    0,    0,   51,    0,    0,    0,
     0,    0,   59,   11,    0,    0,    0,    0,  107,  108,
@@ -590,7 +637,7 @@ short luaY_gindex[] = {                                      0,
     0,    0,  216,    0,    0,    0,    0,    0,  -93,  104,
 };
 #define YYTABLESIZE 1773
-short luaY_table[] = {                                      51,
+static const short luaY_table[] = {                         51,
    69,   52,   26,   72,   70,   26,   71,   24,   73,  123,
    24,  126,   15,   12,   72,   70,   81,   71,   20,   73,
    44,   86,  148,   48,   82,  102,   46,   67,   72,  108,
@@ -770,7 +817,7 @@ short luaY_table[] = {                                      51,
     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
   176,    0,  179,
 };
-short luaY_check[] = {                                      44,
+static const short luaY_check[] = {                         44,
     0,   44,   40,   42,   43,   40,   45,   45,   47,  124,
    45,  124,    2,    2,   42,   43,   38,   45,    2,   47,
    10,   41,  116,  124,   40,   59,   10,    0,   42,   44,
@@ -956,7 +1003,8 @@ short luaY_check[] = {                                      44,
 #endif
 #define YYMAXTOKEN 287
 #if YYDEBUG
-char *luaY_name[] = {
+static const char *luaY_name[] = {
+
 "end-of-file",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,"'('","')'","'*'","'+'","','","'-'","'.'","'/'",0,0,0,0,0,0,0,0,0,0,
 "':'","';'","'<'","'='","'>'",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -969,7 +1017,7 @@ char *luaY_name[] = {
 "LOCAL","FUNCTION","DOTS","ARROW","NUMBER","STRING","NAME","AND","OR","EQ","NE",
 "LE","GE","CONC","UNARY","NOT",
 };
-char *luaY_rule[] = {
+static const char *luaY_rule[] = {
 "$accept : chunk",
 "chunk : chunklist ret",
 "chunklist :",
@@ -1094,43 +1142,113 @@ char *luaY_rule[] = {
 "localdeclist : localdeclist ',' NAME",
 "decinit :",
 "decinit : '=' exprlist1",
+
 };
 #endif
+/* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
 #undef YYMAXDEPTH
-#define YYMAXDEPTH YYSTACKSIZE
+#define YYMAXDEPTH  YYSTACKSIZE
 #else
 #ifdef YYMAXDEPTH
 #define YYSTACKSIZE YYMAXDEPTH
 #else
 #define YYSTACKSIZE 500
-#define YYMAXDEPTH 500
+#define YYMAXDEPTH  500
 #endif
 #endif
-int luaY_debug;
-int luaY_nerrs;
-int luaY_errflag;
-int luaY_char;
-short *luaY_ssp;
-YYSTYPE *luaY_vsp;
-YYSTYPE luaY_val;
-YYSTYPE luaY_lval;
-short luaY_ss[YYSTACKSIZE];
-YYSTYPE luaY_vs[YYSTACKSIZE];
-#define luaY_stacksize YYSTACKSIZE
-#define YYABORT goto luaY_abort
+
+#define YYINITSTACKSIZE 500
+
+int      luaY_debug;
+int      luaY_nerrs;
+
+typedef struct {
+    unsigned stacksize;
+    short    *s_base;
+    short    *s_mark;
+    short    *s_last;
+    YYSTYPE  *l_base;
+    YYSTYPE  *l_mark;
+} YYSTACKDATA;
+int      luaY_errflag;
+int      luaY_char;
+YYSTYPE  luaY_val;
+YYSTYPE  luaY_lval;
+
+/* variables for the parser stack */
+static YYSTACKDATA luaY_stack;
+
+#if YYDEBUG
+#include <stdio.h>		/* needed for printf */
+#endif
+
+#include <stdlib.h>	/* needed for malloc, etc */
+#include <string.h>	/* needed for memset */
+
+/* allocate initial stack or double stack size, up to YYMAXDEPTH */
+static int luaY_growstack(YYSTACKDATA *data)
+{
+    int i;
+    unsigned newsize;
+    short *newss;
+    YYSTYPE *newvs;
+
+    if ((newsize = data->stacksize) == 0)
+        newsize = YYINITSTACKSIZE;
+    else if (newsize >= YYMAXDEPTH)
+        return -1;
+    else if ((newsize *= 2) > YYMAXDEPTH)
+        newsize = YYMAXDEPTH;
+
+    i = data->s_mark - data->s_base;
+    newss = (data->s_base != 0)
+          ? (short *)realloc(data->s_base, newsize * sizeof(*newss))
+          : (short *)malloc(newsize * sizeof(*newss));
+    if (newss == 0)
+        return -1;
+
+    data->s_base = newss;
+    data->s_mark = newss + i;
+
+    newvs = (data->l_base != 0)
+          ? (YYSTYPE *)realloc(data->l_base, newsize * sizeof(*newvs))
+          : (YYSTYPE *)malloc(newsize * sizeof(*newvs));
+    if (newvs == 0)
+        return -1;
+
+    data->l_base = newvs;
+    data->l_mark = newvs + i;
+
+    data->stacksize = newsize;
+    data->s_last = data->s_base + newsize - 1;
+    return 0;
+}
+
+#if YYPURE || defined(YY_NO_LEAKS)
+static void luaY_freestack(YYSTACKDATA *data)
+{
+    free(data->s_base);
+    free(data->l_base);
+    memset(data, 0, sizeof(*data));
+}
+#else
+#define luaY_freestack(data) /* nothing */
+#endif
+
+#define YYABORT  goto luaY_abort
 #define YYREJECT goto luaY_abort
 #define YYACCEPT goto luaY_accept
-#define YYERROR goto luaY_errlab
-int
-luaY_parse()
-{
-    register int luaY_m, luaY_n, luaY_state;
-#if YYDEBUG
-    register char *luaY_s;
-    extern char *getenv();
+#define YYERROR  goto luaY_errlab
 
-    if (luaY_s = getenv("YYDEBUG"))
+int
+YYPARSE_DECL()
+{
+    int luaY_m, luaY_n, luaY_state;
+#if YYDEBUG
+    const char *luaY_s;
+
+    if ((luaY_s = getenv("YYDEBUG")) != 0)
     {
         luaY_n = *luaY_s;
         if (luaY_n >= '0' && luaY_n <= '9')
@@ -1140,17 +1258,24 @@ luaY_parse()
 
     luaY_nerrs = 0;
     luaY_errflag = 0;
-    luaY_char = (-1);
+    luaY_char = YYEMPTY;
+    luaY_state = 0;
 
-    luaY_ssp = luaY_ss;
-    luaY_vsp = luaY_vs;
-    *luaY_ssp = luaY_state = 0;
+#if YYPURE
+    memset(&luaY_stack, 0, sizeof(luaY_stack));
+#endif
+
+    if (luaY_stack.s_base == NULL && luaY_growstack(&luaY_stack)) goto luaY_overflow;
+    luaY_stack.s_mark = luaY_stack.s_base;
+    luaY_stack.l_mark = luaY_stack.l_base;
+    luaY_state = 0;
+    *luaY_stack.s_mark = 0;
 
 luaY_loop:
-    if (luaY_n = luaY_defred[luaY_state]) goto luaY_reduce;
+    if ((luaY_n = luaY_defred[luaY_state]) != 0) goto luaY_reduce;
     if (luaY_char < 0)
     {
-        if ((luaY_char = luaY_lex()) < 0) luaY_char = 0;
+        if ((luaY_char = YYLEX) < 0) luaY_char = 0;
 #if YYDEBUG
         if (luaY_debug)
         {
@@ -1170,13 +1295,14 @@ luaY_loop:
             printf("%sdebug: state %d, shifting to state %d\n",
                     YYPREFIX, luaY_state, luaY_table[luaY_n]);
 #endif
-        if (luaY_ssp >= luaY_ss + luaY_stacksize - 1)
+        if (luaY_stack.s_mark >= luaY_stack.s_last && luaY_growstack(&luaY_stack))
         {
             goto luaY_overflow;
         }
-        *++luaY_ssp = luaY_state = luaY_table[luaY_n];
-        *++luaY_vsp = luaY_lval;
-        luaY_char = (-1);
+        luaY_state = luaY_table[luaY_n];
+        *++luaY_stack.s_mark = luaY_table[luaY_n];
+        *++luaY_stack.l_mark = luaY_lval;
+        luaY_char = YYEMPTY;
         if (luaY_errflag > 0)  --luaY_errflag;
         goto luaY_loop;
     }
@@ -1187,36 +1313,35 @@ luaY_loop:
         goto luaY_reduce;
     }
     if (luaY_errflag) goto luaY_inrecovery;
-#ifdef lint
-    goto luaY_newerror;
-#endif
-luaY_newerror:
+
     luaY_error("syntax error");
-#ifdef lint
+
     goto luaY_errlab;
-#endif
+
 luaY_errlab:
     ++luaY_nerrs;
+
 luaY_inrecovery:
     if (luaY_errflag < 3)
     {
         luaY_errflag = 3;
         for (;;)
         {
-            if ((luaY_n = luaY_sindex[*luaY_ssp]) && (luaY_n += YYERRCODE) >= 0 &&
+            if ((luaY_n = luaY_sindex[*luaY_stack.s_mark]) && (luaY_n += YYERRCODE) >= 0 &&
                     luaY_n <= YYTABLESIZE && luaY_check[luaY_n] == YYERRCODE)
             {
 #if YYDEBUG
                 if (luaY_debug)
                     printf("%sdebug: state %d, error recovery shifting\
- to state %d\n", YYPREFIX, *luaY_ssp, luaY_table[luaY_n]);
+ to state %d\n", YYPREFIX, *luaY_stack.s_mark, luaY_table[luaY_n]);
 #endif
-                if (luaY_ssp >= luaY_ss + luaY_stacksize - 1)
+                if (luaY_stack.s_mark >= luaY_stack.s_last && luaY_growstack(&luaY_stack))
                 {
                     goto luaY_overflow;
                 }
-                *++luaY_ssp = luaY_state = luaY_table[luaY_n];
-                *++luaY_vsp = luaY_lval;
+                luaY_state = luaY_table[luaY_n];
+                *++luaY_stack.s_mark = luaY_table[luaY_n];
+                *++luaY_stack.l_mark = luaY_lval;
                 goto luaY_loop;
             }
             else
@@ -1224,11 +1349,11 @@ luaY_inrecovery:
 #if YYDEBUG
                 if (luaY_debug)
                     printf("%sdebug: error recovery discarding state %d\n",
-                            YYPREFIX, *luaY_ssp);
+                            YYPREFIX, *luaY_stack.s_mark);
 #endif
-                if (luaY_ssp <= luaY_ss) goto luaY_abort;
-                --luaY_ssp;
-                --luaY_vsp;
+                if (luaY_stack.s_mark <= luaY_stack.s_base) goto luaY_abort;
+                --luaY_stack.s_mark;
+                --luaY_stack.l_mark;
             }
         }
     }
@@ -1245,9 +1370,10 @@ luaY_inrecovery:
                     YYPREFIX, luaY_state, luaY_char, luaY_s);
         }
 #endif
-        luaY_char = (-1);
+        luaY_char = YYEMPTY;
         goto luaY_loop;
     }
+
 luaY_reduce:
 #if YYDEBUG
     if (luaY_debug)
@@ -1255,41 +1381,44 @@ luaY_reduce:
                 YYPREFIX, luaY_state, luaY_n, luaY_rule[luaY_n]);
 #endif
     luaY_m = luaY_len[luaY_n];
-    luaY_val = luaY_vsp[1-luaY_m];
+    if (luaY_m)
+        luaY_val = luaY_stack.l_mark[1-luaY_m];
+    else
+        memset(&luaY_val, 0, sizeof luaY_val);
     switch (luaY_n)
     {
 case 5:
-#line 478 "lua.stx"
-{ 
+#line 493 "lua.stx"
+	{ 
 		code_byte(PUSHFUNCTION);
-		code_code(luaY_vsp[0].pFunc);
-		storesinglevar(luaY_vsp[-1].vLong);
+		code_code(luaY_stack.l_mark[0].pFunc);
+		storesinglevar(luaY_stack.l_mark[-1].vLong);
 	       }
 break;
 case 6:
-#line 485 "lua.stx"
-{ luaY_val.vLong =luaY_vsp[0].vLong; init_func(); }
+#line 500 "lua.stx"
+	{ luaY_val.vLong =luaY_stack.l_mark[0].vLong; init_func(); }
 break;
 case 7:
-#line 487 "lua.stx"
-{
+#line 502 "lua.stx"
+	{
 	  code_byte(PUSHSTRING);
-	  code_word(luaI_findconstant(luaY_vsp[0].pTStr));
+	  code_word(luaI_findconstant(luaY_stack.l_mark[0].pTStr));
 	  luaY_val.vLong = 0;  /* indexed variable */
 	  init_func();
 	  add_localvar(luaI_createfixedstring("self"));
 	}
 break;
 case 8:
-#line 497 "lua.stx"
-{
+#line 512 "lua.stx"
+	{
           codereturn();
 	  luaY_val.pFunc = new(TFunc);
           luaI_initTFunc(luaY_val.pFunc);
 	  luaY_val.pFunc->size = pc;
 	  luaY_val.pFunc->code = newvector(pc, Byte);
 	  luaY_val.pFunc->fileName = lua_parsedfile;
-	  luaY_val.pFunc->lineDefined = luaY_vsp[-3].vInt;
+	  luaY_val.pFunc->lineDefined = luaY_stack.l_mark[-3].vInt;
 	  memcpy(luaY_val.pFunc->code, basepc, pc*sizeof(Byte));
           if (lua_debug)
             luaI_closelocalvars(luaY_val.pFunc);
@@ -1302,514 +1431,514 @@ case 8:
 	}
 break;
 case 13:
-#line 524 "lua.stx"
-{ codeIf(luaY_vsp[-4].vLong, luaY_vsp[-2].vLong); }
+#line 539 "lua.stx"
+	{ codeIf(luaY_stack.l_mark[-4].vLong, luaY_stack.l_mark[-2].vLong); }
 break;
 case 16:
-#line 530 "lua.stx"
-{luaY_val.vLong=pc;}
+#line 545 "lua.stx"
+	{luaY_val.vLong=pc;}
 break;
 case 17:
-#line 531 "lua.stx"
-{
-        basepc[luaY_vsp[-3].vLong] = IFFJMP;
-	code_word_at(basepc+luaY_vsp[-3].vLong+1, pc - (luaY_vsp[-3].vLong + sizeof(Word)+1));
-        basepc[luaY_vsp[-1].vLong] = UPJMP;
-	code_word_at(basepc+luaY_vsp[-1].vLong+1, pc - (luaY_vsp[-6].vLong));
+#line 546 "lua.stx"
+	{
+        basepc[luaY_stack.l_mark[-3].vLong] = IFFJMP;
+	code_word_at(basepc+luaY_stack.l_mark[-3].vLong+1, pc - (luaY_stack.l_mark[-3].vLong + sizeof(Word)+1));
+        basepc[luaY_stack.l_mark[-1].vLong] = UPJMP;
+	code_word_at(basepc+luaY_stack.l_mark[-1].vLong+1, pc - (luaY_stack.l_mark[-6].vLong));
        }
 break;
 case 18:
-#line 538 "lua.stx"
-{luaY_val.vLong=pc;}
+#line 553 "lua.stx"
+	{luaY_val.vLong=pc;}
 break;
 case 19:
-#line 539 "lua.stx"
-{
-        basepc[luaY_vsp[0].vLong] = IFFUPJMP;
-	code_word_at(basepc+luaY_vsp[0].vLong+1, pc - (luaY_vsp[-4].vLong));
+#line 554 "lua.stx"
+	{
+        basepc[luaY_stack.l_mark[0].vLong] = IFFUPJMP;
+	code_word_at(basepc+luaY_stack.l_mark[0].vLong+1, pc - (luaY_stack.l_mark[-4].vLong));
        }
 break;
 case 20:
-#line 545 "lua.stx"
-{
+#line 560 "lua.stx"
+	{
         {
          int i;
-         adjust_mult_assign(nvarbuffer, luaY_vsp[0].vLong, luaY_vsp[-2].vInt * 2 + nvarbuffer);
+         adjust_mult_assign(nvarbuffer, luaY_stack.l_mark[0].vLong, luaY_stack.l_mark[-2].vInt * 2 + nvarbuffer);
 	 for (i=nvarbuffer-1; i>=0; i--)
 	  lua_codestore (i);
-	 if (luaY_vsp[-2].vInt > 1 || (luaY_vsp[-2].vInt == 1 && varbuffer[0] != 0))
+	 if (luaY_stack.l_mark[-2].vInt > 1 || (luaY_stack.l_mark[-2].vInt == 1 && varbuffer[0] != 0))
 	  lua_codeadjust (0);
 	}
        }
 break;
 case 22:
-#line 557 "lua.stx"
-{ nlocalvar += luaY_vsp[-1].vInt;
-	  adjust_mult_assign(luaY_vsp[-1].vInt, luaY_vsp[0].vInt, 0);
+#line 572 "lua.stx"
+	{ nlocalvar += luaY_stack.l_mark[-1].vInt;
+	  adjust_mult_assign(luaY_stack.l_mark[-1].vInt, luaY_stack.l_mark[0].vInt, 0);
 	}
 break;
 case 25:
-#line 565 "lua.stx"
-{ codeIf(luaY_vsp[-3].vLong, luaY_vsp[-1].vLong); }
+#line 580 "lua.stx"
+	{ codeIf(luaY_stack.l_mark[-3].vLong, luaY_stack.l_mark[-1].vLong); }
 break;
 case 26:
-#line 570 "lua.stx"
-{code_byte(DUP);}
+#line 585 "lua.stx"
+	{code_byte(DUP);}
 break;
 case 28:
-#line 571 "lua.stx"
-{code_byte(POP);}
+#line 586 "lua.stx"
+	{code_byte(POP);}
 break;
 case 30:
-#line 572 "lua.stx"
-{code_byte(POP); /* should code for fallback here */ }
+#line 587 "lua.stx"
+	{code_byte(POP); /* should code for fallback here */ }
 break;
 case 31:
-#line 577 "lua.stx"
-{code_byte(DUP);}
+#line 592 "lua.stx"
+	{code_byte(DUP);}
 break;
 case 32:
-#line 578 "lua.stx"
-{codeIfEqJmp(luaY_vsp[-3].vLong,luaY_vsp[0].vLong); luaY_val.vLong=luaY_vsp[0].vLong;}
+#line 593 "lua.stx"
+	{codeIfEqJmp(luaY_stack.l_mark[-3].vLong,luaY_stack.l_mark[0].vLong); luaY_val.vLong=luaY_stack.l_mark[0].vLong;}
 break;
 case 33:
-#line 579 "lua.stx"
-{code_byte(EQOP);}
+#line 594 "lua.stx"
+	{code_byte(EQOP);}
 break;
 case 34:
-#line 580 "lua.stx"
-{code_byte(POP);}
+#line 595 "lua.stx"
+	{code_byte(POP);}
 break;
 case 35:
-#line 583 "lua.stx"
-{codeIf(luaY_vsp[-5].vLong,luaY_vsp[-1].vLong);luaY_val.vLong=luaY_vsp[-5].vLong+3;}
+#line 598 "lua.stx"
+	{codeIf(luaY_stack.l_mark[-5].vLong,luaY_stack.l_mark[-1].vLong);luaY_val.vLong=luaY_stack.l_mark[-5].vLong+3;}
 break;
 case 36:
-#line 588 "lua.stx"
-{code_byte(DUP);}
+#line 603 "lua.stx"
+	{code_byte(DUP);}
 break;
 case 38:
-#line 589 "lua.stx"
-{code_byte(POP);}
+#line 604 "lua.stx"
+	{code_byte(POP);}
 break;
 case 40:
-#line 590 "lua.stx"
-{code_byte(POP); /* should code for fallback here */ }
+#line 605 "lua.stx"
+	{code_byte(POP); /* should code for fallback here */ }
 break;
 case 41:
-#line 595 "lua.stx"
-{code_byte(DUP);}
+#line 610 "lua.stx"
+	{code_byte(DUP);}
 break;
 case 42:
-#line 596 "lua.stx"
-{codeIfEqJmp(luaY_vsp[-3].vLong,luaY_vsp[0].vLong); luaY_val.vLong=luaY_vsp[0].vLong;}
+#line 611 "lua.stx"
+	{codeIfEqJmp(luaY_stack.l_mark[-3].vLong,luaY_stack.l_mark[0].vLong); luaY_val.vLong=luaY_stack.l_mark[0].vLong;}
 break;
 case 43:
-#line 597 "lua.stx"
-{code_byte(GLOBMATCHOP);}
+#line 612 "lua.stx"
+	{code_byte(GLOBMATCHOP);}
 break;
 case 44:
-#line 598 "lua.stx"
-{code_byte(POP);}
+#line 613 "lua.stx"
+	{code_byte(POP);}
 break;
 case 45:
-#line 601 "lua.stx"
-{codeIf(luaY_vsp[-5].vLong,luaY_vsp[-1].vLong);luaY_val.vLong=luaY_vsp[-5].vLong+3;}
+#line 616 "lua.stx"
+	{codeIf(luaY_stack.l_mark[-5].vLong,luaY_stack.l_mark[-1].vLong);luaY_val.vLong=luaY_stack.l_mark[-5].vLong+3;}
 break;
 case 46:
-#line 604 "lua.stx"
-{luaY_val.vInt = nlocalvar;}
+#line 619 "lua.stx"
+	{luaY_val.vInt = nlocalvar;}
 break;
 case 47:
-#line 605 "lua.stx"
-{
-	  if (nlocalvar != luaY_vsp[-2].vInt)
+#line 620 "lua.stx"
+	{
+	  if (nlocalvar != luaY_stack.l_mark[-2].vInt)
 	  {
            if (lua_debug)
-             for (; nlocalvar > luaY_vsp[-2].vInt; nlocalvar--)
+             for (; nlocalvar > luaY_stack.l_mark[-2].vInt; nlocalvar--)
                luaI_unregisterlocalvar(lua_linenumber);
            else
-             nlocalvar = luaY_vsp[-2].vInt;
+             nlocalvar = luaY_stack.l_mark[-2].vInt;
 	   lua_codeadjust (0);
 	  }
          }
 break;
 case 49:
-#line 620 "lua.stx"
-{
-	   adjust_functioncall(luaY_vsp[-1].vLong, MULT_RET);
+#line 635 "lua.stx"
+	{
+	   adjust_functioncall(luaY_stack.l_mark[-1].vLong, MULT_RET);
            codereturn();
           }
 break;
 case 50:
-#line 627 "lua.stx"
-{ 
+#line 642 "lua.stx"
+	{ 
 	  luaY_val.vLong = pc;
 	  code_byte(0);		/* open space */
 	  code_word (0);
          }
 break;
 case 51:
-#line 635 "lua.stx"
-{ code_byte(EQOP); code_byte(NOTOP); code_byte(IFFJMP); 
+#line 650 "lua.stx"
+	{ code_byte(EQOP); code_byte(NOTOP); code_byte(IFFJMP); 
                luaY_val.vLong = pc; code_word(0);
              }
 break;
 case 52:
-#line 641 "lua.stx"
-{ code_byte(GLOBMATCHOP); code_byte(NOTOP); code_byte(IFFJMP); 
+#line 656 "lua.stx"
+	{ code_byte(GLOBMATCHOP); code_byte(NOTOP); code_byte(IFFJMP); 
                luaY_val.vLong = pc; code_word(0);
              }
 break;
 case 53:
-#line 646 "lua.stx"
-{ adjust_functioncall(luaY_vsp[0].vLong, 1); }
+#line 661 "lua.stx"
+	{ adjust_functioncall(luaY_stack.l_mark[0].vLong, 1); }
 break;
 case 54:
-#line 649 "lua.stx"
-{ luaY_val.vLong = luaY_vsp[-1].vLong; }
+#line 664 "lua.stx"
+	{ luaY_val.vLong = luaY_stack.l_mark[-1].vLong; }
 break;
 case 55:
-#line 650 "lua.stx"
-{ code_byte(EQOP);   luaY_val.vLong = 0; }
+#line 665 "lua.stx"
+	{ code_byte(EQOP);   luaY_val.vLong = 0; }
 break;
 case 56:
-#line 651 "lua.stx"
-{ code_byte(LTOP);   luaY_val.vLong = 0; }
+#line 666 "lua.stx"
+	{ code_byte(LTOP);   luaY_val.vLong = 0; }
 break;
 case 57:
-#line 652 "lua.stx"
-{ code_byte(GTOP);   luaY_val.vLong = 0; }
+#line 667 "lua.stx"
+	{ code_byte(GTOP);   luaY_val.vLong = 0; }
 break;
 case 58:
-#line 653 "lua.stx"
-{ code_byte(EQOP); code_byte(NOTOP); luaY_val.vLong = 0; }
+#line 668 "lua.stx"
+	{ code_byte(EQOP); code_byte(NOTOP); luaY_val.vLong = 0; }
 break;
 case 59:
-#line 654 "lua.stx"
-{ code_byte(LEOP);   luaY_val.vLong = 0; }
+#line 669 "lua.stx"
+	{ code_byte(LEOP);   luaY_val.vLong = 0; }
 break;
 case 60:
-#line 655 "lua.stx"
-{ code_byte(GEOP);   luaY_val.vLong = 0; }
+#line 670 "lua.stx"
+	{ code_byte(GEOP);   luaY_val.vLong = 0; }
 break;
 case 61:
-#line 656 "lua.stx"
-{ code_byte(ADDOP);  luaY_val.vLong = 0; }
+#line 671 "lua.stx"
+	{ code_byte(ADDOP);  luaY_val.vLong = 0; }
 break;
 case 62:
-#line 657 "lua.stx"
-{ code_byte(SUBOP);  luaY_val.vLong = 0; }
+#line 672 "lua.stx"
+	{ code_byte(SUBOP);  luaY_val.vLong = 0; }
 break;
 case 63:
-#line 658 "lua.stx"
-{ code_byte(MULTOP); luaY_val.vLong = 0; }
+#line 673 "lua.stx"
+	{ code_byte(MULTOP); luaY_val.vLong = 0; }
 break;
 case 64:
-#line 659 "lua.stx"
-{ code_byte(DIVOP);  luaY_val.vLong = 0; }
+#line 674 "lua.stx"
+	{ code_byte(DIVOP);  luaY_val.vLong = 0; }
 break;
 case 65:
-#line 660 "lua.stx"
-{ code_byte(POWOP);  luaY_val.vLong = 0; }
+#line 675 "lua.stx"
+	{ code_byte(POWOP);  luaY_val.vLong = 0; }
 break;
 case 66:
-#line 661 "lua.stx"
-{ code_byte(CONCOP);  luaY_val.vLong = 0; }
+#line 676 "lua.stx"
+	{ code_byte(CONCOP);  luaY_val.vLong = 0; }
 break;
 case 67:
-#line 662 "lua.stx"
-{ code_byte(MINUSOP); luaY_val.vLong = 0;}
+#line 677 "lua.stx"
+	{ code_byte(MINUSOP); luaY_val.vLong = 0;}
 break;
 case 68:
-#line 663 "lua.stx"
-{ luaY_val.vLong = 0; }
+#line 678 "lua.stx"
+	{ luaY_val.vLong = 0; }
 break;
 case 69:
-#line 664 "lua.stx"
-{ luaY_val.vLong = 0;}
+#line 679 "lua.stx"
+	{ luaY_val.vLong = 0;}
 break;
 case 70:
-#line 665 "lua.stx"
-{ code_number(luaY_vsp[0].vFloat); luaY_val.vLong = 0; }
+#line 680 "lua.stx"
+	{ code_number(luaY_stack.l_mark[0].vFloat); luaY_val.vLong = 0; }
 break;
 case 71:
-#line 667 "lua.stx"
-{
+#line 682 "lua.stx"
+	{
       code_byte(PUSHSTRING);
-      code_word(luaY_vsp[0].vWord);
+      code_word(luaY_stack.l_mark[0].vWord);
       luaY_val.vLong = 0;
      }
 break;
 case 72:
-#line 672 "lua.stx"
-{code_byte(PUSHNIL); luaY_val.vLong = 0; }
+#line 687 "lua.stx"
+	{code_byte(PUSHNIL); luaY_val.vLong = 0; }
 break;
 case 73:
-#line 673 "lua.stx"
-{ luaY_val.vLong = luaY_vsp[0].vLong; }
+#line 688 "lua.stx"
+	{ luaY_val.vLong = luaY_stack.l_mark[0].vLong; }
 break;
 case 74:
-#line 674 "lua.stx"
-{ code_byte(NOTOP);  luaY_val.vLong = 0;}
+#line 689 "lua.stx"
+	{ code_byte(NOTOP);  luaY_val.vLong = 0;}
 break;
 case 75:
-#line 675 "lua.stx"
-{code_byte(POP); }
+#line 690 "lua.stx"
+	{code_byte(POP); }
 break;
 case 76:
-#line 676 "lua.stx"
-{ 
-      basepc[luaY_vsp[-2].vLong] = ONFJMP;
-      code_word_at(basepc+luaY_vsp[-2].vLong+1, pc - (luaY_vsp[-2].vLong + sizeof(Word)+1));
+#line 691 "lua.stx"
+	{ 
+      basepc[luaY_stack.l_mark[-2].vLong] = ONFJMP;
+      code_word_at(basepc+luaY_stack.l_mark[-2].vLong+1, pc - (luaY_stack.l_mark[-2].vLong + sizeof(Word)+1));
       luaY_val.vLong = 0;
      }
 break;
 case 77:
-#line 681 "lua.stx"
-{code_byte(POP); }
+#line 696 "lua.stx"
+	{code_byte(POP); }
 break;
 case 78:
-#line 682 "lua.stx"
-{ 
-      basepc[luaY_vsp[-2].vLong] = ONTJMP;
-      code_word_at(basepc+luaY_vsp[-2].vLong+1, pc - (luaY_vsp[-2].vLong + sizeof(Word)+1));
+#line 697 "lua.stx"
+	{ 
+      basepc[luaY_stack.l_mark[-2].vLong] = ONTJMP;
+      code_word_at(basepc+luaY_stack.l_mark[-2].vLong+1, pc - (luaY_stack.l_mark[-2].vLong + sizeof(Word)+1));
       luaY_val.vLong = 0;
      }
 break;
 case 79:
-#line 690 "lua.stx"
-{
+#line 705 "lua.stx"
+	{
       code_byte(CREATEARRAY);
       luaY_val.vLong = pc; code_word(0);
      }
 break;
 case 80:
-#line 695 "lua.stx"
-{
-      code_word_at(basepc+luaY_vsp[-3].vLong, luaY_vsp[-1].vInt);
+#line 710 "lua.stx"
+	{
+      code_word_at(basepc+luaY_stack.l_mark[-3].vLong, luaY_stack.l_mark[-1].vInt);
      }
 break;
 case 81:
-#line 701 "lua.stx"
-{
+#line 716 "lua.stx"
+	{
 	  code_byte(CALLFUNC);
-	  code_byte(luaY_vsp[-1].vInt+luaY_vsp[0].vInt);
+	  code_byte(luaY_stack.l_mark[-1].vInt+luaY_stack.l_mark[0].vInt);
 	  luaY_val.vLong = pc;
 	  code_byte(0);  /* may be modified by other rules */
 	}
 break;
 case 82:
-#line 709 "lua.stx"
-{ luaY_val.vInt = 0; }
+#line 724 "lua.stx"
+	{ luaY_val.vInt = 0; }
 break;
 case 83:
-#line 711 "lua.stx"
-{ 
+#line 726 "lua.stx"
+	{ 
                code_byte(PUSHSELF); 
-	       code_word(luaI_findconstant(luaY_vsp[0].pTStr));
+	       code_word(luaI_findconstant(luaY_stack.l_mark[0].pTStr));
                luaY_val.vInt = 1;
 	     }
 break;
 case 84:
-#line 719 "lua.stx"
-{ luaY_val.vInt = adjust_functioncall(luaY_vsp[-1].vLong, 1); }
+#line 734 "lua.stx"
+	{ luaY_val.vInt = adjust_functioncall(luaY_stack.l_mark[-1].vLong, 1); }
 break;
 case 85:
-#line 720 "lua.stx"
-{ luaY_val.vInt = 1; }
+#line 735 "lua.stx"
+	{ luaY_val.vInt = 1; }
 break;
 case 86:
-#line 723 "lua.stx"
-{ luaY_val.vLong = 0; }
+#line 738 "lua.stx"
+	{ luaY_val.vLong = 0; }
 break;
 case 87:
-#line 724 "lua.stx"
-{ luaY_val.vLong = luaY_vsp[0].vLong; }
+#line 739 "lua.stx"
+	{ luaY_val.vLong = luaY_stack.l_mark[0].vLong; }
 break;
 case 88:
-#line 727 "lua.stx"
-{ if (luaY_vsp[0].vLong != 0) luaY_val.vLong = luaY_vsp[0].vLong; else luaY_val.vLong = -1; }
+#line 742 "lua.stx"
+	{ if (luaY_stack.l_mark[0].vLong != 0) luaY_val.vLong = luaY_stack.l_mark[0].vLong; else luaY_val.vLong = -1; }
 break;
 case 89:
-#line 728 "lua.stx"
-{ luaY_val.vLong = adjust_functioncall(luaY_vsp[-1].vLong, 1); }
+#line 743 "lua.stx"
+	{ luaY_val.vLong = adjust_functioncall(luaY_stack.l_mark[-1].vLong, 1); }
 break;
 case 90:
-#line 729 "lua.stx"
-{
-	  if (luaY_vsp[0].vLong == 0) luaY_val.vLong = -(luaY_vsp[-1].vLong + 1);  /* -length */
+#line 744 "lua.stx"
+	{
+	  if (luaY_stack.l_mark[0].vLong == 0) luaY_val.vLong = -(luaY_stack.l_mark[-1].vLong + 1);  /* -length */
 	  else
 	  {
-	    adjust_functioncall(luaY_vsp[0].vLong, luaY_vsp[-1].vLong);
-	    luaY_val.vLong = luaY_vsp[0].vLong;
+	    adjust_functioncall(luaY_stack.l_mark[0].vLong, luaY_stack.l_mark[-1].vLong);
+	    luaY_val.vLong = luaY_stack.l_mark[0].vLong;
 	  }
 	}
 break;
 case 91:
-#line 739 "lua.stx"
-{ luaY_val.vInt = close_parlist(0); }
+#line 754 "lua.stx"
+	{ luaY_val.vInt = close_parlist(0); }
 break;
 case 92:
-#line 740 "lua.stx"
-{ luaY_val.vInt = close_parlist(luaY_vsp[0].vInt); }
+#line 755 "lua.stx"
+	{ luaY_val.vInt = close_parlist(luaY_stack.l_mark[0].vInt); }
 break;
 case 93:
-#line 743 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[0].vInt; }
+#line 758 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[0].vInt; }
 break;
 case 94:
-#line 745 "lua.stx"
-{
-	  if (luaY_vsp[-2].vInt)
+#line 760 "lua.stx"
+	{
+	  if (luaY_stack.l_mark[-2].vInt)
             lua_error("invalid parameter list");
-          luaY_val.vInt = luaY_vsp[0].vInt;
+          luaY_val.vInt = luaY_stack.l_mark[0].vInt;
 	}
 break;
 case 95:
-#line 752 "lua.stx"
-{ add_localvar(luaY_vsp[0].pTStr); luaY_val.vInt = 0; }
+#line 767 "lua.stx"
+	{ add_localvar(luaY_stack.l_mark[0].pTStr); luaY_val.vInt = 0; }
 break;
 case 96:
-#line 753 "lua.stx"
-{ luaY_val.vInt = 1; }
+#line 768 "lua.stx"
+	{ luaY_val.vInt = 1; }
 break;
 case 97:
-#line 757 "lua.stx"
-{ flush_list(luaY_vsp[0].vInt/FIELDS_PER_FLUSH, luaY_vsp[0].vInt%FIELDS_PER_FLUSH); }
+#line 772 "lua.stx"
+	{ flush_list(luaY_stack.l_mark[0].vInt/FIELDS_PER_FLUSH, luaY_stack.l_mark[0].vInt%FIELDS_PER_FLUSH); }
 break;
 case 98:
-#line 759 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[-2].vInt+luaY_vsp[0].vInt; }
+#line 774 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[-2].vInt+luaY_stack.l_mark[0].vInt; }
 break;
 case 99:
-#line 761 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[-1].vInt; flush_record(luaY_vsp[-1].vInt%FIELDS_PER_FLUSH); }
+#line 776 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[-1].vInt; flush_record(luaY_stack.l_mark[-1].vInt%FIELDS_PER_FLUSH); }
 break;
 case 100:
-#line 765 "lua.stx"
-{ luaY_val.vInt = 0; }
+#line 780 "lua.stx"
+	{ luaY_val.vInt = 0; }
 break;
 case 101:
-#line 767 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[0].vInt; flush_record(luaY_vsp[0].vInt%FIELDS_PER_FLUSH); }
+#line 782 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[0].vInt; flush_record(luaY_stack.l_mark[0].vInt%FIELDS_PER_FLUSH); }
 break;
 case 104:
-#line 774 "lua.stx"
-{ luaY_val.vInt = 0; }
+#line 789 "lua.stx"
+	{ luaY_val.vInt = 0; }
 break;
 case 105:
-#line 775 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[-1].vInt; }
+#line 790 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[-1].vInt; }
 break;
 case 106:
-#line 778 "lua.stx"
-{luaY_val.vInt=1;}
+#line 793 "lua.stx"
+	{luaY_val.vInt=1;}
 break;
 case 107:
-#line 780 "lua.stx"
-{
-		  luaY_val.vInt=luaY_vsp[-2].vInt+1;
+#line 795 "lua.stx"
+	{
+		  luaY_val.vInt=luaY_stack.l_mark[-2].vInt+1;
 		  if (luaY_val.vInt%FIELDS_PER_FLUSH == 0) flush_record(FIELDS_PER_FLUSH);
 		}
 break;
 case 108:
-#line 787 "lua.stx"
-{ 
-	       push_field(luaI_findconstant(luaY_vsp[-2].pTStr));
+#line 802 "lua.stx"
+	{ 
+	       push_field(luaI_findconstant(luaY_stack.l_mark[-2].pTStr));
 	      }
 break;
 case 109:
-#line 792 "lua.stx"
-{ luaY_val.vInt = 0; }
+#line 807 "lua.stx"
+	{ luaY_val.vInt = 0; }
 break;
 case 110:
-#line 793 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[-1].vInt; }
+#line 808 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[-1].vInt; }
 break;
 case 111:
-#line 796 "lua.stx"
-{luaY_val.vInt=1;}
+#line 811 "lua.stx"
+	{luaY_val.vInt=1;}
 break;
 case 112:
-#line 798 "lua.stx"
-{
-		  luaY_val.vInt=luaY_vsp[-2].vInt+1;
+#line 813 "lua.stx"
+	{
+		  luaY_val.vInt=luaY_stack.l_mark[-2].vInt+1;
 		  if (luaY_val.vInt%FIELDS_PER_FLUSH == 0) 
 		    flush_list(luaY_val.vInt/FIELDS_PER_FLUSH - 1, FIELDS_PER_FLUSH);
 		}
 break;
 case 113:
-#line 806 "lua.stx"
-{
+#line 821 "lua.stx"
+	{
 	   nvarbuffer = 0; 
-	   add_varbuffer(luaY_vsp[0].vLong);
-	   luaY_val.vInt = (luaY_vsp[0].vLong == 0) ? 1 : 0;
+	   add_varbuffer(luaY_stack.l_mark[0].vLong);
+	   luaY_val.vInt = (luaY_stack.l_mark[0].vLong == 0) ? 1 : 0;
 	  }
 break;
 case 114:
-#line 812 "lua.stx"
-{ 
-	   add_varbuffer(luaY_vsp[0].vLong);
-	   luaY_val.vInt = (luaY_vsp[0].vLong == 0) ? luaY_vsp[-2].vInt + 1 : luaY_vsp[-2].vInt;
+#line 827 "lua.stx"
+	{ 
+	   add_varbuffer(luaY_stack.l_mark[0].vLong);
+	   luaY_val.vInt = (luaY_stack.l_mark[0].vLong == 0) ? luaY_stack.l_mark[-2].vInt + 1 : luaY_stack.l_mark[-2].vInt;
 	  }
 break;
 case 115:
-#line 818 "lua.stx"
-{ luaY_val.vLong = luaY_vsp[0].vLong; }
+#line 833 "lua.stx"
+	{ luaY_val.vLong = luaY_stack.l_mark[0].vLong; }
 break;
 case 116:
-#line 820 "lua.stx"
-{
+#line 835 "lua.stx"
+	{
 	   luaY_val.vLong = 0;		/* indexed variable */
 	  }
 break;
 case 117:
-#line 824 "lua.stx"
-{
+#line 839 "lua.stx"
+	{
 	   code_byte(PUSHSTRING);
-	   code_word(luaI_findconstant(luaY_vsp[0].pTStr));
+	   code_word(luaI_findconstant(luaY_stack.l_mark[0].pTStr));
 	   luaY_val.vLong = 0;		/* indexed variable */
 	  }
 break;
 case 118:
-#line 832 "lua.stx"
-{
-	   int local = lua_localname(luaY_vsp[0].pTStr);
+#line 847 "lua.stx"
+	{
+	   int local = lua_localname(luaY_stack.l_mark[0].pTStr);
 	   if (local == -1)	/* global var */
-	    luaY_val.vLong = luaI_findsymbol(luaY_vsp[0].pTStr)+1;  /* return positive value */
+	    luaY_val.vLong = luaI_findsymbol(luaY_stack.l_mark[0].pTStr)+1;  /* return positive value */
            else
 	    luaY_val.vLong = -(local+1);		/* return negative value */
 	  }
 break;
 case 119:
-#line 841 "lua.stx"
-{ lua_pushvar(luaY_vsp[0].vLong); }
+#line 856 "lua.stx"
+	{ lua_pushvar(luaY_stack.l_mark[0].vLong); }
 break;
 case 120:
-#line 844 "lua.stx"
-{store_localvar(luaY_vsp[0].pTStr, 0); luaY_val.vInt = 1;}
+#line 859 "lua.stx"
+	{store_localvar(luaY_stack.l_mark[0].pTStr, 0); luaY_val.vInt = 1;}
 break;
 case 121:
-#line 846 "lua.stx"
-{
-	     store_localvar(luaY_vsp[0].pTStr, luaY_vsp[-2].vInt);
-	     luaY_val.vInt = luaY_vsp[-2].vInt+1;
+#line 861 "lua.stx"
+	{
+	     store_localvar(luaY_stack.l_mark[0].pTStr, luaY_stack.l_mark[-2].vInt);
+	     luaY_val.vInt = luaY_stack.l_mark[-2].vInt+1;
 	    }
 break;
 case 122:
-#line 852 "lua.stx"
-{ luaY_val.vInt = 0; }
+#line 867 "lua.stx"
+	{ luaY_val.vInt = 0; }
 break;
 case 123:
-#line 853 "lua.stx"
-{ luaY_val.vInt = luaY_vsp[0].vLong; }
+#line 868 "lua.stx"
+	{ luaY_val.vInt = luaY_stack.l_mark[0].vLong; }
 break;
-#line 1809 "y.tab.c"
+#line 1937 "y.tab.c"
     }
-    luaY_ssp -= luaY_m;
-    luaY_state = *luaY_ssp;
-    luaY_vsp -= luaY_m;
+    luaY_stack.s_mark -= luaY_m;
+    luaY_state = *luaY_stack.s_mark;
+    luaY_stack.l_mark -= luaY_m;
     luaY_m = luaY_lhs[luaY_n];
     if (luaY_state == 0 && luaY_m == 0)
     {
@@ -1819,11 +1948,11 @@ break;
  state %d\n", YYPREFIX, YYFINAL);
 #endif
         luaY_state = YYFINAL;
-        *++luaY_ssp = YYFINAL;
-        *++luaY_vsp = luaY_val;
+        *++luaY_stack.s_mark = YYFINAL;
+        *++luaY_stack.l_mark = luaY_val;
         if (luaY_char < 0)
         {
-            if ((luaY_char = luaY_lex()) < 0) luaY_char = 0;
+            if ((luaY_char = YYLEX) < 0) luaY_char = 0;
 #if YYDEBUG
             if (luaY_debug)
             {
@@ -1846,19 +1975,24 @@ break;
 #if YYDEBUG
     if (luaY_debug)
         printf("%sdebug: after reduction, shifting from state %d \
-to state %d\n", YYPREFIX, *luaY_ssp, luaY_state);
+to state %d\n", YYPREFIX, *luaY_stack.s_mark, luaY_state);
 #endif
-    if (luaY_ssp >= luaY_ss + luaY_stacksize - 1)
+    if (luaY_stack.s_mark >= luaY_stack.s_last && luaY_growstack(&luaY_stack))
     {
         goto luaY_overflow;
     }
-    *++luaY_ssp = luaY_state;
-    *++luaY_vsp = luaY_val;
+    *++luaY_stack.s_mark = (short) luaY_state;
+    *++luaY_stack.l_mark = luaY_val;
     goto luaY_loop;
+
 luaY_overflow:
     luaY_error("yacc stack overflow");
+
 luaY_abort:
+    luaY_freestack(&luaY_stack);
     return (1);
+
 luaY_accept:
+    luaY_freestack(&luaY_stack);
     return (0);
 }

@@ -380,3 +380,12 @@ int luaY_lex (void)
   }
 }
 
+
+static int luaY_lexz (void)
+{
+  char *yytext = luaI_buffer(1);
+  int token = luaY_lex();
+  fprintf(stderr, "no: read token %d (%s)\n", token, yytext);
+  return token;
+}
+

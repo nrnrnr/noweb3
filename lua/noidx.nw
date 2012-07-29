@@ -69,9 +69,12 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   <<initialization>>
   delay = nil
   <<swallow [[args]]>>
-  local prevdb = Noidx.prevdb or { }
-  local nextdb = Noidx.nextdb or { }
-  local usedb  = Noidx.usedb  or { }
+  Noidx.prevdb = Noidx.prevdb or { }
+  Noidx.nextdb = Noidx.nextdb or { }
+  Noidx.usedb  = Noidx.usedb  or { }
+  local prevdb = Noidx.prevdb
+  local nextdb = Noidx.nextdb
+  local usedb  = Noidx.usedb
 
   r = NWB.reader(sourcebuf)
   local newbuf = NWB.new()
@@ -88,6 +91,8 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   r = NWB.reader(newbuf)
   key, arg = NWB.read(r)
   while key do
+--    NWB.put(sinkbuf, 'the_crc_prefix', Noidx.crc_prefix)
+--    NWB.put(sinkbuf, 'active_prefix', Noidx.active_crc_prefix)
     case key of
     <<case for [[crc_prefix]]>>
     <<cases for pass 2>>
@@ -488,6 +493,7 @@ if new[newnext-1] ~= item then
 end
 @
 [[uniqueid]] eliminates both {\TeX} and HTML specials.
+Key counts can be initialized by a cheating, lying script elsewhere.
 <<initialization>>=
 Noidx.idtable = {}
 Noidx.keycounts = {} -- can't make 0 default

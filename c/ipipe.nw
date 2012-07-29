@@ -30,6 +30,7 @@ All other stages are filters.
 #include <stdio.h>
 #include <stdlib.h>
 #include "nwbuffer.h"
+#include "nwtime.h"
 
 typedef struct IPipe_stage *IPipe_T, *IPipe_Source, *IPipe_Filter, *IPipe_Sink;
 
@@ -151,6 +152,16 @@ int IPipe_run(IPipe_T p, NowebBuffer in, NowebBuffer out) {
     int rc  = IPipe_run(p->u.pair.left,  in,   pipe);
     rc     |= IPipe_run(p->u.pair.right, pipe, out);
     NowebBuffer_free(&pipe);
+    return rc;
+  } else if (getenv("NW3TIME")) {
+    NWTime now = NWTime_now();
+    int rc;
+    assert(p->u.leaf.stage);
+    rc = p->u.leaf.stage(p->u.leaf.arg, in, out);
+    fprintf(stderr, "%6.3fs: ", NWTime_usdiff(now) * 1.0e-6);
+    IPipe_print(stderr, p);
+    fprintf(stderr, "\n");
+    NWTime_free(now);
     return rc;
   } else {
     assert(p->u.leaf.stage);

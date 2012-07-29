@@ -66,8 +66,23 @@ static void yyerror (char *s)
 
 static void check_space (int i)
 {
-  if (pc+i>maxcurr-1)  /* 1 byte free to code HALT of main code */
+  if (pc+i>maxcurr-1) {  /* 1 byte free to code HALT of main code */
+	int adjust = (basepc == *initcode);
     maxcurr = growvector(&basepc, maxcurr, Byte, codeEM, MAX_INT);
+	if (adjust) {
+#if 0
+      char *token = luaI_buffer(1);
+      if (token[0] == 0)
+        token = "<eof>";
+	  fprintf(stderr,
+         "no: Adjusted code vector\n> last token read: \"%s\" at line %d in file %s\n",
+              token, lua_linenumber, lua_parsedfile);
+      fprintf(stderr, "   old vector = %p; new vector = %p\n",
+              (void *) *initcode, (void *)basepc);
+#endif
+	  *initcode = basepc; /* bugfix: don't let *initcode get stale */
+    }
+  }
 }
 
 static void code_byte (Byte c)

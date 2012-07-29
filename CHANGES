@@ -1,3 +1,7 @@
+alpha090926
+  fix bad declaration of putenv() [thanks Wenguang Wang]
+  fix bug in code borrowed from CII
+
   better error message in case waitfor() or waitfor2() is surprised
   don't use the word `prepend' in xpipe.nw, to avoid offending sensitive readers
 

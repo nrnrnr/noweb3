@@ -27,7 +27,7 @@ TANGLEOBJS=notangle.o getline.o match.o modules.o modtrees.o strsave.o \
 	main.o errors.o columns.o nwbuffer.o nt-run.o fromascii.o ipipe.o cpif.o
 MARKUPOBJS=markparse.o strsave.o markup.o errors.o getline.o columns.o \
 	ipipe.o nwbuffer.o markup-run.o
-NOOBJS=xpipe.o xpipe-lua.o nwprocess.o lua-help.o nwbuffer.o ipipe.o \
+NOOBJS=xpipe.o xpipe-lua.o nwprocess.o nwtime.o lua-help.o nwbuffer.o ipipe.o \
 	ipipe-lua.o env-lua.o markparse.o strsave.o markup.o errors.o \
 	getline.o columns.o stages.o lua-main.o cpif.o \
 	mpipe.o mpipe-lua.o fromascii.o notangle.o main.o modules.o modtrees.o \
@@ -41,7 +41,7 @@ FILES=markparse.nw markup.nw \
       getline.nw columns.nw errors.nw strsave.nw \
       nwbuffer.nw nwbuffer-lua.nw \
       ipipe.nw ipipe-lua.nw xpipe.nw xpipe-lua.nw mpipe.nw mpipe-lua.nw \
-      nwprocess.nw lua-main.nw nwmtime.nw
+      nwprocess.nw nwtime.nw lua-main.nw nwmtime.nw
 
 # sources to build when distributing C code
 #   (add all generated .c and .h files to this list)
@@ -56,7 +56,7 @@ SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
   noweb-lua.c noweb-lua.h nt-run.c nwbuffer.c \
   nwbuffer.h util.c util.h precompiled.h stages.c stages.h sys.c sys.h \
   toascii.c toascii.h xpipe-lua.c xpipe-lua.h xpipe.c xpipe.h \
-  nwbuffer-lua.c nwprocess.h nwprocess.c \
+  nwbuffer-lua.c nwprocess.h nwprocess.c nwtime.h nwtime.c \
      fu-run.c misc-lua.c misc-lua.h   markup.ps \
      nwmtime.c
 NAME='name of RCS version'
@@ -177,7 +177,7 @@ strsave.o: strsave.c strsave.h errors.h
 
 env-lua.o: env-lua.c env-lua.h lua-help.h
 fromascii.o: getline.h nwbuffer.h errors.h
-ipipe.o: ipipe.c ipipe.h nwbuffer.h
+ipipe.o: ipipe.c ipipe.h nwbuffer.h nwtime.h
 ipipe-lua.o: ipipe-lua.c ipipe-lua.h
 lua-help.o: lua-help.c lua-help.h
 lua-main.o: lua-main.c lua-main.h util.h misc-lua.h
@@ -189,6 +189,7 @@ mpipe.o: mpipe.h ipipe.h xpipe.h nwbuffer.h fromascii.h
 mpipe-lua.o: mpipe.h lua-help.h
 misc-lua.o: lua-help.h
 nwprocess.o: nwprocess.h
+nwtime.o: nwtime.h
 stages.o: stages.c nwbuffer.h  fromascii.h \
 	 lua-help.h cargs.h markparse.h notangle.h
 xpipe.o: xpipe.c xpipe.h sys.h errors.h util.h nwprocess.h
