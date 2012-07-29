@@ -1,0 +1,50 @@
+% -*- mode: Noweb; noweb-code-mode: c-mode; tab-width: 4; c-indent-level: 4 -*-
+
+\section{Time-of-day support for Posix}
+
+\subsection{Interface}
+<<header>>=
+typedef struct NWTime *NWTime;
+
+NWTime NWTime_now(void);  /* allocates and returns the current time */
+double NWTime_usdiff(NWTime then);  /* difference in microseconds from now to then */
+void   NWTime_free(NWTime t);
+<<*>>=
+#include <assert.h>
+#include <stdlib.h>
+
+#include "nwtime.h"
+
+#include <sys/time.h>
+
+struct NWTime {
+  struct timeval tv;
+};
+<<*>>=
+NWTime NWTime_now(void) {
+  int rc;
+  NWTime now = malloc(sizeof(*now));
+  assert(now);
+
+  rc = gettimeofday(&now->tv, NULL);
+  if (rc != 0) {
+    perror("noweb 3 gettimeofday()");
+    abort();
+  }
+  return now;
+}
+<<*>>=
+void NWTime_free(NWTime t) {
+  free(t);
+}
+<<*>>=
+double NWTime_usdiff(NWTime then) {
+  struct timeval now;
+  int rc = gettimeofday(&now, NULL);
+  assert(rc == 0);
+  return (double)(now.tv_sec - then->tv.tv_sec) * 1.0e6 +
+         ((double)now.tv_usec - (double)then->tv.tv_usec);
+}
+@
+
+
