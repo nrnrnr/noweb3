@@ -41,13 +41,12 @@ function Stages.xchunks(inbuf, outbuf, argv)
   local db = NWB.new()
   local rc = Stages.markup(db, argv)
   if rc ~= 0 then return rc end
-  local dbchunks = Xchunks.readchunks(db)
-  local defns = Xchunks.defnstable(dbchunks)
+  local dbchunks, ndbchunks = Xchunks.readchunks(db)
+  local defns = Xchunks.defnstable(dbchunks, ndbchunks)
     -- defns maps name to list of code chunks defining that name
 
-  local thisdoc = Xchunks.readchunks(inbuf)
+  local thisdoc, n = Xchunks.readchunks(inbuf)
   local i = 1
-  local n = List.length(thisdoc)
   while i <= n do
     local c = thisdoc[i]
     if c.type ~= "code" or c.notEmpty or not defns[c.name] then
@@ -73,6 +72,7 @@ The loop logic is a little less pleasant than I would like.
 function Xchunks.readchunks(buf)
   local chunks, c
   chunks = List.new()
+  nchunks = 0 -- number of chunks in chunks
   local file, lnum, startline
   lnum = 1
   local r = NWB.reader(buf)
@@ -95,18 +95,22 @@ function Xchunks.readchunks(buf)
           elseif key == NW_LINE then lnum = tonumber(arg)
           elseif key == NW_NL or key == NW_INDEX_NL then lnum = lnum + 1
           elseif key == NW_DEFN then c.name = arg 
-          elseif key == NW_USE or (key == NW_TEXT and strfind(arg, "%S")) then
+          elseif c.notEmpty ~= 1 and
+                 (key == NW_USE or (key == NW_TEXT and strfind(arg, "%S")))
+          then
             c.notEmpty = 1
           end
           key, arg = NWB.read(r)
         end
         if not key then error("unmatched @begin "..t) end
         NWB.put(lines, key, arg)
-        List.put(chunks, c)
+        nchunks = nchunks + 1
+        chunks[nchunks] = c
      else =>
         local lines = NWB.new()
         NWB.put(lines, key, arg)
-        List.put(chunks, {lines=lines, type="unknown"})
+        nchunks = nchunks + 1
+        chunks[nchunks] =  {lines=lines, type="unknown"}
         if     key == NW_FILE then file = arg; lnum = 1
         elseif key == NW_LINE then lnum = tonumber(arg)
         elseif key == NW_NL or key == NW_INDEX_NL then lnum = lnum + 1
@@ -114,7 +118,7 @@ function Xchunks.readchunks(buf)
      end
      key, arg = NWB.read(r)
   end
-  return chunks
+  return chunks, nchunks
 end
 @ 
 Building the definitions table is easy.
@@ -122,14 +126,14 @@ Building the definitions table is easy.
 function Xchunks.defnstable(chunks)
   local t = {}
   local i = 1
-  local n = List.length(chunks)
-  while i <= n do
-    local c = chunks[i]
+  local c = chunks[i]
+  while c ~= nil do
     if c.type == "code" then
       t[c.name] = t[c.name] or List.new()
       List.put(t[c.name], c)
     end
     i = i + 1
+    c = chunks[i]
   end
   return t
 end
