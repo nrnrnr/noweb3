@@ -5,6 +5,29 @@ List.length&Number of elements in a list.\\
 List = {}
 
 function List.length(list)
+  if type(list) ~= "table" then
+    errormsg("Length of non-list (", type(list), ") ", image(list))
+  end
+  if list[1] == nil then
+    return 0
+  else
+    local lo, hi = 1, 2
+    while list[hi] do lo, hi = hi, 2*hi end
+    assert(list[lo] ~= nil)
+    -- invariant: list[lo] is not nil, list[hi] is nil
+    while hi - lo > 1 do
+      local mid = floor((lo+hi)/2)
+      if list[mid] == nil then
+        hi = mid
+      else
+        lo = mid
+      end
+    end
+    return lo
+  end
+end
+<<*>>=
+function List.slow_length(list)
   local i, n, v
   i = nil
   n = 0
