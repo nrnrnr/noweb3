@@ -1,0 +1,5 @@
+*~
+*.o
+c/no
+c/nwmtime
+lib*.a
