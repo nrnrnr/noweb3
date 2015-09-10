@@ -1,15 +1,33 @@
-This is an alpha version of Noweb 3.  Alpha versions are numbered by
-date; for example, the first version to tangle and weave itself was
-alpha980616.  This alpha version is being release to allow people to
-play with Noweb 3 and in the hopes the Noweb users will fill in some
-of the holes.
+This is Noweb 3.  Noweb 3 is a reimplementation of Noweb using
+a customized version of Lua 2.5.  Noweb 3 was conceived and
+implemented in 1996 to solve two problems:
+
+  - Noweb 2 was hard to install.
+  - Without Icon, Noweb 2 can slow and hard to extend.
+
+Advances in software and hardware have made these problems irrelevant:
+Linux distributions and OSX ports have shifted installation costs from
+the end user to the distribution maintainers, and those same
+distributions have made it easy to build on fast Icon code instead of
+slow Awk code.  Noweb 3 retains some value; it is more flexible and
+easier to extend than Noweb 2, but in Fall 2015, as these words are
+being written, maintaining Noweb 3 makes no sense.  In a just world,
+Noweb 3 would be completely rewritten using Lua 5.  But that won't
+happen.
+
+I have used Noweb 3 in production for some years, but I continue to
+call this distribution "alpha quality."  Alpha versions are numbered
+by date; for example, the first version to tangle and weave itself was
+alpha980616.  This alpha version is made available from github
+(nrnrnr/noweb3) so that those who wish to play with Noweb 3 can do so.
+
 
 
 To get some idea of what is going on with Noweb 3, look at the revised
 Hacker's Guide.
 
-To build Noweb 3, you need a working Noweb 2, plus a C compiler.  See
-http://www.eecs.harvard.edu/~nr/noweb for Noweb 2.
+To build Noweb 3, you need a working Noweb 2, plus a C compiler.  For
+Noweb 2 see http://www.cs.tufts.edu/~nr/noweb.
 The distribution includes:
 
   lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
@@ -59,15 +77,8 @@ Noweb 3 uses a new style of invocation
   no weave ...
   no tangle ...
 
-Start hacking and send in some code!  The web page has a list of what
-needs to be done, but it's not complete.  If you think it's useful,
-send it in.  Also, if you have questions about what is going on, send
-those too, and I can use them to help me improve the documentation.
-
 Noweb 3 would not have been possible without the efforts of Garret
 Prestwood.
 
-
-Do send feedback to nr@eecs.harvard.edu!
 
 Norman Ramsey
