@@ -1,4 +1,4 @@
-Noweb is copyright 1989-1998 by Norman Ramsey.  All rights reserved.
+Noweb is copyright 1989-2015 by Norman Ramsey.  All rights reserved.
 
 Noweb is protected by copyright.  It is not public-domain
 software or shareware, and it is not protected by a ``copyleft''
@@ -21,7 +21,7 @@ You must state clearly that your work uses or is based on noweb and
 that noweb is available free of change.  You must also request that
 bug reports on your work be reported to you.
 
-If this license does not meet your needs, write to nr@eecs.harvard.edu
+If this license does not meet your needs, write to nr@cs.tufts.edu
 to discuss terms.
 
 Noweb version 3 incorporates elements of Lua version 2.5 and CII
