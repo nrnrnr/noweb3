@@ -8,6 +8,7 @@ include nwconfig
 # Stop editing.  No user-serviceable parts below.
 
 all:
+	-mkdir $(BINDIR)
 	cd tools
 	-mkdir $(LIB3)$(P)tools
 	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools"
@@ -20,7 +21,10 @@ all:
 	-mkdir $(LIB3)$(P)lua-2.5+nw
 	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw"
 	cd ..
-	cd c; make all 
+	cd c
+	-mkdir $(LIB3)$(P)c
+	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)c"
+	cd ..
 	cd lua; make all
 
 everything: all todo.html

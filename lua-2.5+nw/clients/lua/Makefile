@@ -10,7 +10,7 @@ EXTRA_DEFS= $(POSIX)
 OBJS= lua.o
 SRCS= lua.c
 
-T=$(BIN)/lua
+T=$(BINDIR)/lua
 
 all: $T
 
