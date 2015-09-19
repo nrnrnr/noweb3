@@ -9,10 +9,13 @@ include nwconfig
 
 all:
 	cd cii
-	-mkdir $(LIB3)\cii
+	-mkdir $(LIB3)$(P)cii
 	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
 	cd ..
-	cd lua-2.5+nw; make "CC=$(CC) -g" all
+	cd lua-2.5+nw
+	-mkdir $(LIB3)$(P)lua-2.5+nw
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw"
+	cd ..
 	cd c; make all 
 	cd lua; make all
 
