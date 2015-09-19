@@ -1,0 +1,79 @@
+include ../nwconfig
+
+TANGLEOBJS=$(OUTPUT)$(P)notangle$(O) \
+	$(OUTPUT)$(P)getline$(O) \
+	$(OUTPUT)$(P)match$(O) \
+	$(OUTPUT)$(P)modules$(O) \
+	$(OUTPUT)$(P)modtrees$(O) \
+	$(OUTPUT)$(P)strsave$(O) \
+	$(OUTPUT)$(P)main$(O) \
+	$(OUTPUT)$(P)errors$(O) \
+	$(OUTPUT)$(P)columns$(O)
+
+MARKUPOBJS=$(OUTPUT)$(P)markmain$(O) \
+	$(OUTPUT)$(P)strsave$(O) \
+	$(OUTPUT)$(P)markup$(O) \
+	$(OUTPUT)$(P)errors$(O) \
+	$(OUTPUT)$(P)getline$(O) \
+	$(OUTPUT)$(P)columns$(O)
+
+OBJS=$(TANGLEOBJS) $(MARKUPOBJS)
+
+#TARGETS=$(OUTPUT)$(P)lua2h.exe \
+TARGETS=$(OUTPUT)$(P)markup.exe \
+#	$(OUTPUT)$(P)markup.exe \
+	$(OUTPUT)$(P)nocond.exe \
+	$(OUTPUT)$(P)nt.exe \
+	$(OUTPUT)$(P)tie.exe
+
+all: $(TARGETS)
+
+#$(OUTPUT)$(P)lua2h.exe: lua2h.c
+#	$(CC) /Fe:$@ lua2h.c
+
+$(OUTPUT)$(P)markup.exe: $(MARKUPOBJS)
+	$(CC) /Fe:$@ $(MARKUPOBJS)
+
+$(OUTPUT)$(P)nocond.exe: $(OUTPUT)$(P)nocond$(O)
+	$(CC) /Fe:$@ $(OUTPUT)$(P)nocond$(O)
+
+$(OUTPUT)$(P)nt.exe: $(TANGLEOBJS)
+	$(CC) /Fe:$@ $(TANGLEOBJS)
+
+$(OUTPUT)$(P)tie.exe: $(OUTPUT)$(P)tie$(O)
+	$(CC) /Fe:$@ $(OUTPUT)$(P)tie$(O)
+
+clean:
+	-del /q $(OBJS)
+	-del /q nocond$(O)
+	-del /q tie$(O)
+
+clobber: clean
+	-del /q $(TARGETS)
+
+$(OUTPUT)$(P)columns$(O):	columns.c columns.h
+	$(CC) /c /Fo$@ columns.c
+$(OUTPUT)$(P)errors$(O):	errors.c errors.h
+	$(CC) /c /Fo$@ errors.c
+$(OUTPUT)$(P)getline$(O): getline.c columns.h errors.h getline.h
+	$(CC) /c /Fo$@ getline.c
+$(OUTPUT)$(P)main$(O):	main.c columns.h errors.h modtrees.h modules.h notangle.h
+	$(CC) /c /Fo$@ main.c
+$(OUTPUT)$(P)markmain$(O):	markmain.c columns.h errors.h getline.h markup.h
+	$(CC) /c /Fo$@ markmain.c
+$(OUTPUT)$(P)markup$(O):	markup.c errors.h markup.h strsave.h
+	$(CC) /c /Fo$@ markup.c
+$(OUTPUT)$(P)match$(O):	match.c match.h
+	$(CC) /c /Fo$@ match.c
+$(OUTPUT)$(P)modtrees$(O):	modtrees.c errors.h modtrees.h modules.h strsave.h
+	$(CC) /c /Fo$@ modtrees.c
+$(OUTPUT)$(P)modules$(O):	modules.c columns.h errors.h modtrees.h modules.h strsave.h
+	$(CC) /c /Fo$@ modules.c
+$(OUTPUT)$(P)nocond$(O):	nocond.c
+	$(CC) /c /Fo$@ nocond.c
+$(OUTPUT)$(P)notangle$(O):	notangle.c errors.h getline.h modtrees.h modules.h notangle.h strsave.h
+	$(CC) /c /Fo$@ notangle.c
+$(OUTPUT)$(P)strsave$(O):	strsave.c errors.h strsave.h
+	$(CC) /c /Fo$@ strsave.c
+$(OUTPUT)$(P)tie$(O):	tie.c
+	$(CC) /c /Fo$@ tie.c

@@ -8,6 +8,10 @@ include nwconfig
 # Stop editing.  No user-serviceable parts below.
 
 all:
+	cd tools
+	-mkdir $(LIB3)$(P)tools
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools"
+	cd ..
 	cd cii
 	-mkdir $(LIB3)$(P)cii
 	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
