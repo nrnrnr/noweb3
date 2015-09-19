@@ -42,13 +42,8 @@ To build Noweb 3 on and for a Windows box:
       - warning about different const qualifiers.
      On my box, it completes in less than half a minute.
 
-  4) Once it has built you can try `make -f Makefile.win clean'.
-
-  5) And when you have installed it on your system, you can type
-     `make -f Makefile.win clobber' to clean the last built bits off.
-
-  6) Also when you have installed it, you can get the literate version
-     by typing `nmake -d Makefile pdf'.
+  4) When you have installed it, you can get the literate version with
+     `nmake -d Makefile pdf'.
 
      The pdf is generated three times and the first time there are a huge
      number of warnings about undefined references which should be ignored.
@@ -58,8 +53,27 @@ To build Noweb 3 on and for a Windows box:
       - A few warnings about undefined references.
      On the same box as above, it completes in just over 1 minute.
 
-     If you wanted to really be brave, you could install the LaTeX style from
-     Noweb 2, and replace step 3 with `nmake -f Makefile.win all pdf clean'.
-
      On the same box as above, doing this completes (as expected) in under
      2 minutes.
+
+  5) Also, once you have installed noweb.sty, you can get a basic sanity
+     check by typing `nmake -f Makefile careful'.
+
+     This builds Noweb 3 twice. Once using the code found in tools, and once
+     using the just Noweb 3 built the first time. It then generates the pdf.
+     The sanity check is that if Noweb 3 can both tangle and weave itself
+     then it must have some basic level of functionality.
+
+     You may see complaints about not finding files or directories. This is
+     because it begins by clobbering everything and finished by cleaning
+     everything. These complaints are because it is unable to clean items
+     which have already been clobbered.
+
+     In experiments run on the same machine as above, using Noweb 3 to build
+     Noweb 3 takes about half the time of using the tools copied from Noweb 2
+     to build Noweb 3. The entire process still takes less than 2 minutes.
+
+  6) `make -f Makefile.win clean' will allow everything to be regenerated but
+     leave everything you need to be installed.
+
+  7) `make -f Makefile.win clobber' will remove the last built bits off.
