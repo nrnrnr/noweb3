@@ -8,10 +8,10 @@
 PIPE=spawn
 
 # What file and PATH conventions should Noweb use (unix or win)?
-#PLATFORM=unix
-#P=/
-PLATFORM=win
-P=^\
+PLATFORM=unix
+P=/
+#PLATFORM=win
+#P=^\
 
 ################################################################
 #
@@ -22,12 +22,12 @@ P=^\
 # LIB3 is where Noweb 3 scripts and configuration files go
 
 # These are some good examples for a Linux box
-#BINDIR=/h/nr/machine/amd64-linux/bin
-#LIB2=/usr/lib64/noweb
-#LIB3=/h/nr/machine/amd64-linux/lib/noweb3
+BINDIR=/h/nr/machine/amd64-linux/bin
+LIB2=/usr/lib64/noweb
+LIB3=/h/nr/machine/amd64-linux/lib/noweb3
 # These are some good examples for a Windows box
-BINDIR=c:\users\Public\documents\noweb3\bin
-LIB3=c:\users\Public\documents\noweb3
+#BINDIR=c:\users\Public\documents\noweb3\bin
+#LIB3=c:\users\Public\documents\noweb3
 
 ################################################################
 #
@@ -35,24 +35,24 @@ LIB3=c:\users\Public\documents\noweb3
 
 # Adjust these three lines for your ANSI C compiler
 # First set are Linux-ish while the second set are Windows-ish.
-#MK=make
-#CC=gcc -ansi -pedantic
-#XCFLAGS=
-#LD=gcc
-#O=o
-#A=a
-#E=
-MK=nmake /nologo
-CC=cl /nologo
+MK=make
+CC=gcc -ansi -pedantic
 XCFLAGS=
-LD=cl
-O=.obj
-A=.lib
-E=.exe
+LD=gcc
+O=o
+A=a
+E=
+#MK=nmake /nologo
+#CC=cl /nologo
+#XCFLAGS=
+#LD=cl
+#O=.obj
+#A=.lib
+#E=.exe
 
 # if your system doesn't have ranlib, change "ranlib" to "true" 
-#RANLIB=ranlib
-RANLIB=true
+RANLIB=ranlib
+#RANLIB=true
 
 # set the alignment (in bytes) of pointers returned by malloc
 # see cii/install.html for more
@@ -64,10 +64,10 @@ CIIMAXALIGN=4		# Linux x86, Windows
 #XINCLUDES=-I/usr/5include
 
 # if you don't have popen() in your C library, comment the following line:
-#POPEN=-DPOPEN
+POPEN=-DPOPEN
 
 # if your C library is not POSIX compliant, comment the following line:
-#POSIX=-DPOSIX
+POSIX=-DPOSIX
 
 # if you don't have strerror() in your C library, uncomment the following line:
 #NOSTRERROR= -DNOSTRERROR
