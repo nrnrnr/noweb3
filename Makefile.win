@@ -25,7 +25,9 @@ all:
 	-mkdir $(LIB3)$(P)c
 	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)c"
 	cd ..
-	cd lua; make all
+	cd lua
+	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>"
+	cd ..
 
 everything: all todo.html
 

@@ -1,0 +1,69 @@
+include ../nwconfig
+
+.SUFFIXES: .cfg .nw .nws
+
+CONFIG=	$(BINDIR)$(P)pipes.cfg \
+	$(BINDIR)$(P)sys.cfg \
+	$(BINDIR)$(P)noweb.cfg \
+	$(BINDIR)$(P)util.cfg \
+	$(BINDIR)$(P)list.nws \
+	$(BINDIR)$(P)set.nws
+FILTERS=	$(BINDIR)$(P)cat.nws \
+		$(BINDIR)$(P)stripconds.nws \
+		$(BINDIR)$(P)xchunks.nws \
+		$(BINDIR)$(P)lines.nws
+STAGES=	$(BINDIR)$(P)totex.nws \
+	$(BINDIR)$(P)tohtml.nws \
+	$(BINDIR)$(P)noidx.nws \
+	$(BINDIR)$(P)elide.nws \
+	$(BINDIR)$(P)unmarkup.nws \
+	$(FILTERS)
+SCRIPTS=	$(BINDIR)$(P)tangle \
+		$(BINDIR)$(P)weave
+
+all: $(CONFIG) $(STAGES) $(SCRIPTS)
+
+test: $(CONFIG) $(STAGES) $(SCRIPTS)
+	@echo 'write("Scripts load from .\n")' | NWPATH=. no
+	@echo 'argv = {"-internaldefaults", "-n", "-html", "/dev/null"}; do_nwfile("weave.nws"); write("Null weave OK.\n")' | NWPATH=. no
+	@echo 'argv = {"-internal", "test.nw"}; do_nwfile("tangle.nws"); write("Null tangle OK.\n")' | NWPATH=. no
+
+htmltest: $(CONFIG) $(STAGES) $(SCRIPTS)
+	@echo 'testfile("/home/nr/www/noweb/index.html")' | NWPATH=. no
+
+clean:
+	rm -f *~ *.cfg *.nws
+	rm -f *.dvi *.aux *.html *.log *.toc *.tex *.ps
+	rm -f core
+	rm -f luac.out
+
+clobber: clean
+
+install: $(SCRIPTS) $(CONFIG) $(STAGES)
+	for i in $(CONFIG) $(STAGES); do sed 's@|LIBDIR|@$(LIB2)@g' $$i > $(LIB3)/$$i; done
+	for i in $(SCRIPTS); do cp $$i $(LIB3)/`basename $$i .nws`; done
+
+$(BINDIR)$(P)pipes.cfg:		config.nw;	$(NOTANGLE) config.nw		$(TANGLEOPTS) -Rpipes.cfg	$(CPIF) $@
+$(BINDIR)$(P)sys.cfg:		config.nw;	$(NOTANGLE) config.nw		$(TANGLEOPTS) -Rsys.cfg		$(CPIF) $@
+$(BINDIR)$(P)noweb.cfg:		config.nw;	$(NOTANGLE) config.nw		$(TANGLEOPTS) -Rnoweb.cfg	$(CPIF) $@
+$(BINDIR)$(P)util.cfg:		config.nw;	$(NOTANGLE) config.nw		$(TANGLEOPTS) -Rutil.cfg	$(CPIF) $@
+$(BINDIR)$(P)list.nws:		list.nw;	$(NOTANGLE) list.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)set.nws:		set.nw;		$(NOTANGLE) set.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)totex.nws:		totex.nw;	$(NOTANGLE) totex.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)tohtml.nws:	tohtml.nw;	$(NOTANGLE) tohtml.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)noidx.nws:		noidx.nw;	$(NOTANGLE) noidx.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)elide.nws:		elide.nw;	$(NOTANGLE) elide.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)unmarkup.nws:	unmarkup.nw;	$(NOTANGLE) unmarkup.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)cat.nws:		cat.nw;		$(NOTANGLE) cat.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)stripconds.nws:	stripconds.nw;	$(NOTANGLE) stripconds.nw	$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)xchunks.nws:	xchunks.nw;	$(NOTANGLE) xchunks.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)lines.nws:		lines.nw;	$(NOTANGLE) lines.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)tangle:		tangle.nw;	$(NOTANGLE) tangle.nw		$(TANGLEOPTS) $(CPIF) $@
+$(BINDIR)$(P)weave:		weave.nw;	$(NOTANGLE) weave.nw		$(TANGLEOPTS) $(CPIF) $@
+
+################################################################
+#
+
+noidx.tex: noidx.nw
+	noweave -delay -x -filter 'elide hackers:*' noidx.nw > noidx.tex
+
