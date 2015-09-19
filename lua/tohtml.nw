@@ -150,8 +150,10 @@ is quoted code.  In that case we have to attach both the label for the
                       write(value)
                     end
                   end
+@
+There should be an index anchor if the text has nonblank
 <<there should be an index anchor>>=
-lastindexref and strfind(value, "[%S]") -- text has nonblank
+lastindexref and strfind(value, "[%S]")
 <<emit the index anchor>>=
 write(linkto(lastindexref, Tohtml.escapeSpecials(value)))
 lastindexref = nil
@@ -171,7 +173,7 @@ lastxreflabel = nil
 An indexed identifier is not empty and contains no tags, so we don't 
 have to worry.
 <<there should be an index and docs anchor>>=
-strfind(value, "[%S]") -- text has nonblank
+strfind(value, "[%S]")
 <<emit the index and docs anchor>>=
 write(linklabelto(lastxreflabel, lastindexref, Tohtml.escapeSpecials(value), "bare"))
 lastxreflabel = nil; lastindexref = nil

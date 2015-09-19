@@ -21,9 +21,9 @@ everything: all todo.html
 install: all install-code install-scripts
 
 install-code:
-	-mkdir $(BIN) 2>/dev/null || true
+	-mkdir $(BINDIR) 2>/dev/null || true
 	-mkdir $(LIB3) 2>/dev/null || true
-	cp c/no $(BIN)/.
+	cp c/no $(BINDIR)/.
 	cp c/nwmtime $(LIB3)/.
 
 install-scripts:

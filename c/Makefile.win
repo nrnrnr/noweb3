@@ -1,0 +1,289 @@
+# Copyright 1991-1998 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+#
+# don't edit this file; edit ../nwconfig instead
+
+include ../nwconfig
+
+################################################################
+# CII is directory where you installed CII ($BUILDDIR)
+
+CII=../cii
+LUA=../lua-2.5+nw
+
+CFLAGS=-I$(CII)\include -I$(LUA)\include \
+	-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) \
+	-DWIN32="1" -DNWDEFAULTDIR="""C:\\Users\\Public\\Documents\\noweb3\\bin""" $(XCFLAGS)
+
+# after installation, `nmake doc' for literate version
+
+# list of object files for each target
+
+FINDUSESOBJS=columns$(O) errors$(O) finduses$(O) match$(O) getline$(O) recognize$(O) fu-run$(O) \
+             nwbuffer$(O) fromascii$(O) ipipe$(O)
+MNTOBJS=mnt$(O) getline$(O) match$(O) modules$(O) modtrees$(O) notangle$(O) \
+	strsave$(O) errors$(O) columns$(O)
+TANGLEOBJS=notangle$(O) getline$(O) match$(O) modules$(O) modtrees$(O) strsave$(O) \
+	main$(O) errors$(O) columns$(O) nwbuffer$(O) nt-run$(O) fromascii$(O) ipipe$(O) cpif$(O)
+MARKUPOBJS=markparse$(O) strsave$(O) markup$(O) errors$(O) getline$(O) columns$(O) \
+	ipipe$(O) nwbuffer$(O) markup-run$(O)
+NOOBJS=$(OUTPUT)$(P)xpipe$(O) $(OUTPUT)$(P)xpipe-lua$(O) $(OUTPUT)$(P)nwprocess$(O) $(OUTPUT)$(P)nwtime$(O) $(OUTPUT)$(P)lua-help$(O) $(OUTPUT)$(P)nwbuffer$(O) $(OUTPUT)$(P)ipipe$(O) \
+	$(OUTPUT)$(P)ipipe-lua$(O) $(OUTPUT)$(P)env-lua$(O) $(OUTPUT)$(P)markparse$(O) $(OUTPUT)$(P)strsave$(O) $(OUTPUT)$(P)markup$(O) $(OUTPUT)$(P)errors$(O) \
+	$(OUTPUT)$(P)getline$(O) $(OUTPUT)$(P)columns$(O) $(OUTPUT)$(P)stages$(O) $(OUTPUT)$(P)lua-main$(O) $(OUTPUT)$(P)cpif$(O) \
+	$(OUTPUT)$(P)mpipe$(O) $(OUTPUT)$(P)mpipe-lua$(O) $(OUTPUT)$(P)fromascii$(O) $(OUTPUT)$(P)notangle$(O) $(OUTPUT)$(P)main$(O) $(OUTPUT)$(P)modules$(O) $(OUTPUT)$(P)modtrees$(O) \
+	$(OUTPUT)$(P)util$(O) $(OUTPUT)$(P)sys$(O) $(OUTPUT)$(P)noweb-lua$(O) $(OUTPUT)$(P)nwbuffer-lua$(O) $(OUTPUT)$(P)misc-lua$(O) $(OUTPUT)$(P)finduses$(O) $(OUTPUT)$(P)recognize$(O) 
+NWMTIMEOBJS=$(OUTPUT)$(P)nwmtime$(O) $(OUTPUT)$(P)getline$(O) $(OUTPUT)$(P)errors$(O) $(OUTPUT)$(P)columns$(O)
+EXTERNAL=finduses markup nt mnt nwmtime
+
+FILES=markparse.nw markup.nw \
+      main.nw notangle.nw match.nw mnt.nw modules.nw modtrees.nw \
+      finduses.nw recognize.nw cpif.nw \
+      getline.nw columns.nw errors.nw strsave.nw \
+      nwbuffer.nw nwbuffer-lua.nw \
+      ipipe.nw ipipe-lua.nw xpipe.nw xpipe-lua.nw mpipe.nw mpipe-lua.nw \
+      nwprocess.nw nwtime.nw lua-main.nw nwmtime.nw
+
+# sources to build when distributing C code
+#   (add all generated .c and .h files to this list)
+
+SRCS=$(OUTPUT)$(P)columns.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)getline.h $(OUTPUT)$(P)markup.h $(OUTPUT)$(P)match.h $(OUTPUT)$(P)modtrees.h \
+	$(OUTPUT)$(P)modules.h $(OUTPUT)$(P)notangle.h $(OUTPUT)$(P)recognize.h $(OUTPUT)$(P)strsave.h $(OUTPUT)$(P)cpif.h $(OUTPUT)$(P)cpif.c \
+	$(OUTPUT)$(P)columns.c $(OUTPUT)$(P)errors.c $(OUTPUT)$(P)getline.c $(OUTPUT)$(P)finduses.c $(OUTPUT)$(P)main.c $(OUTPUT)$(P)markparse.c $(OUTPUT)$(P)markup.c $(OUTPUT)$(P)match.c \
+	$(OUTPUT)$(P)mnt.c $(OUTPUT)$(P)modtrees.c $(OUTPUT)$(P)modules.c $(OUTPUT)$(P)notangle.c $(OUTPUT)$(P)readme.c $(OUTPUT)$(P)recognize.c $(OUTPUT)$(P)strsave.c \
+    $(OUTPUT)$(P)cargs.h $(OUTPUT)$(P)env-lua.c $(OUTPUT)$(P)env-lua.h $(OUTPUT)$(P)fromascii.c $(OUTPUT)$(P)fromascii.h $(OUTPUT)$(P)ipipe-lua.c \
+    $(OUTPUT)$(P)ipipe-lua.h $(OUTPUT)$(P)ipipe.c $(OUTPUT)$(P)ipipe.h $(OUTPUT)$(P)lua-help.c $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)lua-main.c $(OUTPUT)$(P)lua-main.h \
+    $(OUTPUT)$(P)markparse.h $(OUTPUT)$(P)markup-run.c $(OUTPUT)$(P)mpipe-lua.c $(OUTPUT)$(P)mpipe-lua.h $(OUTPUT)$(P)mpipe.c $(OUTPUT)$(P)mpipe.h \
+    $(OUTPUT)$(P)noweb-lua.c $(OUTPUT)$(P)noweb-lua.h $(OUTPUT)$(P)nt-run.c $(OUTPUT)$(P)nwbuffer.c \
+    $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)util.c $(OUTPUT)$(P)util.h $(OUTPUT)$(P)precompiled.h $(OUTPUT)$(P)stages.c $(OUTPUT)$(P)stages.h $(OUTPUT)$(P)sys.c $(OUTPUT)$(P)sys.h \
+    $(OUTPUT)$(P)toascii.c $(OUTPUT)$(P)toascii.h $(OUTPUT)$(P)xpipe-lua.c $(OUTPUT)$(P)xpipe-lua.h $(OUTPUT)$(P)xpipe.c $(OUTPUT)$(P)xpipe.h \
+    $(OUTPUT)$(P)nwbuffer-lua.c $(OUTPUT)$(P)nwprocess.h $(OUTPUT)$(P)nwprocess.c $(OUTPUT)$(P)nwtime.h $(OUTPUT)$(P)nwtime.c \
+    $(OUTPUT)$(P)fu-run.c $(OUTPUT)$(P)misc-lua.c $(OUTPUT)$(P)misc-lua.h $(OUTPUT)$(P)markup.ps \
+    $(OUTPUT)$(P)nwmtime.c
+NAME='name of RCS version'
+
+# metarules so you don't need a new rule for each .c and .h
+
+.SUFFIXES: .nw .tex .dvi .h .html .dvi .ps
+.c$(O): ;	$(CC) $(CFLAGS) /c /Fo$@ $*.c
+.nw.tex: ;	no weave -ifilter "Stages.elide, 'hackers:*'" $*.nw >$*.tex
+.nw.c: ;	$(NOTANGLE) $(TANGLEOPTS) -L $*.nw >$*.c
+.nw.h: ;	$(NOTANGLE) $(TANGLEOPTS) -L -Rheader $*.nw $(CPIF) $*.h
+.nw.html: ;	no weave -ifilter "Stages.elide, 'hackers:*'" -filter l2h -autodefs c -index -html $*.nw >$*.html
+.tex.dvi: ;	latex '\scrollmode \input{$*}' ;
+		latex '\scrollmode \input{$*}'
+.dvi.ps: ;	dvips -o $*.ps $*.dvi
+
+
+all:	$(BINDIR)$(P)no$(E) $(BINDIR)$(P)nwmtime$(E)
+
+
+doc:	$(OUTPUT)\doc.tex $(OUTPUT)\allcode.tex
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	echo * If this is your very first run you will see a large number of
+	echo * missing references. Please ignore for now and move on.
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	pdflatex -output-directory=$(OUTPUT) doc.tex
+	pdflatex -output-directory=$(OUTPUT) doc.tex
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	echo * Any warnings here are real and could be investigated.
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	pdflatex -output-directory=$(OUTPUT) doc.tex
+	copy /Y $(OUTPUT)\doc.pdf $(BINDIR)\doc.pdf
+
+external: $(EXTERNAL)
+
+nt:	$(TANGLEOBJS)
+	$(CC) $(CFLAGS) -o nt $(TANGLEOBJS) -lcii 
+
+finduses:	$(FINDUSESOBJS)
+	$(CC) $(CFLAGS) -o finduses $(FINDUSESOBJS) -lcii
+
+markup:	$(MARKUPOBJS)
+	$(CC) $(CFLAGS) -o markup $(MARKUPOBJS) -lcii
+
+mnt:	$(MNTOBJS)
+	$(CC) $(CFLAGS) -o mnt $(MNTOBJS)
+
+$(BINDIR)$(P)nwmtime$(E):	$(NWMTIMEOBJS)
+	$(CC) $(CFLAGS) /Fe$@ $(NWMTIMEOBJS)
+
+# did have  $(CII)/memchk$(O) preceding -lcii
+$(BINDIR)$(P)no$(E):	$(NOOBJS) $(LIB3)$(P)cii$(P)memchk$(O) $(LIB3)$(P)cii$(P)libcii$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblua$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblualib$(A)
+	$(CC) $(CFLAGS) /Fe$@ $(NOOBJS) /link $(LIB3)$(P)cii$(P)libcii$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblua$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblualib$(A) /NODEFAULTLIB:LIBCMTD
+
+
+source:	$(SRCS)
+touch: $(SRCS)
+	touch $(SRCS)
+
+clean:
+	-del /Q $(NOOBJS)
+	-del /Q $(NWMTIMEOBJS)
+	-del /Q $(SRCS)
+	-del /Q $(OUTPUT)$(P)nwbuffer-lua.0
+	-del /Q $(OUTPUT)$(P)allcode.tex
+	-del /Q $(OUTPUT)$(P)doc.aux
+	-del /Q $(OUTPUT)$(P)doc.log
+	-del /Q $(OUTPUT)$(P)doc.out
+	-del /Q $(OUTPUT)$(P)doc.pdf
+	-del /Q $(OUTPUT)$(P)doc.tex
+	-del /Q $(OUTPUT)$(P)doc.toc
+
+clobber:	clean
+	-del /Q $(BINDIR)$(P)nwmtime$(E) $(BINDIR)$(P)no$(E)
+	-del /Q $(BINDIR)$(P)doc.pdf
+
+checkin:	$(FILES) doc.nw
+		ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
+
+
+$(OUTPUT)\doc.tex:	doc.nw
+	copy doc.nw $@
+
+$(OUTPUT)\allcode.tex:	$(FILES)
+	$(BINDIR)\no weave -ifilter "Stages.elide, 'hackers:*'" -n -index $(FILES) > $@
+
+doc.dvi:	doc.tex allcode.tex
+	latex doc
+
+markup.ps: markparse.nw
+	notangle -Rmarkup.dot markparse.nw | dot -Tps > markup.ps
+
+FPOBJS=fakepretty.o pretty.o errors.o getline.o match.o strsave.o columns.o
+
+fakepretty.o: pretty.h
+
+fakepretty: $(FPOBJS)
+	$(CC) $(CFLAGS) -o fakepretty $(FPOBJS)
+
+
+################################################################
+
+overview.tex: overview.nw
+	no weave -delay overview.nw > overview.tex
+
+depend:
+	gcc $(CFLAGS) -MM -MG *.c
+
+################################################################
+
+$(OUTPUT)$(P)cargs.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)columns.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)cpif.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)env-lua.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)errors.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)fromascii.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)getline.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)ipipe.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)ipipe-lua.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)lua-help.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)lua-main.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)markparse.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)markup.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)match.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)misc-lua.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)modtrees.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)modules.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)mpipe.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)mpipe-lua.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)notangle.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)noweb-lua.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)nwbuffer.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)nwprocess.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)nwtime.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)precompiled.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)recognize.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)stages.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)strsave.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)sys.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)util.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)xpipe.h:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+$(OUTPUT)$(P)xpipe-lua.h:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" -Rheader $(CPIF) $@
+
+################################################################
+
+$(OUTPUT)$(P)columns.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)cpif.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)errors.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)env-lua.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)finduses.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)fromascii.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)getline.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)ipipe.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)ipipe-lua.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)lua-help.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)lua-main.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)main.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)markup.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)markparse.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)misc-lua.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)modtrees.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)modules.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)mpipe.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)mpipe-lua.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)notangle.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)noweb-lua.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)nwbuffer.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)nwbuffer-lua.c: nwbuffer.nw nwbuffer-lua.nw
+	echo ^<^<key macros^>^>= >$(OUTPUT)$(P)nwbuffer-lua.0
+	$(NOTANGLE) nwbuffer.nw $(TANGLEOPTS) -R"key macros" >>$(OUTPUT)$(P)nwbuffer-lua.0
+	echo @ >>$(OUTPUT)$(P)nwbuffer-lua.0
+	type $(OUTPUT)$(P)nwbuffer-lua.0 | $(LIB3)$(P)tools$(P)tie nwbuffer-lua.nw | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt $(CPIF) $@
+$(OUTPUT)$(P)nwprocess.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)nwmtime.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)nwtime.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)recognize.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)stages.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)strsave.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)sys.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)util.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)xpipe.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)xpipe-lua.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+
+################################################################
+
+# These SRCS items remain ungenerated so far
+# match.c mnt.c readme.c markup-run.c nt-run.c toascii.c toascii.h fu-run.c markup.ps \
+
+################################################################
+
+$(OUTPUT)$(P)columns$(O): $(OUTPUT)$(P)columns.c $(OUTPUT)$(P)columns.h
+$(OUTPUT)$(P)cpif$(O): $(OUTPUT)$(P)cpif.c $(OUTPUT)$(P)cpif.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)strsave.h
+$(OUTPUT)$(P)errors$(O): $(OUTPUT)$(P)errors.c $(OUTPUT)$(P)errors.h
+$(OUTPUT)$(P)finduses$(O): $(OUTPUT)$(P)finduses.c $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)match.h $(OUTPUT)$(P)getline.h $(OUTPUT)$(P)recognize.h $(OUTPUT)$(P)nwbuffer.h
+$(OUTPUT)$(P)getline$(O): $(OUTPUT)$(P)getline.c $(OUTPUT)$(P)columns.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)getline.h
+ipipe$(O): ipipe.c ipipe.h nwbuffer.h
+$(OUTPUT)$(P)main$(O): $(OUTPUT)$(P)main.c $(OUTPUT)$(P)notangle.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)columns.h $(OUTPUT)$(P)modules.h $(OUTPUT)$(P)modtrees.h $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)cargs.h $(OUTPUT)$(P)cpif.h
+$(OUTPUT)$(P)markparse$(O): $(OUTPUT)$(P)markparse.c $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)markup.h $(OUTPUT)$(P)getline.h $(OUTPUT)$(P)columns.h $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)markparse.h
+$(OUTPUT)$(P)markup$(O): $(OUTPUT)$(P)markup.c $(OUTPUT)$(P)markup.h $(OUTPUT)$(P)strsave.h $(OUTPUT)$(P)errors.h
+markup-test$(O): markup-test.c markparse.h nwbuffer.h  ipipe.h 
+match$(O): match.c match.h
+$(OUTPUT)$(P)modtrees$(O): $(OUTPUT)$(P)modtrees.c $(OUTPUT)$(P)strsave.h $(OUTPUT)$(P)modules.h $(OUTPUT)$(P)modtrees.h $(OUTPUT)$(P)errors.h
+$(OUTPUT)$(P)modules$(O): $(OUTPUT)$(P)modules.c $(OUTPUT)$(P)modules.h $(OUTPUT)$(P)modtrees.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)columns.h $(OUTPUT)$(P)strsave.h
+$(OUTPUT)$(P)notangle$(O): $(OUTPUT)$(P)notangle.c $(OUTPUT)$(P)strsave.h $(OUTPUT)$(P)getline.h $(OUTPUT)$(P)modules.h $(OUTPUT)$(P)modtrees.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)match.h $(OUTPUT)$(P)notangle.h $(OUTPUT)$(P)nwbuffer.h
+$(OUTPUT)$(P)nwbuffer$(O): $(OUTPUT)$(P)nwbuffer.c $(OUTPUT)$(P)nwbuffer.h
+$(OUTPUT)$(P)strsave$(O): $(OUTPUT)$(P)strsave.c $(OUTPUT)$(P)strsave.h $(OUTPUT)$(P)errors.h
+
+$(OUTPUT)$(P)env-lua$(O): $(OUTPUT)$(P)env-lua.c $(OUTPUT)$(P)env-lua.h $(OUTPUT)$(P)lua-help.h
+$(OUTPUT)$(P)fromascii$(O): $(OUTPUT)$(P)fromascii.c $(OUTPUT)$(P)getline.h $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)fromascii.h
+$(OUTPUT)$(P)ipipe$(O): $(OUTPUT)$(P)ipipe.c $(OUTPUT)$(P)ipipe.h $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)nwtime.h
+$(OUTPUT)$(P)ipipe-lua$(O): $(OUTPUT)$(P)ipipe-lua.c $(OUTPUT)$(P)ipipe-lua.h
+$(OUTPUT)$(P)lua-help$(O): $(OUTPUT)$(P)lua-help.c $(OUTPUT)$(P)lua-help.h
+lua-main$(O): lua-main.c lua-main.h util.h misc-lua.h
+$(OUTPUT)$(P)util$(O): $(OUTPUT)$(P)util.c $(OUTPUT)$(P)precompiled.h $(OUTPUT)$(P)sys.h $(OUTPUT)$(P)util.h
+$(OUTPUT)$(P)sys$(O): $(OUTPUT)$(P)sys.c $(OUTPUT)$(P)sys.h
+$(OUTPUT)$(P)lua-main$(O): $(OUTPUT)$(P)lua-main.c $(OUTPUT)$(P)xpipe-lua.h $(OUTPUT)$(P)ipipe-lua.h $(OUTPUT)$(P)env-lua.h $(OUTPUT)$(P)stages.h $(OUTPUT)$(P)noweb-lua.h $(OUTPUT)$(P)mpipe-lua.h $(OUTPUT)$(P)misc-lua.h $(OUTPUT)$(P)lua-main.h
+$(OUTPUT)$(P)mpipe$(O): $(OUTPUT)$(P)mpipe.c $(OUTPUT)$(P)mpipe.h $(OUTPUT)$(P)ipipe.h $(OUTPUT)$(P)xpipe.h $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)fromascii.h 
+$(OUTPUT)$(P)mpipe-lua$(O): $(OUTPUT)$(P)mpipe-lua.c $(OUTPUT)$(P)mpipe.h $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)mpipe-lua.h
+$(OUTPUT)$(P)misc-lua$(O): $(OUTPUT)$(P)misc-lua.c $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)misc-lua.h
+$(OUTPUT)$(P)noweb-lua$(O): $(OUTPUT)$(P)noweb-lua.c $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)util.h $(OUTPUT)$(P)noweb-lua.h
+$(OUTPUT)$(P)nwbuffer-lua$(O): $(OUTPUT)$(P)nwbuffer-lua.c $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)nwbuffer.h
+$(OUTPUT)$(P)nwprocess$(O): $(OUTPUT)$(P)nwprocess.c $(OUTPUT)$(P)nwprocess.h
+$(OUTPUT)$(P)nwmtime$(O): $(OUTPUT)$(P)nwmtime.c $(OUTPUT)$(P)getline.h
+$(OUTPUT)$(P)nwtime$(O): $(OUTPUT)$(P)nwtime.c $(OUTPUT)$(P)nwtime.h
+$(OUTPUT)$(P)recognize$(O): $(OUTPUT)$(P)recognize.c
+$(OUTPUT)$(P)stages$(O): $(OUTPUT)$(P)stages.c $(OUTPUT)$(P)nwbuffer.h  $(OUTPUT)$(P)fromascii.h $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)cargs.h $(OUTPUT)$(P)markparse.h $(OUTPUT)$(P)notangle.h $(OUTPUT)$(P)stages.h
+$(OUTPUT)$(P)xpipe$(O): $(OUTPUT)$(P)xpipe.c $(OUTPUT)$(P)xpipe.h $(OUTPUT)$(P)sys.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)util.h $(OUTPUT)$(P)nwprocess.h
+$(OUTPUT)$(P)xpipe-lua$(O): $(OUTPUT)$(P)xpipe-lua.c $(OUTPUT)$(P)xpipe-lua.h $(OUTPUT)$(P)xpipe.h $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)cargs.h
+nt-run$(O): nt-run.c markparse.h nwbuffer.h ipipe.h cargs.h fromascii.h \
+	nwbuffer.h errors.h

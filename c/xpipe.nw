@@ -130,6 +130,10 @@ building, and printing of the pipeline.
 #include "list.h"
 #include "mem.h"
 #include "str.h"
+#if defined(WIN32)
+#include <Windows.h>
+#include <io.h>
+#endif
 
 #define T XPipe_T
 typedef struct XPipe_Stage* XPipe_Stage;
@@ -561,9 +565,18 @@ Also useful for debugging!
 #include <fmt.h>
 
 <<private temporary-file prototypes>>
+#if defined(WIN32)
+<<Windows run-program prototypes>>
+#else
 <<Unix run-program prototypes>>
+#endif
+
 <<temporary-file functions>>
+#if defined(WIN32)
+<<Windows run-program functions>>
+#else
 <<Unix run-program functions>>
+#endif
 @ 
 We walk a list of stages with input and output files given.
 <<private temporary-file prototypes>>=
@@ -618,9 +631,32 @@ fprintf(stderr, "running program %s in xpipe\n", stage->u.prog.path);
   }
 }
 @ 
+<<Windows run-program prototypes>>=
+void PrintError(LPTSTR lpszPreface);
+@
+<<Windows run-program functions>>=
+void PrintError(LPTSTR lpszPreface) {
+  DWORD dw = GetLastError();
+
+  LPVOID lpMsgBuf;
+  FormatMessage(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER |
+    FORMAT_MESSAGE_FROM_SYSTEM |
+    FORMAT_MESSAGE_IGNORE_INSERTS,
+    NULL,
+    dw,
+    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+    (LPTSTR) &lpMsgBuf,
+    0, NULL );
+
+  printf("%s: error %d (%s)\n", lpszPreface, dw, lpMsgBuf);
+
+  LocalFree(lpMsgBuf);
+}
+@
 <<private temporary-file prototypes>>=
 static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out);
-<<temporary-file functions>>=
+<<Unix run-program functions>>=
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -645,6 +681,135 @@ static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
     return waitfor(pid);
   }
 }
+@ 
+<<Windows run-program functions>>=
+static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
+  STARTUPINFO si;
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESTDHANDLES;
+  si.hStdInput = (HANDLE)_get_osfhandle( _fileno(in) );
+  si.hStdOutput = (HANDLE)_get_osfhandle( _fileno(out) );
+  si.hStdError = (HANDLE)_get_osfhandle( _fileno(stderr) );
+
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(pi));
+
+  SECURITY_ATTRIBUTES sa;
+  ZeroMemory(&sa, sizeof(sa));
+  sa.nLength = sizeof(sa);
+  sa.lpSecurityDescriptor = NULL;
+  sa.bInheritHandle = TRUE;
+
+  int i, j, m, n, o;
+  <<Copy the path and argv into a new argv>>
+  <<Copy the envp into a new envp>>
+
+  int result = 0;
+
+  if(!CreateProcess(NULL, new_argv, NULL, NULL, TRUE, 0, new_envp, NULL, &si, &pi)) {
+    PrintError(TEXT("Creating process"));
+    result = -1;
+  }
+
+  WaitForSingleObject( pi.hProcess, INFINITE );
+
+  _close(_fileno(in));
+  _close(_fileno(out));
+  _close(_fileno(stderr));
+  if(result!=0)
+    exit(EXIT_FAILURE);
+  return result;
+}
+@
+The CreateProcess function allows for both a command string and an argv string.
+
+If you use the command string, then all path searching is not performed and
+the format of the directory used to locate a command can be version specific.
+These issues can lead to results that will suprise general users of Noweb.
+
+In order to enable the expected path searching and directory nomenclature,
+you simply prepend the command to the argv string and leave the command
+string as null.
+
+So we begin by determining the size of the command string.
+<<Copy the path and argv into a new argv>>=
+for (o = 0; prog->path[o] != '\0'; o++);  /* set o to length of path */
+@
+Determining the length needed for the argv string is a little bit more complex.
+The argv we receive is an array of strings, but CreateProcess requires a
+single string.
+
+We do this by counting the number of strings and then totaling the size of
+each string.
+
+Then we can take advantage of the fact that the number strings is equal to the
+number of spaces we need.
+<<Copy the path and argv into a new argv>>=
+for (m = 0; prog->argv[m] != NULL; m++);  /* set m to length of argv */
+n = 0;
+for (i = 0; i < m; i++)
+{
+  j = 0;
+  for(j = 0; prog->argv[i][j] != '\0'; j++, n++); /* add length of argv[i] to n */    
+}
+@
+Now that we have all of that done, let's make a string that's big enough to hold
+the command string, space, each of the strings, a space after each (though the
+last space is replaced by the null character).
+<<Copy the path and argv into a new argv>>=
+char * new_argv = ALLOC((o + 1 + m + n) * sizeof(char));
+@
+Finally, we just copy them in sequence with spaces between, remembering to change
+the last space into the null character.
+<<Copy the path and argv into a new argv>>=
+n = 0;
+for (i = 0; i < o; i++)
+{
+  new_argv[n++] = prog->path[i];
+}
+new_argv[n++] = ' ';
+for (i = 0; i < m; i++)
+{
+  j = 0;
+  while(prog->argv[i][j] != '\0') {
+    new_argv[n++] = prog->argv[i][j++];
+  }
+  new_argv[n++] = ' ';
+}
+new_argv[n - 1] = '\0';
+@
+The CreateProcess function allows for passing an environment, but the format
+is very different from what we receive.
+
+The envp we receive is an array of strings, but CreateProcess requires a
+single string with null characters between environment settings and a final
+null character to mark that the last string has been read.
+
+This uses the same ideas as found in [[<<Copy the path and argv into a new argv>>]],
+with one exception.
+
+Instead of replacing the last placed character with the null character, we need to
+append an additional null character.
+<<Copy the envp into a new envp>>=
+for(m = 0; prog->envp[m] != NULL; m++); /* set m to length of envp */
+n = 0;
+for (i = 0; i < m; i++)
+{
+  j = 0;
+  for(j = 0; prog->envp[i][j] != '\0'; j++, n++); /* add length of envp[i] to n */
+}
+char * new_envp = ALLOC((m + n + 1) * sizeof(char));
+n = 0;
+for(i = 0; i < m; i ++)
+{
+  j = 0;
+  while(prog->envp[i][j] != '\0') {
+    new_envp[n++] = prog->envp[i][j++];
+  }
+  new_envp[n++] = '\0';
+}
+new_envp[n] = '\0';
 @ 
 Temporary files are supported using [[tmpfile]], which is ISO~C.
 N.B.~The file is automatically deleted on closure.

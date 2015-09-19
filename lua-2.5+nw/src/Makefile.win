@@ -1,0 +1,96 @@
+# makefile for lua distribution (main library)
+
+LUA=..
+
+include ../../nwconfig
+include ../config
+
+OBJS=	$(OUTPUT)$(P)fallback$(O)\
+	$(OUTPUT)$(P)func$(O)\
+	$(OUTPUT)$(P)glob$(O)\
+	$(OUTPUT)$(P)hash$(O)\
+	$(OUTPUT)$(P)inout$(O)\
+	$(OUTPUT)$(P)lex$(O)\
+	$(OUTPUT)$(P)mem$(O)\
+	$(OUTPUT)$(P)opcode$(O)\
+	$(OUTPUT)$(P)parser$(O)\
+	$(OUTPUT)$(P)table$(O)\
+	$(OUTPUT)$(P)tree$(O)\
+	$(OUTPUT)$(P)undump$(O)
+
+SRCS=	fallback.c\
+	fallback.h\
+	func.c\
+	func.h\
+	glob.c\
+	hash.c\
+	hash.h\
+	inout.c\
+	inout.h\
+	lex.c\
+	lex.h\
+	mem.c\
+	mem.h\
+	opcode.c\
+	opcode.h\
+	parser.c\
+	parser.h\
+	table.c\
+	table.h\
+	tree.c\
+	tree.h\
+	types.h\
+	undump.c\
+	undump.h\
+	lua.stx
+
+SLIB= $(OUTPUT)$(P)liblua$(A)
+
+all: $(SLIB)
+
+$(SLIB): $(OBJS)
+	lib -nologo -out:$@ $(OBJS)
+
+clean:
+	-del /Q $(OBJS)
+
+clobber:	clean
+	-del /Q $(SLIB)
+
+co:
+	co -f -M $(SRCS)
+
+parser:
+	yacc -d lua.stx
+	rm -f parser.c parser.h
+	sed -e 's/yy/luaY_/g' y.tab.c > parser.c
+	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
+	rm y.tab.c y.tab.h
+
+klean:	clean
+	rm -f $(SRCS)
+
+$(OUTPUT)$(P)fallback.obj:	fallback.c
+	$(CC) /Fo$@ /c $(CFLAGS) fallback.c
+$(OUTPUT)$(P)func.obj:	func.c
+	$(CC) /Fo$@ /c $(CFLAGS) func.c
+$(OUTPUT)$(P)glob.obj:	glob.c
+	$(CC) /Fo$@ /c $(CFLAGS) glob.c
+$(OUTPUT)$(P)hash.obj:	hash.c
+	$(CC) /Fo$@ /c $(CFLAGS) hash.c
+$(OUTPUT)$(P)inout.obj:	inout.c
+	$(CC) /Fo$@ /c $(CFLAGS) inout.c
+$(OUTPUT)$(P)lex.obj:	lex.c
+	$(CC) /Fo$@ /c $(CFLAGS) lex.c
+$(OUTPUT)$(P)mem.obj:	mem.c
+	$(CC) /Fo$@ /c $(CFLAGS) mem.c
+$(OUTPUT)$(P)opcode.obj:	opcode.c
+	$(CC) /Fo$@ /c $(CFLAGS) opcode.c
+$(OUTPUT)$(P)parser.obj:	parser.c
+	$(CC) /Fo$@ /c $(CFLAGS) parser.c
+$(OUTPUT)$(P)table.obj:	table.c
+	$(CC) /Fo$@ /c $(CFLAGS) table.c
+$(OUTPUT)$(P)tree.obj:	tree.c
+	$(CC) /Fo$@ /c $(CFLAGS) tree.c
+$(OUTPUT)$(P)undump.obj:	undump.c
+	$(CC) /Fo$@ /c $(CFLAGS) undump.c

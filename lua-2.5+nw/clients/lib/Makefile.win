@@ -1,0 +1,45 @@
+# makefile for lualib
+
+LUA= ../..
+
+include ../../../nwconfig
+include ../../config
+
+EXTRA_DEFS= $(POPEN) $(NOSTRERROR)
+
+OBJS= $(OUTPUT)$(P)iolib$(O) $(OUTPUT)$(P)mathlib$(O) $(OUTPUT)$(P)strlib$(O)
+SRCS= iolib.c mathlib.c strlib.c
+
+SLIB= $(OUTPUT)$(P)liblualib$(A)
+
+# dynamic libraries only work for SunOs
+DLIB= $(LIB)/liblualib.so.$(VERSION)
+
+all: $(SLIB)
+
+dynamic: $(DLIB)
+
+$(SLIB): $(OBJS)
+	lib -nologo -out:$@ $(OBJS)
+
+$(DLIB): $(OBJS)
+	ld -o $@ $(OBJS)
+
+clean:
+	-del /Q $(OBJS)
+
+clobber:	clean
+	-del /Q $(SLIB)
+
+co:
+	co -f -M $(SRCS)
+
+klean:	clean
+	rm -f $(SRCS)
+
+$(OUTPUT)$(P)iolib$(O):		iolib.c
+	$(CC) $(CFLAGS) /c /Fo$@ iolib.c
+$(OUTPUT)$(P)mathlib$(O):	mathlib.c
+	$(CC) $(CFLAGS) /c /Fo$@ mathlib.c
+$(OUTPUT)$(P)strlib$(O):	strlib.c
+	$(CC) $(CFLAGS) /c /Fo$@ strlib.c

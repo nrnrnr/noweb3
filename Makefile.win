@@ -1,0 +1,137 @@
+# Copyright 1995-1998 by Norman Ramsey.  All rights reserved.
+# See file COPYRIGHT for more information.
+#
+# Edit nwconfig before running
+
+include nwconfig
+
+# Stop editing.  No user-serviceable parts below.
+
+all:
+	-mkdir $(BINDIR)
+	cd tools
+	-mkdir $(LIB3)$(P)tools
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools"
+	cd ..
+	cd cii
+	-mkdir $(LIB3)$(P)cii
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
+	cd ..
+	cd lua-2.5+nw
+	-mkdir $(LIB3)$(P)lua-2.5+nw
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw"
+	cd ..
+	cd c
+	-mkdir $(LIB3)$(P)c
+	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)c"
+	cd ..
+	cd lua
+	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>"
+	cd ..
+	cd tex
+	-mkdir $(LIB3)$(P)tex
+	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex"
+	cd ..
+
+careful:
+	-rmdir /s /q $(LIB3)$(P)first
+	mkdir $(LIB3)$(P)first
+	$(MK) -f Makefile.win clobber
+	$(MK) -f Makefile.win all clean
+	xcopy $(BINDIR)$(P)* $(LIB3)$(P)first
+	$(MK) -f Makefile.win clobber
+	mkdir $(BINDIR)
+	cd tools
+	mkdir $(LIB3)$(P)tools
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools"
+	cd ..
+	cd cii
+	mkdir $(LIB3)$(P)cii
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
+	cd ..
+	cd lua-2.5+nw
+	mkdir $(LIB3)$(P)lua-2.5+nw
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw"
+	cd ..
+	cd c
+	mkdir $(LIB3)$(P)c
+# We don't yet have a real nocond filter --- things built in tool are pre-alpha at best.
+# This may be ugly but but it does work for now.
+	$(MK) -f Makefile.win "NWPATH=$(LIB3)$(P)first" "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)first$(P)no tangle" "CPIF=>" "OUTPUT=$(LIB3)$(P)c" all
+	cd ..
+	cd lua
+	$(MK) -f Makefile.win "NWPATH=$(LIB3)$(P)first" "NOTANGLE=$(LIB3)$(P)first$(P)no tangle" "TANGLEOPTS=" "CPIF=>" all
+	cd ..
+	cd tex
+	mkdir $(LIB3)$(P)tex
+	$(MK) -f Makefile.win "NWPATH=$(LIB3)$(P)first" "NOTANGLE=$(LIB3)$(P)first$(P)no tangle" "TANGLEOPTS=" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex" all
+	cd ..
+	echo At this point we are attempting to build the literate version.
+	echo It may fail if you have not previously installed noweb.sty.
+	$(MK) -f Makefile.win pdf clean
+	-rmdir /s /q $(LIB3)$(P)first
+
+pdf:
+	cd c
+	-mkdir $(LIB3)$(P)c
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" doc
+	cd ..
+
+everything: all todo.html
+
+install: all install-code install-scripts
+
+install-code:
+	-mkdir $(BIN) 2>/dev/null || true
+	-mkdir $(LIB3) 2>/dev/null || true
+	cp c/no $(BIN)/.
+	cp c/nwmtime $(LIB3)/.
+
+install-scripts:
+	-mkdir $(LIB3) 2>/dev/null || true
+	cd lua; make LIB2=$(LIB2) LIB3=$(LIB3) install
+
+todo.html: todo.nw
+	noweave -filter l2h -html todo.nw > todo.html
+
+www: todo.html
+	cp todo.html /home/cellar/nr/www/noweb/todo3.html
+
+# In order for us to be completely clean, we need to clobber some of the
+# tools and libraries used to build us.
+clean:
+	cd tools
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools" clobber
+	-rmdir $(LIB3)$(P)tools
+	cd ..
+	cd cii
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii" clobber
+	-rmdir $(LIB3)$(P)cii
+	cd ..
+	cd lua-2.5+nw
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw" clobber
+	-rmdir $(LIB3)$(P)lua-2.5+nw
+	cd ..
+	cd c
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" clean
+	-rmdir $(LIB3)$(P)c
+	cd ..
+	cd lua
+	$(MK) -f Makefile.win clean
+	cd ..
+	cd tex
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tex" clean
+	-rmdir $(LIB3)$(P)tex
+	cd ..
+
+clobber: clean
+	cd c
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" clobber
+	cd ..
+	cd lua
+	$(MK) -f Makefile.win clobber
+	cd ..
+	cd tex
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tex" clobber
+	cd ..
+	-rmdir $(BINDIR)
