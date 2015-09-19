@@ -49,11 +49,34 @@ todo.html: todo.nw
 www: todo.html
 	cp todo.html /home/cellar/nr/www/noweb/todo3.html
 
+# In order for us to be completely clean, we need to clobber some of the
+# tools and libraries used to build us.
 clean:
-	for i in lua-2.5+nw c lua xdoc; do (cd $$i; make clean); done
-	(cd cii; make clobber)
-	rm -f *~ */*~
+	cd tools
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools" clobber
+	-rmdir $(LIB3)\tools
+	cd ..
+	cd cii
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii" clobber
+	-rmdir $(LIB3)\cii
+	cd ..
+	cd lua-2.5+nw
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw" clobber
+	-rmdir $(LIB3)\lua-2.5+nw
+	cd ..
+	cd c
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" clean
+	-rmdir $(LIB3)\c
+	cd ..
+	cd lua
+	$(MK) -f Makefile.win clean
+	cd ..
 
 clobber: clean
-	for i in lua-2.5+nw c lua xdoc; do (cd $$i; make clobber); done
-	rm -f *.html
+	cd c
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" clobber
+	cd ..
+	cd lua
+	$(MK) -f Makefile.win clobber
+	cd ..
+	-rmdir $(BINDIR)

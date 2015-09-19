@@ -32,12 +32,9 @@ htmltest: $(CONFIG) $(STAGES) $(SCRIPTS)
 	@echo 'testfile("/home/nr/www/noweb/index.html")' | NWPATH=. no
 
 clean:
-	rm -f *~ *.cfg *.nws
-	rm -f *.dvi *.aux *.html *.log *.toc *.tex *.ps
-	rm -f core
-	rm -f luac.out
 
 clobber: clean
+	-del /Q $(CONFIG) $(FILTERS) $(STAGES) $(SCRIPTS)
 
 install: $(SCRIPTS) $(CONFIG) $(STAGES)
 	for i in $(CONFIG) $(STAGES); do sed 's@|LIBDIR|@$(LIB2)@g' $$i > $(LIB3)/$$i; done

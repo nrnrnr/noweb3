@@ -17,7 +17,7 @@ MARKUPOBJS=$(OUTPUT)$(P)markmain$(O) \
 	$(OUTPUT)$(P)getline$(O) \
 	$(OUTPUT)$(P)columns$(O)
 
-OBJS=$(TANGLEOBJS) $(MARKUPOBJS)
+OBJS=$(TANGLEOBJS) $(MARKUPOBJS) $(OUTPUT)$(P)nocond$(O) $(OUTPUT)$(P)tie$(O)
 
 #TARGETS=$(OUTPUT)$(P)lua2h.exe \
 TARGETS=$(OUTPUT)$(P)markup.exe \
@@ -45,8 +45,6 @@ $(OUTPUT)$(P)tie.exe: $(OUTPUT)$(P)tie$(O)
 
 clean:
 	-del /q $(OBJS)
-	-del /q nocond$(O)
-	-del /q tie$(O)
 
 clobber: clean
 	-del /q $(TARGETS)

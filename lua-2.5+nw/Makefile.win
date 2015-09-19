@@ -10,13 +10,13 @@ all:
 	$(MK) -f Makefile.win all
 	cd ../..
 
-co clean klean:
-	cd include; make $@
-	cd src; make $@
-	cd src/luac; make $@
-	cd clients/lib; make $@
-	cd clients/lib/old; make $@
-	cd clients/lua; make $@
+clean:
+	cd src
+	$(MK) -f Makefile.win clean
+	cd ..
+	cd clients/lib
+	$(MK) -f Makefile.win clean
+	cd ../..
 
 install:
 	cd src/luac; make all
@@ -26,3 +26,9 @@ old:
 	cd clients/lib/old; make $@
 
 clobber: clean
+	cd src
+	$(MK) -f Makefile.win clobber
+	cd ..
+	cd clients/lib
+	$(MK) -f Makefile.win clobber
+	cd ../..

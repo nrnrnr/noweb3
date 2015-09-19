@@ -26,7 +26,10 @@ $(DLIB): $(OBJS)
 	ld -o $@ $(OBJS)
 
 clean:
-	rm -f $(OBJS) $(SLIB) $(DLIB)
+	-del /Q $(OBJS)
+
+clobber:	clean
+	-del /Q $(SLIB)
 
 co:
 	co -f -M $(SRCS)

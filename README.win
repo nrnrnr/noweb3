@@ -1,0 +1,48 @@
+This is the readme for the Windows build of Noweb 3.
+
+This readme assumes that you have read the more general README for conext.
+
+This port of NoWeb 3 was started because not all of the advances in software
+and hardware mentioned in README seem to apply to the Windows world.
+
+Noweb 2 is still hard to install --- or even obtain for that amtter.
+
+With this Noweb 3 will build and can be used for noweb files, but until
+Noweb 3 has been fully moved into versio 5 of Luo, even the Windows port must
+be considered alpha quality.
+
+To build a Windows version of NoWeb 3 you will need a working C compiler, like
+the one that comes with Visual Studio.
+
+The distribution includes:
+
+  lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
+  cii          CII, from Dave Hanson, stripped down to Noweb's needs only.
+  c            C source code for Noweb.
+  lua          Lua source code for Noweb commands and pipeline stages.
+  nocond       Used only in the Linux build.
+  tools        Code from Noweb 2 and barely usable pipes to permit a build.
+  xdoc         Documentation, especially the revised Hacker's Guide.
+
+Lua-2.5+nw and CII are used by permission.
+
+To build Noweb 3 on and for a Windows box:
+
+  1) Edit nwconfig according to the directions.
+
+  2) Make sure you have created the directories referenced in nwconfig and
+     that you have the correct permissions as described. Because the Windows
+     build assumes that you don't have NoWeb 2, you don't actually have to
+     set the LIB2 variable.
+
+  3) Fasten your seat belt and type `nmake -f Makefile.win all'.
+
+     The system should build with only these warnings:
+      - warning about a formal parameter difference.
+      - warning about different const qualifiers.
+     On my box, it completes in less than half a minute.
+
+  4) Once it has built you can try `make -f Makefile.win clean'.
+
+  5) And when you have installed it on your systme, you can type
+     `make -f Makefile.win clobber' to clean the last built bits off.

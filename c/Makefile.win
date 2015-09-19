@@ -11,7 +11,7 @@ include ../nwconfig
 CII=../cii
 LUA=../lua-2.5+nw
 
-CFLAGS=-Zi -I$(CII)\include -I$(LUA)\include \
+CFLAGS=-I$(CII)\include -I$(LUA)\include \
 	-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) \
 	-DWIN32="1" -DNWDEFAULTDIR="""C:\\Users\\Public\\Documents\\noweb3\\bin""" $(XCFLAGS)
 
@@ -46,19 +46,19 @@ FILES=markparse.nw markup.nw \
 # sources to build when distributing C code
 #   (add all generated .c and .h files to this list)
 
-SRCS=columns.h errors.h getline.h markup.h match.h modtrees.h \
-	modules.h notangle.h recognize.h strsave.h cpif.h cpif.c \
-	columns.c errors.c getline.c finduses.c main.c markparse.c markup.c match.c \
-	mnt.c modtrees.c modules.c notangle.c readme.c recognize.c strsave.c \
-  cargs.h env-lua.c env-lua.h fromascii.c fromascii.h ipipe-lua.c \
-  ipipe-lua.h ipipe.c ipipe.h lua-help.c lua-help.h lua-main.c lua-main.h \
-  markparse.h markup-run.c mpipe-lua.c mpipe-lua.h mpipe.c mpipe.h \
-  noweb-lua.c noweb-lua.h nt-run.c nwbuffer.c \
-  nwbuffer.h util.c util.h precompiled.h stages.c stages.h sys.c sys.h \
-  toascii.c toascii.h xpipe-lua.c xpipe-lua.h xpipe.c xpipe.h \
-  nwbuffer-lua.c nwprocess.h nwprocess.c nwtime.h nwtime.c \
-     fu-run.c misc-lua.c misc-lua.h   markup.ps \
-     nwmtime.c
+SRCS=$(OUTPUT)$(P)columns.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)getline.h $(OUTPUT)$(P)markup.h $(OUTPUT)$(P)match.h $(OUTPUT)$(P)modtrees.h \
+	$(OUTPUT)$(P)modules.h $(OUTPUT)$(P)notangle.h $(OUTPUT)$(P)recognize.h $(OUTPUT)$(P)strsave.h $(OUTPUT)$(P)cpif.h $(OUTPUT)$(P)cpif.c \
+	$(OUTPUT)$(P)columns.c $(OUTPUT)$(P)errors.c $(OUTPUT)$(P)getline.c $(OUTPUT)$(P)finduses.c $(OUTPUT)$(P)main.c $(OUTPUT)$(P)markparse.c $(OUTPUT)$(P)markup.c $(OUTPUT)$(P)match.c \
+	$(OUTPUT)$(P)mnt.c $(OUTPUT)$(P)modtrees.c $(OUTPUT)$(P)modules.c $(OUTPUT)$(P)notangle.c $(OUTPUT)$(P)readme.c $(OUTPUT)$(P)recognize.c $(OUTPUT)$(P)strsave.c \
+    $(OUTPUT)$(P)cargs.h $(OUTPUT)$(P)env-lua.c $(OUTPUT)$(P)env-lua.h $(OUTPUT)$(P)fromascii.c $(OUTPUT)$(P)fromascii.h $(OUTPUT)$(P)ipipe-lua.c \
+    $(OUTPUT)$(P)ipipe-lua.h $(OUTPUT)$(P)ipipe.c $(OUTPUT)$(P)ipipe.h $(OUTPUT)$(P)lua-help.c $(OUTPUT)$(P)lua-help.h $(OUTPUT)$(P)lua-main.c $(OUTPUT)$(P)lua-main.h \
+    $(OUTPUT)$(P)markparse.h $(OUTPUT)$(P)markup-run.c $(OUTPUT)$(P)mpipe-lua.c $(OUTPUT)$(P)mpipe-lua.h $(OUTPUT)$(P)mpipe.c $(OUTPUT)$(P)mpipe.h \
+    $(OUTPUT)$(P)noweb-lua.c $(OUTPUT)$(P)noweb-lua.h $(OUTPUT)$(P)nt-run.c $(OUTPUT)$(P)nwbuffer.c \
+    $(OUTPUT)$(P)nwbuffer.h $(OUTPUT)$(P)util.c $(OUTPUT)$(P)util.h $(OUTPUT)$(P)precompiled.h $(OUTPUT)$(P)stages.c $(OUTPUT)$(P)stages.h $(OUTPUT)$(P)sys.c $(OUTPUT)$(P)sys.h \
+    $(OUTPUT)$(P)toascii.c $(OUTPUT)$(P)toascii.h $(OUTPUT)$(P)xpipe-lua.c $(OUTPUT)$(P)xpipe-lua.h $(OUTPUT)$(P)xpipe.c $(OUTPUT)$(P)xpipe.h \
+    $(OUTPUT)$(P)nwbuffer-lua.c $(OUTPUT)$(P)nwprocess.h $(OUTPUT)$(P)nwprocess.c $(OUTPUT)$(P)nwtime.h $(OUTPUT)$(P)nwtime.c \
+    $(OUTPUT)$(P)fu-run.c $(OUTPUT)$(P)misc-lua.c $(OUTPUT)$(P)misc-lua.h $(OUTPUT)$(P)markup.ps \
+    $(OUTPUT)$(P)nwmtime.c
 NAME='name of RCS version'
 
 # metarules so you don't need a new rule for each .c and .h
@@ -102,13 +102,14 @@ source:	$(SRCS)
 touch: $(SRCS)
 	touch $(SRCS)
 
-clean: ;	rm -f nt markup mnt finduses fakepretty no buildswitch nwmtime
-		rm -f core *.makelog *.tex *.log *.blg *.dvi *.o *.toc *~ 
-		rm -f *.atac *.trace *.html *.icn
+clean:
+	-del /Q $(NOOBJS)
+	-del /Q $(NWMTIMEOBJS)
+	-del /Q $(SRCS)
+	-del /Q $(OUTPUT)$(P)nwbuffer-lua.0
 
 clobber:	clean
-		rm -f $(SRCS) TAGS doc.ps overview.ps fakepretty.c pretty.[ch]
-		rm -f *.aux *.bbl
+	-del /Q $(BINDIR)$(P)nwmtime$(E) $(BINDIR)$(P)no$(E)
 
 checkin:	$(FILES) doc.nw
 		ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
@@ -211,7 +212,7 @@ $(OUTPUT)$(P)nwtime.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L
 $(OUTPUT)$(P)recognize.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
 $(OUTPUT)$(P)stages.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
 $(OUTPUT)$(P)strsave.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
-$(OUTPUT)$(P)sys.c:			$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
+$(OUTPUT)$(P)sys.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
 $(OUTPUT)$(P)util.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
 $(OUTPUT)$(P)xpipe.c:		$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
 $(OUTPUT)$(P)xpipe-lua.c:	$(@B).nw;	$(NOTANGLE) $(@B).nw $(TANGLEOPTS) -L"#line %L ""$(@B).nw""%N" $(CPIF) $@
