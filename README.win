@@ -44,5 +44,22 @@ To build Noweb 3 on and for a Windows box:
 
   4) Once it has built you can try `make -f Makefile.win clean'.
 
-  5) And when you have installed it on your systme, you can type
+  5) And when you have installed it on your system, you can type
      `make -f Makefile.win clobber' to clean the last built bits off.
+
+  6) Also when you have installed it, you can get the literate version
+     by typing `nmake -d Makefile pdf'.
+
+     The pdf is generated three times and the first time there are a huge
+     number of warnings about undefined references which should be ignored.
+     On subsequent generations you will see:
+      - a warning about a missing `aho:efficent' citation.
+      - a complaint about missing doc.bbl.
+      - A few warnings about undefined references.
+     On the same box as above, it completes in just over 1 minute.
+
+     If you wanted to really be brave, you could install the LaTeX style from
+     Noweb 2, and replace step 3 with `nmake -f Makefile.win all pdf clean'.
+
+     On the same box as above, doing this completes (as expected) in under
+     2 minutes.

@@ -15,7 +15,7 @@ CFLAGS=-I$(CII)\include -I$(LUA)\include \
 	-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) \
 	-DWIN32="1" -DNWDEFAULTDIR="""C:\\Users\\Public\\Documents\\noweb3\\bin""" $(XCFLAGS)
 
-# after installation, make doc.pdf for literate version
+# after installation, `nmake doc' for literate version
 
 # list of object files for each target
 
@@ -76,6 +76,20 @@ NAME='name of RCS version'
 
 all:	$(BINDIR)$(P)no$(E) $(BINDIR)$(P)nwmtime$(E)
 
+
+doc:	$(OUTPUT)\doc.tex $(OUTPUT)\allcode.tex
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	echo * If this is your very first run you will see a large number of
+	echo * missing references. Please ignore for now and move on.
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	pdflatex -output-directory=$(OUTPUT) doc.tex
+	pdflatex -output-directory=$(OUTPUT) doc.tex
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	echo * Any warnings here are real and could be investigated.
+	echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo * & echo *
+	pdflatex -output-directory=$(OUTPUT) doc.tex
+	copy /Y $(OUTPUT)\doc.pdf $(BINDIR)\doc.pdf
+
 external: $(EXTERNAL)
 
 nt:	$(TANGLEOBJS)
@@ -107,18 +121,27 @@ clean:
 	-del /Q $(NWMTIMEOBJS)
 	-del /Q $(SRCS)
 	-del /Q $(OUTPUT)$(P)nwbuffer-lua.0
+	-del /Q $(OUTPUT)$(P)allcode.tex
+	-del /Q $(OUTPUT)$(P)doc.aux
+	-del /Q $(OUTPUT)$(P)doc.log
+	-del /Q $(OUTPUT)$(P)doc.out
+	-del /Q $(OUTPUT)$(P)doc.pdf
+	-del /Q $(OUTPUT)$(P)doc.tex
+	-del /Q $(OUTPUT)$(P)doc.toc
 
 clobber:	clean
 	-del /Q $(BINDIR)$(P)nwmtime$(E) $(BINDIR)$(P)no$(E)
+	-del /Q $(BINDIR)$(P)doc.pdf
 
 checkin:	$(FILES) doc.nw
 		ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
 
-doc.tex:	doc.nw
-	cp doc.nw doc.tex
 
-allcode.tex: $(FILES) Makefile
-	no weave -ifilter "Stages.elide, 'hackers:*'" -n -index $(FILES) > allcode.tex
+$(OUTPUT)\doc.tex:	doc.nw
+	copy doc.nw $@
+
+$(OUTPUT)\allcode.tex:	$(FILES)
+	$(BINDIR)\no weave -ifilter "Stages.elide, 'hackers:*'" -n -index $(FILES) > $@
 
 doc.dvi:	doc.tex allcode.tex
 	latex doc

@@ -28,6 +28,16 @@ all:
 	cd lua
 	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>"
 	cd ..
+	cd tex
+	-mkdir $(LIB3)$(P)tex
+	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex"
+	cd ..
+
+pdf:
+	cd c
+	-mkdir $(LIB3)\c
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)\c" doc
+	cd ..
 
 everything: all todo.html
 
@@ -71,6 +81,10 @@ clean:
 	cd lua
 	$(MK) -f Makefile.win clean
 	cd ..
+	cd tex
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tex" clean
+	-rmdir $(LIB3)\tex
+	cd ..
 
 clobber: clean
 	cd c
@@ -80,3 +94,6 @@ clobber: clean
 	$(MK) -f Makefile.win clobber
 	cd ..
 	-rmdir $(BINDIR)
+	cd tex
+	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tex" clobber
+	cd ..
