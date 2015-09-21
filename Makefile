@@ -6,11 +6,9 @@
 include nwconfig
 
 # Stop editing.  No user-serviceable parts below.
-SHELL=/bin/sh
-CINAME=
-CIMSG=
 
-all: 
+all:
+# Makefile and Makefile.win are to be identical up through this line!
 	cd cii; make all
 	cd lua-2.5+nw; make "CC=$(CC) -g" all
 	cd c; make all 

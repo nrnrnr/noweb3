@@ -8,6 +8,7 @@ include nwconfig
 # Stop editing.  No user-serviceable parts below.
 
 all:
+# Makefile and Makefile.win are to be identical up through this line!
 	-mkdir $(BINDIR)
 	cd tools
 	-mkdir $(LIB3)$(P)tools
