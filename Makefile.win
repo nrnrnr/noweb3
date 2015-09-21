@@ -8,14 +8,13 @@ include nwconfig
 # Stop editing.  No user-serviceable parts below.
 
 all:
+	-mkdir $(LIB3)$(P)tools 2>$(NUL)
+	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" & cd ..
+	-mkdir $(LIB3)$(P)cii 2>$(NUL)
 # Makefile and Makefile.win are to be identical up through this line!
-	-mkdir $(BINDIR)
-	cd tools
-	-mkdir $(LIB3)$(P)tools
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools"
-	cd ..
+	echo "No errors or warnings up through here, right?
+	pause
 	cd cii
-	-mkdir $(LIB3)$(P)cii
 	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
 	cd ..
 	cd lua-2.5+nw
@@ -38,13 +37,15 @@ careful:
 	-rmdir /s /q $(LIB3)$(P)first
 	mkdir $(LIB3)$(P)first
 	$(MK) -f Makefile.win clobber
+	mkdir $(BINDIR)
+	cls
 	$(MK) -f Makefile.win all clean
 	xcopy $(BINDIR)$(P)* $(LIB3)$(P)first
 	$(MK) -f Makefile.win clobber
 	mkdir $(BINDIR)
 	cd tools
 	mkdir $(LIB3)$(P)tools
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools"
+	$(MK) -f Makefile "OUTPUT=$(LIB3)$(P)tools"
 	cd ..
 	cd cii
 	mkdir $(LIB3)$(P)cii
@@ -102,7 +103,7 @@ www: todo.html
 # tools and libraries used to build us.
 clean:
 	cd tools
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tools" clobber
+	$(MK) -f Makefile "OUTPUT=$(LIB3)$(P)tools" clobber
 	-rmdir $(LIB3)$(P)tools
 	cd ..
 	cd cii

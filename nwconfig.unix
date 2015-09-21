@@ -29,14 +29,18 @@ SHELL=/bin/sh
 CINAME=
 CIMSG=
 
-# Adjust these three lines for your build chain
+# Adjust these lines for your build chain
+NUL=/dev/null
 MK=make
-CC=gcc -ansi -pedantic
+CC=gcc -ansi -pedantic -std=c11
 XCFLAGS=
+ONAME=-c -o
+ENAME=-o
 LD=gcc
-O=o
-A=a
+O=.o
+A=.a
 E=
+RM=rm -f
 
 # if your system doesn't have ranlib, change "ranlib" to "true" 
 RANLIB=ranlib

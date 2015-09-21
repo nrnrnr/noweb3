@@ -26,14 +26,18 @@ LIB3=c:\users\Public\documents\noweb3
 #
 #  information about your system
 
-# Adjust these three lines for your build chain
+# Adjust these lines for your build chain
+NUL=NUL:
 MK=nmake /nologo /s
 CC=cl /nologo
 XCFLAGS=
+ONAME=/c /Fo:
+ENAME=/Fe:
 LD=cl
 O=.obj
 A=.lib
 E=.exe
+RM=del /q
 
 # if your system doesn't have ranlib, change "ranlib" to "true" 
 RANLIB=true

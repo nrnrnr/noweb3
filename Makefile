@@ -8,6 +8,9 @@ include nwconfig
 # Stop editing.  No user-serviceable parts below.
 
 all:
+	-mkdir $(LIB3)$(P)tools 2>$(NUL)
+	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" & cd ..
+	-mkdir $(LIB3)$(P)cii 2>$(NUL)
 # Makefile and Makefile.win are to be identical up through this line!
 	cd cii; make all
 	cd lua-2.5+nw; make "CC=$(CC) -g" all

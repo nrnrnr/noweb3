@@ -1,6 +1,6 @@
-################################################################
+#####################################################################
 #
-# nwconfig.unix and nwconfig.dos contain some examples of
-# good defaults. You can either modify those or create your own
-# to suit your needs. Then change the file being included here
-include nwconfig.win
+# This file is empty?
+#
+# You need to start by copying either nwconfig.unix or nwconfig.win,
+# and then modify it suit your needs.
