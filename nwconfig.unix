@@ -48,7 +48,9 @@ LFLAGS=-o
 E=
 
 # AR
-AR=ar rv
+# There is a space after the rv in the following line.
+# This is both deliberate and required.
+AR=ar rv 
 A=.a
 
 # delete one or more files

@@ -9,9 +9,9 @@ include nwconfig
 
 all:
 	-mkdir $(LIB3)$(P)tools 2>$(NUL)
-	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" & cd ..
+	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" && cd ..
 	-mkdir $(LIB3)$(P)cii 2>$(NUL)
-	cd cii & $(MK) "OUTPUT=$(LIB3)$(P)cii" & cd ..
+	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" && cd ..
 # Makefile and Makefile.win are to be identical up through this line!
 	echo "No errors or warnings up through here, right?
 	pause
