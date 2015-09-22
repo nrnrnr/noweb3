@@ -11,12 +11,10 @@ all:
 	-mkdir $(LIB3)$(P)tools 2>$(NUL)
 	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" & cd ..
 	-mkdir $(LIB3)$(P)cii 2>$(NUL)
+	cd cii & $(MK) "OUTPUT=$(LIB3)$(P)cii" & cd ..
 # Makefile and Makefile.win are to be identical up through this line!
 	echo "No errors or warnings up through here, right?
 	pause
-	cd cii
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
-	cd ..
 	cd lua-2.5+nw
 	-mkdir $(LIB3)$(P)lua-2.5+nw
 	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)lua-2.5+nw"
@@ -49,7 +47,7 @@ careful:
 	cd ..
 	cd cii
 	mkdir $(LIB3)$(P)cii
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii"
+	$(MK) "OUTPUT=$(LIB3)$(P)cii"
 	cd ..
 	cd lua-2.5+nw
 	mkdir $(LIB3)$(P)lua-2.5+nw
@@ -107,7 +105,7 @@ clean:
 	-rmdir $(LIB3)$(P)tools
 	cd ..
 	cd cii
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)cii" clobber
+	$(MK) "OUTPUT=$(LIB3)$(P)cii" clobber
 	-rmdir $(LIB3)$(P)cii
 	cd ..
 	cd lua-2.5+nw

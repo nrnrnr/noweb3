@@ -25,22 +25,37 @@ LIB3=c:\users\Public\documents\noweb3
 ################################################################
 #
 #  information about your system
-
-# Adjust these lines for your build chain
 NUL=NUL:
+
+################################################################
+#
+#  information about your build system
+
+# make
 MK=nmake /nologo /s
-CC=cl /nologo
-XCFLAGS=
-ONAME=/c /Fo:
-ENAME=/Fe:
-LD=cl
+
+# compile
+CC=cl
+CFLAGS=/nologo -MTd /c /Fo:
 O=.obj
-A=.lib
+
+# link
+LD=cl
+LFLAGS=/nologo /Fe:
 E=.exe
+
+# AR
+AR=lib -nologo -out:
+A=.lib
+
+# delete one or more files
 RM=del /q
 
-# if your system doesn't have ranlib, change "ranlib" to "true" 
-RANLIB=true
+################################################################
+#
+#  Other configuration information
+
+RANLIB=echo
 
 # set the alignment (in bytes) of pointers returned by malloc
 # see cii/install.html for more

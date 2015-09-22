@@ -27,16 +27,16 @@ TARGETS=$(OUTPUT)$(P)markup$(E) \
 all: $(TARGETS)
 
 $(OUTPUT)$(P)markup$(E): $(MARKUPOBJS)
-	$(CC) $(ENAME)$@ $(MARKUPOBJS)
+	$(LD) $(LFLAGS)$@ $(MARKUPOBJS)
 
 $(OUTPUT)$(P)nocond$(E): $(OUTPUT)$(P)nocond$(O)
-	$(CC) $(ENAME)$@ $(OUTPUT)$(P)nocond$(O)
+	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)nocond$(O)
 
 $(OUTPUT)$(P)nt$(E): $(TANGLEOBJS)
-	$(CC) $(ENAME)$@ $(TANGLEOBJS)
+	$(LD) $(LFLAGS)$@ $(TANGLEOBJS)
 
 $(OUTPUT)$(P)tie$(E): $(OUTPUT)$(P)tie$(O)
-	$(CC) $(ENAME)$@ $(OUTPUT)$(P)tie$(O)
+	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)tie$(O)
 
 clean:
 	-$(RM) $(OBJS)
@@ -45,28 +45,28 @@ clobber: clean
 	-$(RM) $(TARGETS)
 
 $(OUTPUT)$(P)columns$(O):	columns.c columns.h
-	$(CC) $(ONAME)$@ columns.c
+	$(CC) $(CFLAGS)$@ columns.c
 $(OUTPUT)$(P)errors$(O):	errors.c errors.h
-	$(CC) $(ONAME)$@ errors.c
+	$(CC) $(CFLAGS)$@ errors.c
 $(OUTPUT)$(P)getline$(O): getline.c columns.h errors.h getline.h
-	$(CC) $(ONAME)$@ getline.c
+	$(CC) $(CFLAGS)$@ getline.c
 $(OUTPUT)$(P)main$(O):	main.c columns.h errors.h modtrees.h modules.h notangle.h
-	$(CC) $(ONAME)$@ main.c
+	$(CC) $(CFLAGS)$@ main.c
 $(OUTPUT)$(P)markmain$(O):	markmain.c columns.h errors.h getline.h markup.h
-	$(CC) $(ONAME)$@ markmain.c
+	$(CC) $(CFLAGS)$@ markmain.c
 $(OUTPUT)$(P)markup$(O):	markup.c errors.h markup.h strsave.h
-	$(CC) $(ONAME)$@ markup.c
+	$(CC) $(CFLAGS)$@ markup.c
 $(OUTPUT)$(P)match$(O):	match.c match.h
-	$(CC) $(ONAME)$@ match.c
+	$(CC) $(CFLAGS)$@ match.c
 $(OUTPUT)$(P)modtrees$(O):	modtrees.c errors.h modtrees.h modules.h strsave.h
-	$(CC) $(ONAME)$@ modtrees.c
+	$(CC) $(CFLAGS)$@ modtrees.c
 $(OUTPUT)$(P)modules$(O):	modules.c columns.h errors.h modtrees.h modules.h strsave.h
-	$(CC) $(ONAME)$@ modules.c
+	$(CC) $(CFLAGS)$@ modules.c
 $(OUTPUT)$(P)nocond$(O):	nocond.c
-	$(CC) $(ONAME)$@ nocond.c
+	$(CC) $(CFLAGS)$@ nocond.c
 $(OUTPUT)$(P)notangle$(O):	notangle.c errors.h getline.h modtrees.h modules.h notangle.h strsave.h
-	$(CC) $(ONAME)$@ notangle.c
+	$(CC) $(CFLAGS)$@ notangle.c
 $(OUTPUT)$(P)strsave$(O):	strsave.c errors.h strsave.h
-	$(CC) $(ONAME)$@ strsave.c
+	$(CC) $(CFLAGS)$@ strsave.c
 $(OUTPUT)$(P)tie$(O):	tie.c
-	$(CC) $(ONAME)$@ tie.c
+	$(CC) $(CFLAGS)$@ tie.c

@@ -28,19 +28,35 @@ LIB3=/h/nr/machine/amd64-linux/lib/noweb3
 SHELL=/bin/sh
 CINAME=
 CIMSG=
-
-# Adjust these lines for your build chain
 NUL=/dev/null
+
+################################################################
+#
+#  information about your build system
+
+# make
 MK=make
-CC=gcc -ansi -pedantic -std=c11
-XCFLAGS=
-ONAME=-c -o
-ENAME=-o
-LD=gcc
+
+# compile
+CC=gcc
+CFLAGS=-ansi -pedantic -std=c11 -c -o
 O=.o
-A=.a
+
+# link
+LD=gcc
+LFLAGS=-o
 E=
+
+# AR
+AR=ar rv
+A=.a
+
+# delete one or more files
 RM=rm -f
+
+################################################################
+#
+#  Other configuration information
 
 # if your system doesn't have ranlib, change "ranlib" to "true" 
 RANLIB=ranlib
@@ -48,7 +64,7 @@ RANLIB=ranlib
 # set the alignment (in bytes) of pointers returned by malloc
 # see cii/install.html for more
 #CIIMAXALIGN=8		# Sparc, Alpha
-CIIMAXALIGN=4		# Linux x86, Windows
+CIIMAXALIGN=4		# Linux x86
 
 # in SunOs 4.1.x, uncomment the following line to avoid prototypes warnings
 # for standard functions 
