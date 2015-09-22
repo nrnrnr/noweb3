@@ -12,8 +12,10 @@ all:
 	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" && cd ..
 	-mkdir $(LIB3)$(P)cii 2>$(NUL)
 	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" && cd ..
+	-mkdir $(LIB3)$(P)lua-2.5+nw
+	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd ..
+	$(LuaCpCommand)
 # Makefile and Makefile.win are to be identical up through this line!
-	cd lua-2.5+nw; make "CC=$(CC) -g" all
 	cd c; make all 
 	cd lua; make all
 

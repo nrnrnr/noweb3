@@ -3,7 +3,7 @@
 LUA=..
 
 include ../../nwconfig
-include ../config
+include ../config.win
 
 OBJS=	$(OUTPUT)$(P)fallback$(O)\
 	$(OUTPUT)$(P)func$(O)\
@@ -71,26 +71,26 @@ klean:	clean
 	rm -f $(SRCS)
 
 $(OUTPUT)$(P)fallback.obj:	fallback.c
-	$(CC) /Fo$@ /c $(CFLAGS) fallback.c
+	$(CC) $(INCS) $(CFLAGS)$@ fallback.c
 $(OUTPUT)$(P)func.obj:	func.c
-	$(CC) /Fo$@ /c $(CFLAGS) func.c
+	$(CC) $(INCS) $(CFLAGS)$@ func.c
 $(OUTPUT)$(P)glob.obj:	glob.c
-	$(CC) /Fo$@ /c $(CFLAGS) glob.c
+	$(CC) $(INCS) $(CFLAGS)$@ glob.c
 $(OUTPUT)$(P)hash.obj:	hash.c
-	$(CC) /Fo$@ /c $(CFLAGS) hash.c
+	$(CC) $(INCS) $(CFLAGS)$@ hash.c
 $(OUTPUT)$(P)inout.obj:	inout.c
-	$(CC) /Fo$@ /c $(CFLAGS) inout.c
+	$(CC) $(INCS) $(CFLAGS)$@ inout.c
 $(OUTPUT)$(P)lex.obj:	lex.c
-	$(CC) /Fo$@ /c $(CFLAGS) lex.c
+	$(CC) $(INCS) $(CFLAGS)$@ lex.c
 $(OUTPUT)$(P)mem.obj:	mem.c
-	$(CC) /Fo$@ /c $(CFLAGS) mem.c
+	$(CC) $(INCS) $(CFLAGS)$@ mem.c
 $(OUTPUT)$(P)opcode.obj:	opcode.c
-	$(CC) /Fo$@ /c $(CFLAGS) opcode.c
+	$(CC) $(INCS) $(CFLAGS)$@ opcode.c
 $(OUTPUT)$(P)parser.obj:	parser.c
-	$(CC) /Fo$@ /c $(CFLAGS) parser.c
+	$(CC) $(INCS) $(CFLAGS)$@ parser.c
 $(OUTPUT)$(P)table.obj:	table.c
-	$(CC) /Fo$@ /c $(CFLAGS) table.c
+	$(CC) $(INCS) $(CFLAGS)$@ table.c
 $(OUTPUT)$(P)tree.obj:	tree.c
-	$(CC) /Fo$@ /c $(CFLAGS) tree.c
+	$(CC) $(INCS) $(CFLAGS)$@ tree.c
 $(OUTPUT)$(P)undump.obj:	undump.c
-	$(CC) /Fo$@ /c $(CFLAGS) undump.c
+	$(CC) $(INCS) $(CFLAGS)$@ undump.c

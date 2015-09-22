@@ -24,6 +24,12 @@ LIB3=c:\users\Public\documents\noweb3
 
 ################################################################
 #
+# Lua kludges --- here because we know we are moving to Lua 5.
+LuaMakefile=-f Makefile.win
+LuaCpCommand=echo "Lua-2.5+nw in place"
+
+################################################################
+#
 #  information about your system
 NUL=NUL:
 

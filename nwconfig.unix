@@ -24,6 +24,12 @@ LIB3=/h/nr/machine/amd64-linux/lib/noweb3
 
 ################################################################
 #
+# Lua kludges --- here because we know we are moving to Lua 5.
+LuaMakefile=
+LuaCpCommand=cp ./lua-2.5+nw/lib/* $(LIB3)/lua-2.5+nw
+
+################################################################
+#
 #  information about your system
 SHELL=/bin/sh
 CINAME=
