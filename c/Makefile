@@ -190,7 +190,7 @@ $(OUTPUT)$(P)nwbuffer-lua.1:	nwbuffer.nw
 $(OUTPUT)$(P)nwbuffer-lua.2:	nwbuffer-lua.nw
 	$(NOTANGLE) nwbuffer-lua.nw $(TANGLEOPTS) -R"key macros footer" >$(OUTPUT)$(P)nwbuffer-lua.2
 $(OUTPUT)$(P)nwbuffer-lua.3:	$(OUTPUT)$(P)nwbuffer-lua.0 $(OUTPUT)$(P)nwbuffer-lua.1 $(OUTPUT)$(P)nwbuffer-lua.2
-	type $(OUTPUT)$(P)nwbuffer-lua.0 | $(TOOLS)$(P)tie $(OUTPUT)$(P)nwbuffer-lua.1 $(OUTPUT)$(P)nwbuffer-lua.2 nwbuffer-lua.nw >$(OUTPUT)$(P)nwbuffer-lua.3
+	more $(OUTPUT)$(P)nwbuffer-lua.0 | $(TOOLS)$(P)tie $(OUTPUT)$(P)nwbuffer-lua.1 $(OUTPUT)$(P)nwbuffer-lua.2 nwbuffer-lua.nw >$(OUTPUT)$(P)nwbuffer-lua.3
 $(OUTPUT)$(P)nwbuffer-lua.c: $(OUTPUT)$(P)nwbuffer-lua.3
 	$(NOTANGLE) $(OUTPUT)$(P)nwbuffer-lua.3 $(TANGLEOPTS) $(CPIF) $@
 $(OUTPUT)$(P)nwprocess.c:	nwprocess.nw;	$(NOTANGLE) nwprocess.nw	$(TANGLEOPTS) -L"#line %L ""nwprocess.nw""%N"	$(CPIF) $@

@@ -15,16 +15,16 @@ all:
 	-mkdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
 	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd .. && $(LuaCpCommand)
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
-	cd c && $(MK) "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "OUTPUT=$(LIB3)$(P)c" && cd ..
+	cd c && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "OUTPUT=$(LIB3)$(P)c" && cd ..
 # Makefile and Makefile.win are to be identical up through this line!
 	echo No errors and only the two expected warnings up through here, right?
 	pause
 	cd lua
-	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>"
+	$(MK) -f Makefile.win "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>"
 	cd ..
 	cd tex
 	-mkdir $(LIB3)$(P)tex
-	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex"
+	$(MK) -f Makefile.win "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex"
 	cd ..
 
 careful:
@@ -53,7 +53,7 @@ careful:
 	mkdir $(LIB3)$(P)c
 # We don't yet have a real nocond filter --- things built in tool are pre-alpha at best.
 # This may be ugly but but it does work for now.
-	$(MK) -f Makefile.win "NWPATH=$(LIB3)$(P)first" "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)first$(P)no tangle" "CPIF=>" "OUTPUT=$(LIB3)$(P)c" all
+	$(MK) -f Makefile.win "NWPATH=$(LIB3)$(P)first" "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)first$(P)no tangle" "CPIF=>" "OUTPUT=$(LIB3)$(P)c" all
 	cd ..
 	cd lua
 	$(MK) -f Makefile.win "NWPATH=$(LIB3)$(P)first" "NOTANGLE=$(LIB3)$(P)first$(P)no tangle" "TANGLEOPTS=" "CPIF=>" all
