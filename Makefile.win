@@ -12,16 +12,13 @@ all:
 	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" && cd ..
 	-mkdir $(LIB3)$(P)cii 2>$(NUL)
 	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" && cd ..
-	-mkdir $(LIB3)$(P)lua-2.5+nw
-	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd ..
-	$(LuaCpCommand)
+	-mkdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd .. && $(LuaCpCommand)
+	-mkdir $(LIB3)$(P)c 2>$(NUL)
+	cd c && $(MK) "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "OUTPUT=$(LIB3)$(P)c" && cd ..
 # Makefile and Makefile.win are to be identical up through this line!
-	echo "No errors or warnings up through here, right?
+	echo No errors and only the two expected warnings up through here, right?
 	pause
-	cd c
-	-mkdir $(LIB3)$(P)c
-	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)c"
-	cd ..
 	cd lua
 	$(MK) -f Makefile.win "NOTANGLE=type" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>"
 	cd ..
@@ -112,7 +109,7 @@ clean:
 	-rmdir $(LIB3)$(P)lua-2.5+nw
 	cd ..
 	cd c
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" clean
+	$(MK) "OUTPUT=$(LIB3)$(P)c" clean
 	-rmdir $(LIB3)$(P)c
 	cd ..
 	cd lua
@@ -125,7 +122,7 @@ clean:
 
 clobber: clean
 	cd c
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)c" clobber
+	$(MK) "OUTPUT=$(LIB3)$(P)c" clobber
 	cd ..
 	cd lua
 	$(MK) -f Makefile.win clobber

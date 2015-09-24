@@ -9,6 +9,7 @@ PIPE=spawn
 
 # What file and PATH conventions should Noweb use (unix or win)?
 PLATFORM=unix
+XCFLAGS=-DPLATFORM='"$(PLATFORM)"' -Dnw_$(PLATFORM)
 P=/
 
 ################################################################
@@ -21,6 +22,7 @@ P=/
 BINDIR=/h/nr/machine/amd64-linux/bin
 LIB2=/usr/lib64/noweb
 LIB3=/h/nr/machine/amd64-linux/lib/noweb3
+XCFLAGS=$(XCFLAGS) -DNWDEFAULTDIR='"$(LIB3)"'
 
 ################################################################
 #
@@ -51,6 +53,9 @@ O=.o
 # link
 LD=gcc
 LFLAGS=-o
+LIBPROLOG=/link
+LIBPREFIX=
+LIBEPILOG=-lm
 E=
 
 # AR
@@ -59,8 +64,9 @@ E=
 AR=ar rv 
 A=.a
 
-# delete one or more files
+# general commands
 RM=rm -f
+CP=cp
 
 ################################################################
 #

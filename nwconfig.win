@@ -9,6 +9,7 @@ PIPE=spawn
 
 # What file and PATH conventions should Noweb use (unix or win)?
 PLATFORM=win
+XCFLAGS=-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) -DWIN32="1"
 P=^\
 
 ################################################################
@@ -21,12 +22,14 @@ P=^\
 BINDIR=c:\users\Public\documents\noweb3\bin
 LIB2=
 LIB3=c:\users\Public\documents\noweb3
+#XCFLAGS=$(XCFLAGS) -DNWDEFAULTDIR="""$(LIB3)"""
+XCFLAGS=$(XCFLAGS) -DNWDEFAULTDIR="\"c:\\users\\Public\\documents\\noweb3\\bin\""
 
 ################################################################
 #
 # Lua kludges --- here because we know we are moving to Lua 5.
 LuaMakefile=-f Makefile.win
-LuaCpCommand=echo "Lua-2.5+nw in place"
+LuaCpCommand=echo Lua-2.5+nw in place
 
 ################################################################
 #
@@ -48,14 +51,19 @@ O=.obj
 # link
 LD=cl
 LFLAGS=/nologo /Fe:
+LIBPROLOG=/link
+LIBPREFIX=
+#LIBEPILOG=/NODEFAULTLIB:LIBCMTD
+LIBEPILOG=
 E=.exe
 
 # AR
 AR=lib -nologo -out:
 A=.lib
 
-# delete one or more files
+# general commands
 RM=del /q
+CP=copy
 
 ################################################################
 #
