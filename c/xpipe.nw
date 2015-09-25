@@ -491,6 +491,8 @@ Note that this might happen if, for example, another process forks a
 child, doesn't wait for it, and then execs Noweb.%
 \footnote{Thank you, Russ Cox.}
 <<Unix run-program functions>>=
+#include <sys/wait.h>
+
 static int waitfor(int pid) {
   int status, childpid;
 #if 0
@@ -659,7 +661,6 @@ static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out);
 <<Unix run-program functions>>=
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include "sys.h"
 
 static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {

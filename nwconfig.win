@@ -9,7 +9,6 @@ PIPE=spawn
 
 # What file and PATH conventions should Noweb use (unix or win)?
 PLATFORM=win
-XCFLAGS=-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) -DWIN32="1"
 P=^\
 
 ################################################################
@@ -22,8 +21,7 @@ P=^\
 BINDIR=c:\users\Public\documents\noweb3\bin
 LIB2=
 LIB3=c:\users\Public\documents\noweb3
-#XCFLAGS=$(XCFLAGS) -DNWDEFAULTDIR="""$(LIB3)"""
-XCFLAGS=$(XCFLAGS) -DNWDEFAULTDIR="\"c:\\users\\Public\\documents\\noweb3\\bin\""
+XCFLAGS=-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) -DWIN32="1" -DNWDEFAULTDIR="\"c:\\users\\Public\\documents\\noweb3\\bin\""
 
 ################################################################
 #
@@ -52,8 +50,6 @@ O=.obj
 LD=cl
 LFLAGS=/nologo /Fe:
 LIBPROLOG=/link
-LIBPREFIX=
-#LIBEPILOG=/NODEFAULTLIB:LIBCMTD
 LIBEPILOG=
 E=.exe
 

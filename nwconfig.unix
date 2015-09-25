@@ -53,8 +53,7 @@ O=.o
 # link
 LD=gcc
 LFLAGS=-o
-LIBPROLOG=/link
-LIBPREFIX=
+LIBPROLOG=
 LIBEPILOG=-lm
 E=
 
