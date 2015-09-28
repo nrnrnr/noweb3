@@ -18,13 +18,11 @@ all:
 	cd c && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "OUTPUT=$(LIB3)$(P)c" && cd ..
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
 	cd lua && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
+	-mkdir $(LIB3)$(P)tex
+	cd tex && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex" && cd ..
 # Makefile and Makefile.win are to be identical up through this line!
 	echo No errors and only the two expected warnings up through here, right?
 	pause
-	cd tex
-	-mkdir $(LIB3)$(P)tex
-	$(MK) -f Makefile.win "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex"
-	cd ..
 
 careful:
 	-rmdir /s /q $(LIB3)$(P)first
@@ -112,10 +110,10 @@ clean:
 	-rmdir $(LIB3)$(P)c
 	cd ..
 	cd lua
-	$(MK) clean
+	$(MK) "OUTPUT=$(LIB3)$(P)lua" clean
 	cd ..
 	cd tex
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tex" clean
+	$(MK) "OUTPUT=$(LIB3)$(P)tex" clean
 	-rmdir $(LIB3)$(P)tex
 	cd ..
 
@@ -124,9 +122,9 @@ clobber: clean
 	$(MK) "OUTPUT=$(LIB3)$(P)c" clobber
 	cd ..
 	cd lua
-	$(MK) clobber
+	$(MK) "OUTPUT=$(LIB3)$(P)lua" clobber
 	cd ..
 	cd tex
-	$(MK) -f Makefile.win "OUTPUT=$(LIB3)$(P)tex" clobber
+	$(MK) "OUTPUT=$(LIB3)$(P)tex" clobber
 	cd ..
 	-rmdir $(BINDIR)

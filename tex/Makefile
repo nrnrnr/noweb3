@@ -1,9 +1,13 @@
-SHELL=/bin/sh
 NAME="name of version checked in"
 CIMSG="message for version checked in"
 RCSFILES=support.nw Makefile
 
-all: nwmac.tex noweb.sty
+# don't edit this file; edit ../nwconfig instead
+
+include ../nwconfig
+
+all: $(OUTPUT)$(P)nwmac.tex $(OUTPUT)$(P)noweb.sty
+
 source: nwmac.tex noweb.sty
 touch: nwmac.tex noweb.sty
 	touch nwmac.tex noweb.sty
@@ -11,15 +15,19 @@ touch: nwmac.tex noweb.sty
 checkin:
 	ci -l $(CINAME) $(CIMSG) $(RCSFILES)
 
-nwmac.tex: support.nw
-	notangle -Rnwmac.tex support.nw > nwmac.tex
+$(OUTPUT)$(P)nwmac.tex: support.nw
+	$(NOTANGLE) support.nw $(TANGLEOPTS) -Rnwmac.tex $(CPIF) $@
 
-noweb.sty: support.nw
-	notangle -Rnoweb.sty support.nw > noweb.sty
+$(OUTPUT)$(P)noweb.sty: support.nw
+	$(NOTANGLE) support.nw $(TANGLEOPTS) -Rnoweb.sty $(CPIF) $@
 
 support.tex: support.nw
 	noweave -delay -x support.nw > support.tex
 
 clean: 
-	/bin/rm -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
-	/bin/rm -f support.tex
+	-$(RM) -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
+	-$(RM) -f support.tex
+
+clobber:
+	-$(RM) -f $(OUTPUT)$(P)nwmac.tex
+	-$(RM) -f $(OUTPUT)$(P)noweb.sty
