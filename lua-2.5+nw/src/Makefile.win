@@ -52,10 +52,10 @@ $(SLIB): $(OBJS)
 	lib -nologo -out:$@ $(OBJS)
 
 clean:
-	-del /Q $(OBJS)
+	-del /Q $(OBJS) 2>nul:
 
 clobber:	clean
-	-del /Q $(SLIB)
+	-del /Q $(SLIB) 2>nul:
 
 co:
 	co -f -M $(SRCS)

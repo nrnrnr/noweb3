@@ -63,6 +63,7 @@ AR=ar rv
 A=.a
 
 # general commands
+RMDIR=rm -f -r
 RM=rm -f
 CP=cp
 

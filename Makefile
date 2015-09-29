@@ -20,6 +20,11 @@ all:
 	cd lua && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
 	-mkdir $(LIB3)$(P)tex
 	cd tex && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)nocond $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex" && cd ..
+
+careful:
+	-$(RMDIR) $(LIB3)$(P)first 2>$(NUL)
+	mkdir $(LIB3)$(P)first
+	$(MK) clobber
 # Makefile and Makefile.win are to be identical up through this line!
 
 everything: all todo.html
@@ -43,10 +48,19 @@ www: todo.html
 	cp todo.html /home/cellar/nr/www/noweb/todo3.html
 
 clean:
-	for i in lua-2.5+nw c lua xdoc; do (cd $$i; make clean); done
-	(cd cii; make clobber)
-	rm -f *~ */*~
+	cd tools && $(MK) "OUTPUT=$(LIB3)$(P)tools" clobber && cd ..
+	-$(RMDIR) $(LIB3)$(P)tools 2>$(NUL)
+	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" clobber && cd ..
+	-$(RMDIR) $(LIB3)$(P)cii 2>$(NUL)
+	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" clobber && cd ..
+	-rmdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	cd c && $(MK) "OUTPUT=$(LIB3)$(P)c" clean && cd ..
+	cd lua && $(MK) "OUTPUT=$(LIB3)$(P)lua" clean && cd ..
+	cd tex && $(MK) "OUTPUT=$(LIB3)$(P)tex" clean && cd ..
+	-$(RM) *~ 2>$(NUL)
 
 clobber: clean
-	for i in lua-2.5+nw c lua xdoc; do (cd $$i; make clobber); done
-	rm -f *.html
+	cd c && $(MK) "OUTPUT=$(LIB3)$(P)c" clobber && cd ..
+	cd lua && $(MK) "OUTPUT=$(LIB3)$(P)lua" clobber && cd ..
+	cd tex && $(MK) "OUTPUT=$(LIB3)$(P)tex" clobber && cd ..
+	-$(RM) *.html 2>$(NUL)

@@ -58,6 +58,7 @@ AR=lib -nologo -out:
 A=.lib
 
 # general commands
+RMDIR=rmdir /s /q
 RM=del /q
 CP=copy
 

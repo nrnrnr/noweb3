@@ -25,9 +25,9 @@ support.tex: support.nw
 	noweave -delay -x support.nw > support.tex
 
 clean: 
-	-$(RM) -f *~ *.dvi *.aux *.log *.blg *.bbl *.toc
-	-$(RM) -f support.tex
+	-$(RM) *~ *.dvi *.aux *.log *.blg *.bbl *.toc 2>$(NUL)
+	-$(RM) support.tex 2>$(NUL)
 
 clobber:
-	-$(RM) -f $(OUTPUT)$(P)nwmac.tex
-	-$(RM) -f $(OUTPUT)$(P)noweb.sty
+	-$(RM) $(OUTPUT)$(P)nwmac.tex 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)noweb.sty 2>$(NUL)

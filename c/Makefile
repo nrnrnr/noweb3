@@ -99,21 +99,24 @@ touch: $(SRCS)
 	touch $(SRCS)
 
 clean:
-	-$(RM) $(NOOBJS)
-	-$(RM) $(NWMTIMEOBJS)
-	-$(RM) $(SRCS)
-	-$(RM) $(OUTPUT)$(P)nwbuffer-lua.0
-	-$(RM) $(OUTPUT)$(P)allcode.tex
-	-$(RM) $(OUTPUT)$(P)doc.aux
-	-$(RM) $(OUTPUT)$(P)doc.log
-	-$(RM) $(OUTPUT)$(P)doc.out
-	-$(RM) $(OUTPUT)$(P)doc.pdf
-	-$(RM) $(OUTPUT)$(P)doc.tex
-	-$(RM) $(OUTPUT)$(P)doc.toc
+	-$(RM) $(NOOBJS) 2>$(NUL)
+	-$(RM) $(NWMTIMEOBJS) 2>$(NUL)
+	-$(RM) $(SRCS) 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)nwbuffer-lua.0 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)nwbuffer-lua.1 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)nwbuffer-lua.2 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)nwbuffer-lua.3 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)allcode.tex 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.aux 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.log 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.out 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.pdf 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.tex 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.toc 2>$(NUL)
 
 clobber:	clean
-	-$(RM) $(OUTPUT)$(P)nwmtime$(E) $(OUTPUT)$(P)no$(E)
-	-$(RM) $(OUTPUT)$(P)doc.pdf
+	-$(RM) $(OUTPUT)$(P)nwmtime$(E) $(OUTPUT)$(P)no$(E) 2>$(NUL)
+	-$(RM) $(OUTPUT)$(P)doc.pdf 2>$(NUL)
 
 checkin:	$(FILES) doc.nw
 		ci $(CINAME) $(CIMSG) -l $(FILES) doc.nw
@@ -207,9 +210,6 @@ $(OUTPUT)$(P)xpipe-lua.c:	xpipe-lua.nw;	$(NOTANGLE) xpipe-lua.nw	$(TANGLEOPTS) -
 ################################################################
 
 $(OUTPUT)$(P)columns$(O): $(OUTPUT)$(P)cargs.h $(OUTPUT)$(P)columns.c $(OUTPUT)$(P)columns.h
-	echo columns.obj start
-	$(CC) $(INCS) $(XCFLAGS) $(CFLAGS)$@ $*.c
-	echo columns.obj end
 $(OUTPUT)$(P)cpif$(O): $(OUTPUT)$(P)cpif.c $(OUTPUT)$(P)cpif.h $(OUTPUT)$(P)errors.h $(OUTPUT)$(P)strsave.h
 $(OUTPUT)$(P)env-lua$(O): $(OUTPUT)$(P)env-lua.c $(OUTPUT)$(P)env-lua.h $(OUTPUT)$(P)lua-help.h
 $(OUTPUT)$(P)errors$(O): $(OUTPUT)$(P)errors.c $(OUTPUT)$(P)errors.h

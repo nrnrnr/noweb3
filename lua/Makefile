@@ -35,7 +35,7 @@ htmltest: $(CONFIG) $(STAGES) $(SCRIPTS)
 clean:
 
 clobber: clean
-	-$(RM) $(CONFIG) $(FILTERS) $(STAGES) $(SCRIPTS)
+	-$(RM) $(CONFIG) $(FILTERS) $(STAGES) $(SCRIPTS) 2>$(NUL)
 
 install: $(SCRIPTS) $(CONFIG) $(STAGES)
 	for i in $(CONFIG) $(STAGES); do sed 's@|LIBDIR|@$(LIB2)@g' $$i > $(LIB3)/$$i; done

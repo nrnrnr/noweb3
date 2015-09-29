@@ -39,10 +39,10 @@ $(OUTPUT)$(P)tie$(E): $(OUTPUT)$(P)tie$(O)
 	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)tie$(O)
 
 clean:
-	-$(RM) $(OBJS)
+	-$(RM) $(OBJS) 2>$(NUL)
 
 clobber: clean
-	-$(RM) $(TARGETS)
+	-$(RM) $(TARGETS) 2>$(NUL)
 
 $(OUTPUT)$(P)columns$(O):	columns.c columns.h
 	$(CC) $(CFLAGS)$@ columns.c

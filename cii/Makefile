@@ -37,10 +37,10 @@ $Bseq$O:	src/seq.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/seq.c
 $Bstr$O:	src/str.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/str.c
 
 clean::
-		-$(RM) $(OBJS)
+		-$(RM) $(OBJS) 2>$(NUL)
 
 clobber::	clean
-		-$(RM) $Blibcii$A $B*$O
+		-$(RM) $Blibcii$A $B*$O 2>$(NUL)
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
