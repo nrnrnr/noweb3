@@ -98,7 +98,7 @@ clean:
 	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" clobber && cd ..
 	-$(RMDIR) $(LIB3)$(P)cii 2>$(NUL)
 	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" clobber && cd ..
-	-rmdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	-$(RMDIR) $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
 	cd c && $(MK) "OUTPUT=$(LIB3)$(P)c" clean && cd ..
 	cd lua && $(MK) "OUTPUT=$(LIB3)$(P)lua" clean && cd ..
 	cd tex && $(MK) "OUTPUT=$(LIB3)$(P)tex" clean && cd ..
@@ -106,6 +106,10 @@ clean:
 
 clobber: clean
 	cd c && $(MK) "OUTPUT=$(LIB3)$(P)c" clobber && cd ..
+	-$(RMDIR) $(LIB3)$(P)c 2>$(NUL)
 	cd lua && $(MK) "OUTPUT=$(LIB3)$(P)lua" clobber && cd ..
+	-$(RMDIR) $(LIB3)$(P)lua 2>$(NUL)
 	cd tex && $(MK) "OUTPUT=$(LIB3)$(P)tex" clobber && cd ..
+	-$(RMDIR) $(LIB3)$(P)tex 2>$(NUL)
 	-$(RM) *.html 2>$(NUL)
+
