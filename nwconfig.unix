@@ -19,6 +19,7 @@ P=/
 # LIB2 is where external pipeline stages from Noweb 2 are stored
 # LIB3 is where Noweb 3 scripts and configuration files go
 BINDIR=/h/nr/machine/amd64-linux/bin
+TEXINPUTS=/usr/share/texmf/tex/latex/local
 LIB2=/usr/lib64/noweb
 LIB3=/h/nr/machine/amd64-linux/lib/noweb3
 XCFLAGS=-DPLATFORM='"$(PLATFORM)"' -Dnw_$(PLATFORM) -DNWDEFAULTDIR='"$(LIB3)"'
@@ -66,6 +67,7 @@ A=.a
 RMDIR=rm -f -r
 RM=rm -f
 CP=cp
+CPR=cp -r
 
 ################################################################
 #

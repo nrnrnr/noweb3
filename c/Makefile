@@ -85,8 +85,8 @@ NAME='name of RCS version'
 all:	$(OUTPUT)$(P)no$(E) $(OUTPUT)$(P)nwmtime$(E)
 
 doc:	$(OUTPUT)$(P)doc.tex $(OUTPUT)$(P)allcode.tex
-	pdflatex -output-directory=$(OUTPUT) doc.tex
-	pdflatex -output-directory=$(OUTPUT) doc.tex
+	pdflatex -output-directory=$(OUTPUT) doc.tex >$(NUL)
+	pdflatex -output-directory=$(OUTPUT) doc.tex >$(NUL)
 	pdflatex -output-directory=$(OUTPUT) doc.tex
 
 $(OUTPUT)$(P)nwmtime$(E):	$(NWMTIMEOBJS)
@@ -110,7 +110,6 @@ clean:
 	-$(RM) $(OUTPUT)$(P)doc.aux 2>$(NUL)
 	-$(RM) $(OUTPUT)$(P)doc.log 2>$(NUL)
 	-$(RM) $(OUTPUT)$(P)doc.out 2>$(NUL)
-	-$(RM) $(OUTPUT)$(P)doc.pdf 2>$(NUL)
 	-$(RM) $(OUTPUT)$(P)doc.tex 2>$(NUL)
 	-$(RM) $(OUTPUT)$(P)doc.toc 2>$(NUL)
 

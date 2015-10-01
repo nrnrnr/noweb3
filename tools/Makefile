@@ -17,14 +17,18 @@ MARKUPOBJS=$(OUTPUT)$(P)markmain$(O) \
 	$(OUTPUT)$(P)getline$(O) \
 	$(OUTPUT)$(P)columns$(O)
 
-OBJS=$(TANGLEOBJS) $(MARKUPOBJS) $(OUTPUT)$(P)nocond$(O) $(OUTPUT)$(P)tie$(O)
+OBJS=$(TANGLEOBJS) $(MARKUPOBJS) $(OUTPUT)$(P)l2htodo$(O) $(OUTPUT)$(P)nocond$(O) $(OUTPUT)$(P)tie$(O)
 
-TARGETS=$(OUTPUT)$(P)markup$(E) \
+TARGETS=$(OUTPUT)$(P)l2htodo$(E) \
+	$(OUTPUT)$(P)markup$(E) \
 	$(OUTPUT)$(P)nocond$(E) \
 	$(OUTPUT)$(P)nt$(E) \
 	$(OUTPUT)$(P)tie$(E)
 
 all: $(TARGETS)
+
+$(OUTPUT)$(P)l2htodo$(E): $(OUTPUT)$(P)l2htodo$(O)
+	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)l2htodo$(O)
 
 $(OUTPUT)$(P)markup$(E): $(MARKUPOBJS)
 	$(LD) $(LFLAGS)$@ $(MARKUPOBJS)
@@ -50,6 +54,8 @@ $(OUTPUT)$(P)errors$(O):	errors.c errors.h
 	$(CC) $(CFLAGS)$@ errors.c
 $(OUTPUT)$(P)getline$(O): getline.c columns.h errors.h getline.h
 	$(CC) $(CFLAGS)$@ getline.c
+$(OUTPUT)$(P)l2htodo$(O):	l2htodo.c
+	$(CC) $(CFLAGS)$@ l2htodo.c
 $(OUTPUT)$(P)main$(O):	main.c columns.h errors.h modtrees.h modules.h notangle.h
 	$(CC) $(CFLAGS)$@ main.c
 $(OUTPUT)$(P)markmain$(O):	markmain.c columns.h errors.h getline.h markup.h

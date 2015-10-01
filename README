@@ -37,8 +37,8 @@ The distribution includes:
   c            C source code for Noweb
   lua          Lua source code for Noweb commands and pipeline stages
   nocond       A filter to help build Noweb 3 from sources.
-  tools        Only used in the Windows build.
-  tex          La/TeX style/macros for weaved output. Not built (yet).
+  tex          La/TeX styles/macros.
+  tools        Code used to bootstrap the build process.
   xdoc         Documentation, especially the revised Hacker's Guide
 
 Lua-2.5+nw and CII are used by permission.

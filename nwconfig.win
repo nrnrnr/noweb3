@@ -19,7 +19,7 @@ P=^\
 # LIB2 is where external pipeline stages from Noweb 2 are stored
 # LIB3 is where Noweb 3 scripts and configuration files go
 BINDIR=c:\users\Public\documents\noweb3\bin
-LIB2=
+TEXINPUTS=C:\Users\Public\tex
 LIB3=c:\users\Public\documents\noweb3
 XCFLAGS=-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) -DWIN32="1" -DNWDEFAULTDIR="\"c:\\users\\Public\\documents\\noweb3\\bin\""
 
@@ -61,6 +61,7 @@ A=.lib
 RMDIR=rmdir /s /q
 RM=del /q
 CP=copy
+CPR=xcopy /s
 
 ################################################################
 #
