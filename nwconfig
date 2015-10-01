@@ -1,6 +1,128 @@
-#####################################################################
+################################################################
 #
-# This file is empty?
+# configuration for Noweb's behavior
+
+# How should Noweb run external pipelines?
+#   fork    Unix fork and Unix pipelines
+#   spawn   Run programs sequentially using spawn and temporary files
+PIPE=spawn
+
+
+# For the next while the first set of macros are for a unix environment and
+# the set of commented out macros are for a windows environment.
+
+# What file and PATH conventions should Noweb use (unix or win)?
+PLATFORM=unix
+P=/
+#PLATFORM=win
+#P=^\
+
+################################################################
 #
-# You need to start by copying either nwconfig.unix or nwconfig.win,
-# and then modify it suit your needs.
+# installation instructions for your site
+
+# BINDIR is where the no command lands
+# TEXINPUTS is where to place the La/TeX styles/macros following the TDS.
+# LIB3 is where Noweb 3 scripts and configuration files go
+BINDIR=/h/nr/machine/amd64-linux/bin
+TEXINPUTS=/usr/share/texmf/tex/latex/local
+LIB3=/h/nr/machine/amd64-linux/lib/noweb3
+#BINDIR=c:\users\Public\documents\noweb3\bin
+#TEXINPUTS=C:\Users\Public\tex
+#LIB3=c:\users\Public\documents\noweb3
+
+################################################################
+#
+# Lua kludges --- here because we know we are moving to Lua 5.
+LuaMakefile=
+LuaCpCommand=cp ./lua-2.5+nw/lib/* $(LIB3)/lua-2.5+nw
+#LuaMakefile=-f Makefile.win
+#LuaCpCommand=echo Lua-2.5+nw in place
+
+################################################################
+#
+#  information about your system
+SHELL=/bin/sh
+CINAME=
+CIMSG=
+NUL=/dev/null
+#NUL=NUL:
+
+################################################################
+#
+#  information about your build system
+
+# make
+MK=make
+#MK=nmake /nologo /s
+
+# nocond
+NOCOND=$(LIB3)\tools\nocond
+
+# compile
+CC=gcc
+CFLAGS=-ansi -pedantic -std=c11 -c -o
+XCFLAGS=-DPLATFORM='"$(PLATFORM)"' -Dnw_$(PLATFORM) -DNWDEFAULTDIR='"$(LIB3)"'
+O=.o
+#CC=cl
+#CFLAGS=/nologo -MTd /c /Fo:
+#XCFLAGS=-DPLATFORM="\"$(PLATFORM)\"" -Dnw_$(PLATFORM) -DWIN32="1" -DNWDEFAULTDIR="\"c:\\users\\Public\\documents\\noweb3\\bin\""
+#O=.obj
+
+# link
+LD=gcc
+LFLAGS=-o
+LIBPROLOG=
+LIBEPILOG=-lm
+E=
+#LD=cl
+#LFLAGS=/nologo /Fe:
+#LIBPROLOG=/link
+#LIBEPILOG=
+#E=.exe
+
+# AR
+# There is a space after the rv in the following line.
+# This is both deliberate and required.
+AR=ar rv 
+A=.a
+#AR=lib -nologo -out:
+#A=.lib
+
+# general commands
+RMDIR=rm -f -r
+RM=rm -f
+CP=cp
+CPR=cp -r
+#RMDIR=rmdir /s /q
+#RM=del /q
+#CP=copy
+#CPR=xcopy /s
+
+################################################################
+#
+#  Other configuration information
+
+# if your system doesn't have ranlib, change "ranlib" to "true" 
+RANLIB=ranlib
+#RANLIB=echo
+
+# set the alignment (in bytes) of pointers returned by malloc
+# see cii/install.html for more
+#CIIMAXALIGN=8		# Sparc, Alpha
+CIIMAXALIGN=4		# Linux x86, Windows
+
+# Most Windows environments will want to comment everything following this.
+
+# in SunOs 4.1.x, uncomment the following line to avoid prototypes warnings
+# for standard functions 
+#XINCLUDES=-I/usr/5include
+
+# if you don't have popen() in your C library, comment the following line:
+POPEN=-DPOPEN
+
+# if your C library is not POSIX compliant, comment the following line:
+POSIX=-DPOSIX
+
+# if you don't have strerror() in your C library, uncomment the following line:
+#NOSTRERROR= -DNOSTRERROR
