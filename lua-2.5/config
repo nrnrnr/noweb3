@@ -1,0 +1,14 @@
+# configuration file for making Lua
+
+### NO NEED TO CHANGE ANYTHING BELOW THIS LINE ================================
+
+VERSION= 2.5
+
+#INC= $(LUA)/include
+#LIB= $(LUA)/lib
+#BIN= $(LUA)/bin
+
+INCS= -Ic:\users\dazitzel\lp\nwalphaXXYYZZ\lua-2.5\include $(EXTRA_INCS)
+DEFS= $(EXTRA_DEFS)
+
+CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)
