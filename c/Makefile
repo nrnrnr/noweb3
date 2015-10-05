@@ -9,7 +9,6 @@ include ../nwconfig
 # CII is directory where you installed CII ($BUILDDIR)
 
 CII=../cii
-LUA=../lua-2.5+nw
 
 INCS=-I$(CII)$(P)include -I$(LUA)$(P)include
 
@@ -92,8 +91,8 @@ doc:	$(OUTPUT)$(P)doc.tex $(OUTPUT)$(P)allcode.tex
 $(OUTPUT)$(P)nwmtime$(E):	$(NWMTIMEOBJS)
 	$(LD) $(LFLAGS)$@ $(NWMTIMEOBJS)
 
-$(OUTPUT)$(P)no$(E):	$(NOOBJS) $(LIB3)$(P)cii$(P)memchk$(O) $(LIB3)$(P)cii$(P)libcii$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblua$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblualib$(A)
-	$(LD) $(LFLAGS)$@ $(NOOBJS) $(LIBPROLOG) $(LIB3)$(P)cii$(P)libcii$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblua$(A) $(LIB3)$(P)lua-2.5+nw$(P)liblualib$(A) $(LIBEPILOG)
+$(OUTPUT)$(P)no$(E):	$(NOOBJS) $(LIB3)$(P)cii$(P)memchk$(O) $(LIB3)$(P)cii$(P)libcii$(A) $(LUALIB)$(P)liblua$(A) $(LUALIB)$(P)liblualib$(A)
+	$(LD) $(LFLAGS)$@ $(NOOBJS) $(LIBPROLOG) $(LIB3)$(P)cii$(P)libcii$(A) $(LUALIB)$(P)liblua$(A) $(LUALIB)$(P)liblualib$(A) $(LIBEPILOG)
 
 touch: $(SRCS)
 	touch $(SRCS)
