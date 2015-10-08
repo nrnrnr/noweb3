@@ -26,13 +26,23 @@ Here's the organization of the source:
 <<*>>=
 <<copyright notice>>
 function mywrite (l)
+<<* ((luanw))>>=
   case type(l) of
   | "string", "number" => write(l)
   | "nil" => -- do nothing
   | "table" => 
+<<* ((lua2))>>=
+  if type(l) == "string" or type(l) == "number" then write(l)
+  elseif type(l) ==  "nil" then -- do nothing
+  elseif type(l) ==  "table" then
+<<*>>=
       local i = 1
       while l[i] do write(l[i]) i = i + 1 end
+<<* ((luanw))>>=
   else => errormsg("bad type ", type(l), " to mywrite()") error()
+<<* ((lua2))>>=
+  else errormsg("bad type ", type(l), " to mywrite()") error()
+<<*>>=
   end
   newline()
 end
@@ -45,10 +55,16 @@ function Stages.totex(sourcebuf, args)
   <<initialization>>
   while List.length(args) > 0 do 
     a = List.get(args)
+<<* ((luanw))>>=
     case a of
     | "-delay" => delay = 1
     | "-noindex" => noindex = 1
     | "-no-gen-comment" => suppressInitialComment = 1
+<<* ((lua2))>>=
+    if a == "-delay" then delay = 1
+    elseif a == "-noindex" then noindex = 1
+    elseif a == "-no-gen-comment" then suppressInitialComment = 1
+<<*>>=
     end
   end
   writes = write
@@ -58,7 +74,11 @@ function Stages.totex(sourcebuf, args)
   r = NWB.reader(sourcebuf)
   key, value = NWB.read(r)
   while key do
+<<* ((luanw))>>=
     case key of
+<<* ((lua2))>>=
+    if key == nil then noweb_error("key was nil!")
+<<*>>=
     <<cases for conversion>>
     end
     key, value = NWB.read(r)
@@ -98,9 +118,15 @@ This whole code is a giant [[if ... then ... else if ...]].
 <<@xref>>
 <<@index>>
 <<others>>
+<<cases for conversion ((luanw))>>=
 | NW_FATAL => return 1
 | "literal" => writes(value)
 else =>
+<<cases for conversion ((lua2))>>=
+elseif key == NW_FATAL then return 1
+elseif key == "literal" then writes(value)
+else
+<<cases for conversion>>=
   if key == NW_LINE then 
     -- do nothing (adding another case overflows yacc's stack!!)
   elseif type(key) == "string" then
@@ -114,21 +140,38 @@ noweb_error("TeX back end only knows about tex and latex headers, not ", value)
 noweb_error("TeX back end only knows about tex and latex trailers, not ", value)
 @
 \subsection{Basic text and chunk boundaries}
-<<code chunks>>=
+<<code chunks ((luanw))>>=
 | NW_BEGIN_CODE =>  code = 1; writes("\\nwbegincode{", value, "}")
+<<code chunks ((lua2))>>=
+elseif key == NW_BEGIN_CODE then code = 1; writes("\\nwbegincode{", value, "}")
+<<code chunks>>=
                           <<reset cross-reference info>>
+<<code chunks ((luanw))>>=
 | NW_END_CODE =>    <<dump pending cross-reference info>>
+<<code chunks ((lua2))>>=
+elseif key == NW_END_CODE then <<dump pending cross-reference info>>
+<<code chunks>>=
                     code = nil; writes("\\nwendcode{}")
                     lastdefnlabel, pendingprev, pendingnext = nil, nil, nil
-<<docs chunks>>=
+<<docs chunks ((luanw))>>=
 | NW_BEGIN_DOCS =>  if delay and value == "0" then <<delay for [[@begin docs]]>>  
+<<docs chunks ((lua2))>>=
+elseif key == NW_BEGIN_DOCS then if delay and value == "0" then <<delay for [[@begin docs]]>>
+<<docs chunks>>=
                     else text = 0; writes("\\nwbegindocs{", value, "}")
                     end
+<<docs chunks ((luanw))>>=
 | NW_END_DOCS   =>  if delay and value == "0" then <<delay for [[@end docs]]>> 
+<<docs chunks ((lua2))>>=
+elseif key == NW_END_DOCS then if delay and value == "0" then <<delay for [[@end docs]]>>
+<<docs chunks>>=
                     else writes("\\nwenddocs{}")
                     end
-<<@text>>=
+<<@text ((luanw))>>=
 | NW_TEXT =>        text = text + strlen(value)
+<<@text ((lua2))>>=
+elseif key == NW_TEXT then text = text + strlen(value)
+<<@text>>=
                     if quoting then
                       writes(linked_ident("q", TeXliteral(value),
 					  not noindex and lastindexref))
@@ -146,8 +189,11 @@ function linked_ident(context, text, tag)
     return text
   end
 end
-<<@nl>>=
+<<@nl ((luanw))>>=
 | NW_NL =>          if not code then <<print [[\nwdocspar]] if no [[text]]>> end
+<<@nl ((lua2))>>=
+elseif key == NW_NL then if not code then <<print [[\nwdocspar]] if no [[text]]>> end
+<<@nl>>=
                     if quoting then writes("\\nwnewline") end
                     <<show definitions and uses on definition line---once>>
                     newline()
@@ -169,8 +215,11 @@ text = 1
 \subsection{Chunk definitions and uses, with possible cross-reference}
 Here we start to see the cross-reference markup, driven by [[lastxreflabel]]
 and [[lastxrefref]].
-<<@defn>>=
+<<@defn ((luanw))>>=
 | NW_DEFN =>       if lastxreflabel then
+<<@defn ((lua2))>>=
+elseif key == NW_DEFN then if lastxreflabel then
+<<@defn>>=
                      writes("\\sublabel{", lastxreflabel, "}")
                      writes("\\nwmargintag{", label2tag(lastxreflabel), "}")
                    end
@@ -189,8 +238,11 @@ and [[lastxrefref]].
 although the index filter only provides uses with the first chunk.
 <<initialization>>=
 useitemstab = {}
-<<@use>>=
+<<@use ((luanw))>>=
 | NW_USE =>        if lastxrefref then t = "~"..label2tag(lastxrefref) else t = "" end
+<<@use ((lua2))>>=
+elseif key == NW_USE then if lastxrefref then t = "~"..label2tag(lastxrefref) else t = "" end
+<<@use>>=
                    writes("\\LA{}", convquotes(value), t, "\\RA{}")
                    <<clear [[lastxref*]]>>
 <<*>>=
@@ -204,7 +256,7 @@ end
 defns = {}
 @
 \subsection{Quoting, headers, trailers, \& miscellany}
-<<others>>=
+<<others ((luanw))>>=
 | NW_QUOTE    => quoting = 1   ; writes("{\\Tt{}")
 | NW_ENDQUOTE => quoting = nil ; writes("\\nwendquote}")
 | NW_FILE     => filename = value; <<clear [[lastxref*]]>>
@@ -219,6 +271,22 @@ defns = {}
                  | "latex" => mywrite("\\end{document}")
                  | "tex"   => mywrite("\\bye")
                  else => <<trailer botch>>
+                 end
+<<others ((lua2))>>=
+elseif key == NW_QUOTE    then quoting = 1   ; writes("{\\Tt{}")
+elseif key == NW_ENDQUOTE then quoting = nil ; writes("\\nwendquote}")
+elseif key == NW_FILE     then filename = value; <<clear [[lastxref*]]>>
+                 if not delay then writes("\\nwfilename{", filename, "}") end
+elseif key == NW_LITERAL  then writes(value)
+elseif key == NW_HEADER   then
+                 if matchpattern(value, "latex *") then <<write {\LaTeX} header>>
+                 elseif matchpattern(value, "tex *") then writes("\\input nwmac ")
+                 else  <<header botch>>
+                 end
+elseif key == NW_TRAILER  then
+                 if value == "latex" then mywrite("\\end{document}")
+                 elseif value == "tex"   then mywrite("\\bye")
+                 else  <<trailer botch>>
                  end
 <<write {\LaTeX} header>>=
 writes("\\documentclass{article}\\usepackage{noweb}\\pagestyle{noweb}\\noweboptions{",
@@ -243,7 +311,7 @@ dumpitems(defitems, "nwalsodefined")
 dumpitems(useitems, "nwused")
 if notused then writes("\\nwnotused{", notused, "}") end
 <<reset cross-reference info>>
-<<@xref>>=
+<<@xref ((luanw))>>=
 | NW_XREF_LABEL     => lastxreflabel = value
 | NW_XREF_REF       => lastxrefref   = value
 | NW_XREF_BEGINDEFS =>
@@ -255,6 +323,18 @@ if notused then writes("\\nwnotused{", notused, "}") end
 | NW_XREF_NOTUSED   => notused = value
 | NW_XREF_NEXTDEF   => pendingnext = value
 | NW_XREF_PREVDEF   => pendingprev = value
+<<@xref ((lua2))>>=
+elseif key == NW_XREF_LABEL     then lastxreflabel = value
+elseif key == NW_XREF_REF       then lastxrefref   = value
+elseif key == NW_XREF_BEGINDEFS then
+elseif key == NW_XREF_DEFITEM   then List.put(defitems, value)
+elseif key == NW_XREF_ENDDEFS   then
+elseif key == NW_XREF_BEGINUSES then useitems = {}
+elseif key == NW_XREF_USEITEM   then List.put(useitems, value)
+elseif key == NW_XREF_ENDUSES   then useitemstab[thischunk] = useitems
+elseif key == NW_XREF_NOTUSED   then notused = value
+elseif key == NW_XREF_NEXTDEF   then pendingnext = value
+elseif key == NW_XREF_PREVDEF   then pendingprev = value
 <<show definitions and uses on definition line---once>>=
 if pendinguses or pendingprev or pendingnext then 
   writes("\\nwstartdeflinemarkup")
@@ -291,10 +371,14 @@ end
 This first round of stuff just handles the basics: definitions, uses, and newlines.
 Unless it's OK to show the index (by \LA{}SI\RA), we handle nothing but 
 \hbox{[[@index nl]]}.
-<<@index>>=
+<<@index ((luanw))>>=
 | NW_INDEX_NL    =>     if code then mywrite("\\eatline") else mywrite("%") end
 | NW_INDEX_DEFN, NW_INDEX_LOCALDEFN => if not noindex then <<handle index defn>> end
 | NW_INDEX_USE                      => if not noindex then <<handle index use>>  end
+<<@index ((lua2))>>=
+elseif key == NW_INDEX_NL    then     if code then mywrite("\\eatline") else mywrite("%") end
+elseif key == NW_INDEX_DEFN or key ==  NW_INDEX_LOCALDEFN then if not noindex then <<handle index defn>> end
+elseif key == NW_INDEX_USE                      then if not noindex then <<handle index use>>  end
 @
 Nothing is involved in handling definitions and uses unless there are cross-reference
 labels pending.
@@ -329,7 +413,7 @@ lastindexref = lastxrefref
 <<clear [[lastxref*]]>>
 @
 Here's the local identifier cross-reference that appears at the end of a code chunk.
-<<@index>>=
+<<@index ((luanw))>>=
 | NW_INDEX_BEGINDEFS => if not noindex then <<dump pending cross-reference info>>
                                             writes("\\nwidentdefs{") end
 | NW_INDEX_ISUSED    => -- handled by latex
@@ -341,6 +425,18 @@ Here's the local identifier cross-reference that appears at the end of a code ch
 | NW_INDEX_USEITEM   => if not noindex then i = value; <<write [[i]] with [[\\]]>> 
                                             List.put(ulist, i)                     end
 | NW_INDEX_ENDUSES   => if not noindex then writes("}"); <<write [[ulist]]>>       end
+<<@index ((lua2))>>=
+elseif key == NW_INDEX_BEGINDEFS then if not noindex then <<dump pending cross-reference info>>
+                                            writes("\\nwidentdefs{") end
+elseif key == NW_INDEX_ISUSED    then -- handled by latex
+elseif key == NW_INDEX_DEFITEM   then if not noindex then i = value; <<write [[i]] with [[\\]]>> end
+elseif key == NW_INDEX_ENDDEFS   then if not noindex then writes("}")                            end
+elseif key == NW_INDEX_BEGINUSES then if not noindex then <<dump pending cross-reference info>>
+                                            writes("\\nwidentuses{"); ulist = {}   end
+elseif key == NW_INDEX_ISDEFINED then -- "latex finds the definitions"
+elseif key == NW_INDEX_USEITEM   then if not noindex then i = value; <<write [[i]] with [[\\]]>>
+                                            List.put(ulist, i)                     end
+elseif key == NW_INDEX_ENDUSES   then if not noindex then writes("}"); <<write [[ulist]]>>       end
 <<write [[i]] with [[\\]]>>=
 writes("\\\\{{\\nwixident{", TeXliteral(i), "}}{", indexlabel(i), "}}") 
 <<write [[ulist]]>>=
@@ -358,7 +454,7 @@ end
 The treatments of the list of chunks and the index are similar.
 Both use [[\nwixlogsorted]], which writes magic goo into the {\tt .aux} file.
 The real cross-referencing is done by the underlying {\LaTeX} code.
-<<@xref>>=
+<<@xref ((luanw))>>=
 | NW_XREF_BEGINCHUNKS => 
 | NW_XREF_CHUNKBEGIN  =>  label, name = split_first_space(value)
                           writes("\\nwixlogsorted{c}{{", convquotes(name), "}",
@@ -367,7 +463,16 @@ The real cross-referencing is done by the underlying {\LaTeX} code.
 | NW_XREF_CHUNKDEFN   =>  writes("\\nwixd{", value, "}")
 | NW_XREF_CHUNKEND    =>  mywrite("}}%")
 | NW_XREF_ENDCHUNKS   => 
-<<@index>>=
+<<@xref ((lua2))>>=
+elseif key == NW_XREF_BEGINCHUNKS then
+elseif key == NW_XREF_CHUNKBEGIN  then  label, name = split_first_space(value)
+                          writes("\\nwixlogsorted{c}{{", convquotes(name), "}",
+                                 "{", label, "}{")
+elseif key == NW_XREF_CHUNKUSE    then  writes("\\nwixu{", value, "}")
+elseif key == NW_XREF_CHUNKDEFN   then  writes("\\nwixd{", value, "}")
+elseif key == NW_XREF_CHUNKEND    then  mywrite("}}%")
+elseif key == NW_XREF_ENDCHUNKS   then
+<<@index ((luanw))>>=
 | NW_INDEX_BEGININDEX =>
 | NW_INDEX_ENTRYBEGIN => if not noindex then
                            label, name = split_first_space(value)
@@ -378,6 +483,17 @@ The real cross-referencing is done by the underlying {\LaTeX} code.
 | NW_INDEX_ENTRYDEFN  =>    -- handled by latex
 | NW_INDEX_ENTRYEND   =>
 | NW_INDEX_ENDINDEX   =>
+<<@index ((lua2))>>=
+elseif key == NW_INDEX_BEGININDEX then
+elseif key == NW_INDEX_ENTRYBEGIN then if not noindex then
+                           label, name = split_first_space(value)
+                           mywrite {"\\nwixlogsorted{i}{{\\nwixident{", TeXliteral(name),
+                           "}}{", indexlabel(name), "}}%"}
+                         end
+elseif key == NW_INDEX_ENTRYUSE   then    -- handled by latex
+elseif key == NW_INDEX_ENTRYDEFN  then    -- handled by latex
+elseif key == NW_INDEX_ENTRYEND   then
+elseif key == NW_INDEX_ENDINDEX   then
 @
 \subsection{HEader comments}
 This godawful hack slips in a comment without messing up our line

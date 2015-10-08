@@ -29,15 +29,78 @@ function errormsg(a, b, c, d, e, f, g, h)
   out = writetox(stderr)
   local l = {a, b, c, d, e, f, g, h}
   j = 1; while l[j] do
+<<util.cfg ((luanw))>>=
     case type(l[j]) of 
     | "string", "number" => write(l[j])
     | "table"  => i = 1; while l[j][i] do errormsg(l[j][i]); i = i+1 end
     else => writeto(out); error("non-string non-table to errormsg")
+<<util.cfg ((lua2))>>=
+    if type(l[j]) == "string" or type(l[j]) == "number" then write(l[j])
+    elseif type(l[j]) == "table" then i = 1; while l[j][i] do errormsg(l[j][i]); i = i+1 end
+    else writeto(out); error("non-string non-table to errormsg")
+<<util.cfg>>=
     end
   j = j+1; end
   write("\n")
   writetox(out)
 end
+
+<<util.cfg ((lua2))>>=
+function matchpattern(str, pat)
+  strwork = str
+  patwork = pat
+  while strlen(patwork) > 0 and strlen(strwork) > 0 do
+    if strsub(patwork, 1, 1) == "\\" then
+      patwork = strsub(patwork, 2)
+      if strsub(strwork, 1, 1) ~= strsub(patwork, 1, 1) then
+        return nil
+      end
+    elseif strsub(patwork, 1, 1) == "[" then
+      if strlen(patwork) < 5 then
+        return nil
+      end
+      if ascii(strwork) < ascii(patwork, 2) then
+        return nil
+      end
+      if strsub(patwork, 3, 3) ~= "-" then
+        return nil
+      end
+      if ascii(strwork) > ascii(patwork, 4) then
+        return nil
+      end
+      if strsub(patwork, 5, 5) ~= "]" then
+        return nil
+      end
+      patwork = strsub(patwork, 5)
+    elseif strsub(patwork, 1, 1) == '?' then
+      -- do nothing
+    elseif strsub(patwork, 1, 1) == "*" then
+      if patwork == "*" then
+        return (not nil)
+      end
+      while strlen(strwork) > 0 do
+        if matchpattern(strsub(strwork, 2), strsub(patwork, 2)) then
+          return (not nil)
+        end
+        strwork = strsub(strwork, 2)
+      end
+    else
+      if strsub(strwork, 1, 1) ~= strsub(patwork, 1, 1) then
+        return nil
+      end
+    end
+    strwork = strsub(strwork, 2)
+    patwork = strsub(patwork, 2)
+  end
+  if strlen(strwork) > 0 then
+    return nil
+  end
+  if strlen(patwork) > 0 then
+    return nil
+  end
+  return (not nil)
+end
+
 <<hackers: entries for Lua functions>>=
 errormsg&
 Takes up to 8~arguments and writes them to standard error.
@@ -113,57 +176,85 @@ XPipe.sink   = XPipe.stage
 <<sys.cfg>>=
 $debug
 if not Unix then Unix = { } end
+if not Win then Win = { } end
 
 function Unix.stringFilter(s)
   return MPipe.filter("sh", { "-c", s })
 end
+function Win.stringFilter(s)
+  return MPipe.filter(System.getenv("ComSpec"), { "/c", s })
+end
 <<hackers: entries for Lua functions>>=
 Unix.stringFilter&
-Takes one argument, a Unix shell command, 
+Win.stringFilter&
+Takes one argument, a shell command,
 and returns a filter to execute that argument.\\
 <<sys.cfg>>=
-function Unix.extendPath(dir, file) 
+function Unix.extendPath(dir, file)
   return dir .. "/" .. file
+end
+function Win.extendPath(dir, file)
+  return dir .. "\\" .. file
 end
 
 function Unix.isExecutable(file)
   return XPipe.run(XPipe.stage("test", {"-x", file})) == 0
 end
-
-if not Dos then Dos = { } end
-
-function Dos.extendPath(dir, name)
-  return dir .. "\\" .. name
+function Win.isExecutable(file)
+  -- no good test, just assume it is
+  return true
 end
 
-case PLATFORM of
-| "unix" => MD = Unix
-else => error("Unknown target platform ", PLATFORM)
+
+if PLATFORM == "unix" then MD = Unix
+elseif PLATFORM == "win" then MD = Win
+else error("Unknown target platform ", PLATFORM)
 end
 @ 
 <<util.cfg>>=
 $debug
 function image(x)
   local i, n, v, pfx, s, ty, tag
+<<util.cfg ((luanw))>>=
   case type(x) of
   | "string" => return format("%q", x)
   | "number" => return format("%.0f", x)
   | "function", "cfunction" =>
+<<util.cfg ((lua2))>>=
+  if type(x) == "string" then return format("%q", x)
+  elseif type(x) == "number" then return format("%.0f", x)
+  elseif type(x) == "function" or type(x) == "cfunction" then
+<<util.cfg>>=
        i = funname(x)
        if i then return "<function " .. i .. ">"
        else return tostring(x)
        end
+<<util.cfg ((luanw))>>=
   | "table" =>
+<<util.cfg ((lua2))>>=
+  elseif type(x) == "table" then
+<<util.cfg>>=
         if List.is(x) then <<return image of list [[x]]>>
         else               <<return image of table [[x]]>>
         end
+<<util.cfg ((luanw))>>=
   | "nil" => return 'nil'
   | "userdata" => ty, tag = type(x)
                   case tag of
                   | NWKEY => return funname(x)
                   else => return tostring(x)
                   end
+<<util.cfg ((lua2))>>=
+  elseif type(x) == "nil" then return 'nil'
+  elseif type(x) == "userdata" then ty, tag = type(x)
+                  if tag == NWKEY then return funname(x)
+                  else return tostring(x)
+                  end
+<<util.cfg ((luanw))>>=
   else => return tostring(x)
+<<util.cfg ((lua2))>>=
+  else return tostring(x)
+<<util.cfg>>=
   end
 end
 <<return image of table [[x]]>>=
@@ -249,10 +340,16 @@ Typically used to find names of functions.\\
 function Config.filterfun(x)
   local ty, tag = type(x)
   if ty ~= "userdata" then return nil end
+<<set fallback for connecting pipelines ((luanw))>>=
   case tag of
   | MSOURCE, MFILTER, MSINK => return MPipe.connect
   | XPIPE => return XPipe.connect
   else => return nil
+<<set fallback for connecting pipelines ((lua2))>>=
+  if tag == MSOURCE or tag == MFILTER or tag == MSINK then return MPipe.connect
+  elseif tag == XPIPE then return XPipe.connect
+  else return nil
+<<set fallback for connecting pipelines>>=
   end    
 end
 

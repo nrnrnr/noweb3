@@ -14,7 +14,11 @@ function Stages.unmarkup (buf, outfile)
   key, arg = NWB.read(r)
   local code, dangling_text, defline, deflines, space_pending
   while key do
+<<* ((luanw))>>=
     case key of
+<<* ((lua2))>>=
+    if key == nil then noweb_error("key was nil!")
+<<*>>=
     <<cases for unmarkup>>
     end
     key, arg = NWB.read(r)
@@ -25,18 +29,28 @@ function Stages.unmarkup (buf, outfile)
   return 0
 end
 @ 
-<<cases for unmarkup>>=
+<<cases for unmarkup ((luanw))>>=
 | NW_BEGIN_DOCS =>  if arg ~= "0" then write('@'); space_pending = 1 end
 | NW_BEGIN_CODE =>  code = 1
 | NW_END_DOCS, NW_END_CODE =>
+<<cases for unmarkup ((lua2))>>=
+elseif key == NW_BEGIN_DOCS then  if arg ~= "0" then write('@'); space_pending = 1 end
+elseif key == NW_BEGIN_CODE then  code = 1
+elseif key == NW_END_DOCS or key == NW_END_CODE then
+<<cases for unmarkup>>=
 		code = nil
 		if dangling_text then write('\n') end
 		dangling_text = nil
                 write(deflines)
                 if defline ~= "" then write(defline, '\n') end
                 deflines = "" ; defline = ""
+<<cases for unmarkup ((luanw))>>=
 | NW_DEFN =>    write('@<<', arg, '@>>=')
 | NW_TEXT => if arg ~= '' then
+<<cases for unmarkup ((lua2))>>=
+elseif key == NW_DEFN then    write('@<<', arg, '@>>=')
+elseif key == NW_TEXT then if arg ~= '' then
+<<cases for unmarkup>>=
                arg = gsub(arg, "<<", "@<<")
                arg = gsub(arg, ">>", "@>>")
                if not (code or quoting) then
@@ -47,6 +61,7 @@ end
                write(arg)
                dangling_text = 1
              end
+<<cases for unmarkup ((luanw))>>=
 | NW_QUOTE    => <<emit pending space, if any>>
                  write("[["); dangling_text = 1; quoting = 1
 | NW_ENDQUOTE => <<emit pending space, if any>>
@@ -61,6 +76,21 @@ end
 | NW_USE => write('@<<' .. arg .. '@>>')
             dangling_text = 1
 else => -- do nothing
+<<cases for unmarkup ((lua2))>>=
+elseif key == NW_QUOTE    then <<emit pending space, if any>>
+                 write("[["); dangling_text = 1; quoting = 1
+elseif key == NW_ENDQUOTE then <<emit pending space, if any>>
+                 write("]]"); dangling_text = 1; quoting = nil
+elseif key == NW_NL       then write("\n"); space_pending = nil; dangling_text = nil
+elseif key == NW_INDEX_DEFN then
+     if defline == "" then defline = "@ %def" end
+     defline = defline .. " " .. arg
+elseif key == NW_INDEX_NL then
+     deflines = deflines .. defline .. "\n"
+     defline = ""
+elseif key == NW_USE then write('@<<' .. arg .. '@>>')
+            dangling_text = 1
+else -- do nothing
 @ This trick delays a space after~[[@]] until it is seen to be
 warranted.  That way, we avoid a trailing space when the [[@]] that ends a
 documentation chunk appears on a line by itself.

@@ -31,7 +31,7 @@ external pipeline commands built in [[xpipe-lua.nw]] and [[xpipe.nw]].
 
 extern void nwbuffer_open(void);
 
-char *platform = "unix"; /* should be defined elsewhere */
+char *platform = PLATFORM;
 
 static int manual_input(void) {
   if (isatty(0)) {

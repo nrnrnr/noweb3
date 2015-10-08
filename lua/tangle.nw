@@ -12,6 +12,7 @@ verbose = nil
 
 while List.length(argv) > 0 do
   a = List.get(argv)
+<<* ((luanw))>>=
   globmatch a of
   | "-e" => dostring(List.get(argv))
   | "-internal" => markup = Stages.markup; nt = Stages.nt
@@ -21,10 +22,27 @@ while List.length(argv) > 0 do
     "-c", "-c++", "-f77", "-f90", "-tex" => -- deliberately ignore nountangle args
   | "-t" => -- this is the default
   | "-t*" =>   -- copy tabs at markup, use width given in notangle
+<<* ((lua2))>>=
+  if a == "-e" then dostring(List.get(argv))
+  elseif a == "-internal" then markup = Stages.markup; nt = Stages.nt
+  elseif a == "-external" then markup = libFile("markup"); nt = libFile("nt")
+  elseif a == "-v" then verbose = 1
+  elseif a == "-ml" or a == "-m3" or a == "-awk" or a == "-icn" or a == "-icon" or
+    a == "-pascal" or a == "-c" or a == "-c++" or a == "-f77" or a =="-f90" or
+    a == "-tex" then -- deliberately ignore nountangle args
+  elseif a == "-t" then -- this is the default
+  elseif matchpattern(a, "-t*") then   -- copy tabs at markup, use width given in notangle
+<<*>>=
 	      List.put(markopt, "-t")
       	      List.put(opt, a)
+<<* ((luanw))>>=
   | "-filter" => List.put(filters, MD.stringFilter(List.get(argv)))
+<<* ((lua2))>>=
+  elseif a == "-filter" then List.put(filters, MD.stringFilter(List.get(argv)))
+<<* ((luanw))>>=
   | "-ifilter" =>
+<<* ((lua2))>>=
+  elseif a == "-ifilter" then
 --  if verbose then 
 --  errormsg("FILTER: ", 
 --  "if 1 then local f, arg = " .. argv[1] .. 
@@ -36,7 +54,11 @@ while List.length(argv) > 0 do
                     format('%q', stagearg) .. 
                     " .. ' does not exist for -ifilter') end" ..
                "; List.put(filters, MPipe.filter(f, arg)) end")
+<<* ((luanw))>>=
   | "-markup" => markup = List.get(argv)
+<<* ((lua2))>>=
+  elseif a == "-markup" then markup = List.get(argv)
+<<* ((luanw))>>=
   | "-w[0-9]", "-w[0-9][0-9]*" =>  -- ignore arg meant for nountangle
   | "-L*" => List.put(markopt, "-t"); List.put(opt, "-t"); List.put(opt, a)
   | "-"   => List.put(arg, a)
@@ -44,6 +66,15 @@ while List.length(argv) > 0 do
   | "-*"  => List.put(opt, a)
   | "*"   => List.put(arg, a)
   else => error("This can't happen! Arg did not match *: " .. a)
+<<* ((lua2))>>=
+  elseif matchpattern(a, "-w[0-9]") or matchpattern(a, "-w[0-9][0-9]*") then  -- ignore arg meant for nountangle
+  elseif matchpattern(a, "-L*") then List.put(markopt, "-t"); List.put(opt, "-t"); List.put(opt, a)
+  elseif a == "-"   then List.put(arg, a)
+  elseif a == "-cpif" or a == "-cp" then List.put(opt, a); List.put(opt, List.get(argv))
+  elseif matchpattern(a, "-*") then List.put(opt, a)
+  elseif matchpattern(a, "*") then List.put(arg, a)
+  else error("This can't happen! Arg did not match *: " .. a)
+<<*>>=
   end
 end
 

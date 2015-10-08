@@ -8,14 +8,29 @@ function Filters.docs2comment(inbuf, outbuf, argv)
   width = 72
   i = 1
   while i <= length(argv) do
+<<* ((luanw))>>=
     globmatch argv[i] of
     | "-ml", "-m3" => fmt="(* %%-%ds *)"
+<<* ((lua2))>>=
+    if matchpattern(argv[i], "-ml") or
+       matchpattern(argv[i], "-m3") then fmt="(* %%-%ds *)"
+<<*>>=
 	              pat1 = "%*%)"; repl1 = "* )"; pat2 = "%(%*"; repl2 = "( *"
+<<* ((luanw))>>=
     | "-awk", "-icn", "-icon" => fmt="# %%-%ds"
     | "-lisp", "-scm" =>	    fmt=";;; %%-%ds"
     | "-c++" =>    fmt="// %%-%ds" 
     | "-c" =>      fmt="/* %%-%ds */"  
+<<* ((lua2))>>=
+    elseif matchpattern(argv[i], "-awk") or
+           matchpattern(argv[i], "-icn") or
+           matchpattern(argv[i], "-icon") then fmt="# %%-%ds"
+    elseif matchpattern(argv[i], "-lisp") , "-scm" =>	    fmt=";;; %%-%ds"
+    elseif matchpattern(argv[i], "-c++") =>    fmt="// %%-%ds"
+    elseif matchpattern(argv[i], "-c") =>      fmt="/* %%-%ds */"
+<<*>>=
                    pat1 = "%*%/"; repl1 = "* /"; pat2 = "%/%*"; repl2 = "/ *"
+<<* ((luanw))>>=
     | "-pascal" => fmt="{ %%-%ds }" pat1 = "[{}]"; repl1 = "-"
     | "-f77" =>    fmt="C %%-%ds"
     | "-f90" =>    fmt="! %%-%ds"
@@ -23,6 +38,18 @@ function Filters.docs2comment(inbuf, outbuf, argv)
     | "-w[0-9]" | "-w[0-9][0-9]" | "-w[0-9][0-9][0-9]" | "-w[0-9][0-9][0-9][0-9]"
     =>    width=tonumber(strsub(argv[i], 3))
     else =>
+<<* ((lua2))>>=
+    elseif matchpattern(argv[i], "-pascal") => fmt="{ %%-%ds }" pat1 = "[{}]"; repl1 = "-"
+    elseif matchpattern(argv[i], "-f77") =>    fmt="C %%-%ds"
+    elseif matchpattern(argv[i], "-f90") =>    fmt="! %%-%ds"
+    elseif matchpattern(argv[i], "-tex") =>    fmt="%%%% %%-%ds"
+    elseif matchpattern(argv[i], "-w[0-9]") or
+           matchpattern(argv[i], "-w[0-9][0-9]") or
+           matchpattern(argv[i], "-w[0-9][0-9][0-9]") or
+           matchpattern(argv[i], "-w[0-9][0-9][0-9][0-9]") then
+             width=tonumber(strsub(argv[i], 3))
+    else
+<<*>>=
       error("Unrecognized option ", argv[i], " to Filters.docs2comment")
     end
     i++
