@@ -18,16 +18,16 @@ ciilib:
 	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" && cd ..
 
 lualib:
-	-mkdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
-	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd .. && $(LuaCpCommand)
+	-mkdir $(LIB3)$(P)lua-2.5 2>$(NUL)
+	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" && cd .. && $(LuaCpCommand2)
 
 code: bootstrap ciilib lualib
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
-	cd c && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "LUA=..$(P)lua-2.5+nw" "LUALIB=$(LIB3)$(P)lua-2.5+nw" "OUTPUT=$(LIB3)$(P)c" && cd ..
+	cd c && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "LUA=..$(P)lua-2.5" "LUALIB=$(LIB3)$(P)lua-2.5" "OUTPUT=$(LIB3)$(P)c" && cd ..
 
 scripts: bootstrap
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
-	cd lua && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) luanw | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
+	cd lua && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) lua2 | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
 
 styles: bootstrap
 	-mkdir $(LIB3)$(P)tex 2>$(NUL)
@@ -36,7 +36,16 @@ styles: bootstrap
 transfer:
 # Build 2.5+nw using bootstrap
 	$(MK) clobber
-	$(MK) all
+	$(MK) bootstrap
+	$(MK) ciilib
+	-mkdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd .. && $(LuaCpCommand)
+	-mkdir $(LIB3)$(P)c 2>$(NUL)
+	-mkdir $(LIB3)$(P)lua 2>$(NUL)
+	-mkdir $(LIB3)$(P)tex 2>$(NUL)
+	cd c && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "LUA=..$(P)lua-2.5+nw" "LUALIB=$(LIB3)$(P)lua-2.5+nw" "OUTPUT=$(LIB3)$(P)c" && cd ..
+	cd lua && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) luanw | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
+	cd tex && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex" && cd ..
 	cd c && $(MK) "NWPATH=$(LIB3)$(P)lua" "OUTPUT=$(LIB3)$(P)c" doc && cd ..
 # Copy it to a safe location
 	-$(RMDIR) $(LIB3)$(P)nwbootstrap 2>$(NUL)
@@ -48,16 +57,7 @@ transfer:
 	$(CPR) $(LIB3)$(P)tex$(P)* $(LIB3)$(P)nwbootstrap$(P)tex
 # Build 2.5 using bootstrap
 	$(MK) clobber
-	$(MK) bootstrap
-	$(MK) ciilib
-	-mkdir $(LIB3)$(P)lua-2.5 2>$(NUL)
-	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" && cd .. && $(LuaCpCommand2)
-	-mkdir $(LIB3)$(P)c 2>$(NUL)
-	-mkdir $(LIB3)$(P)lua 2>$(NUL)
-	-mkdir $(LIB3)$(P)tex 2>$(NUL)
-	cd c && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) $(PIPE) | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "LUA=..$(P)lua-2.5" "LUALIB=$(LIB3)$(P)lua-2.5" "OUTPUT=$(LIB3)$(P)c" && cd ..
-	cd lua && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) lua2 | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
-	cd tex && $(MK) "NOTANGLE=more" "TANGLEOPTS= | $(LIB3)$(P)tools$(P)markup | $(LIB3)$(P)tools$(P)nt" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex" && cd ..
+	$(MK) all
 	cd c && $(MK) "NWPATH=$(LIB3)$(P)lua" "OUTPUT=$(LIB3)$(P)c" doc && cd ..
 # Copy it to a safe location
 	-$(RMDIR) $(LIB3)$(P)2bootstrap 2>$(NUL)
@@ -71,7 +71,8 @@ transfer:
 	$(MK) clobber
 	$(MK) bootstrap
 	$(MK) ciilib
-	$(MK) lualib
+	-mkdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd .. && $(LuaCpCommand)
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
 	-mkdir $(LIB3)$(P)tex 2>$(NUL)
@@ -91,8 +92,7 @@ transfer:
 	$(MK) clobber
 	$(MK) bootstrap
 	$(MK) ciilib
-	-mkdir $(LIB3)$(P)lua-2.5 2>$(NUL)
-	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" && cd .. && $(LuaCpCommand2)
+	$(MK) lualib
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
 	-mkdir $(LIB3)$(P)tex 2>$(NUL)
@@ -112,7 +112,8 @@ transfer:
 	$(MK) clobber
 	$(MK) bootstrap
 	$(MK) ciilib
-	$(MK) lualib
+	-mkdir $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" && cd .. && $(LuaCpCommand)
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
 	-mkdir $(LIB3)$(P)tex 2>$(NUL)
@@ -132,8 +133,7 @@ transfer:
 	$(MK) clobber
 	$(MK) bootstrap
 	$(MK) ciilib
-	-mkdir $(LIB3)$(P)lua-2.5 2>$(NUL)
-	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" && cd .. && $(LuaCpCommand2)
+	$(MK) lualib
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
 	-mkdir $(LIB3)$(P)tex 2>$(NUL)
@@ -158,6 +158,10 @@ transfer:
 	windiff $(LIB3)$(P)nwnw $(LIB3)$(P)nw2
 # Compare 2.5 built using 2.5+nw to 2.5 built using 2.5
 	windiff $(LIB3)$(P)2nw $(LIB3)$(P)22
+# Confirm that they are different
+	windiff $(LIB3)$(P)nwnw $(LIB3)$(P)2nw
+	windiff $(LIB3)$(P)nwnw $(LIB3)$(P)22
+	windiff $(LIB3)$(P)nw2 $(LIB3)$(P)22
 # Clean up
 	$(MK) clobber
 	$(RMDIR) $(LIB3)$(P)nwbootstrap
@@ -183,9 +187,9 @@ careful:
 	$(MK) ciilib
 	$(MK) lualib
 	-mkdir $(LIB3)$(P)c 2>$(NUL)
-	cd c && $(MK) "NWPATH=$(LIB3)$(P)first$(P)lua" "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) $(PIPE) | $(LIB3)$(P)first$(P)c$(P)no tangle" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "LUA=..$(P)lua-2.5+nw" "LUALIB=$(LIB3)$(P)lua-2.5+nw" "OUTPUT=$(LIB3)$(P)c" && cd ..
+	cd c && $(MK) "NWPATH=$(LIB3)$(P)first$(P)lua" "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) $(PIPE) | $(LIB3)$(P)first$(P)c$(P)no tangle" "CPIF=>" "TOOLS=$(LIB3)$(P)tools" "LUA=..$(P)lua-2.5" "LUALIB=$(LIB3)$(P)lua-2.5" "OUTPUT=$(LIB3)$(P)c" && cd ..
 	-mkdir $(LIB3)$(P)lua 2>$(NUL)
-	cd lua && $(MK) "NWPATH=$(LIB3)$(P)first$(P)lua" "NOTANGLE=$(LIB3)$(P)first$(P)c$(P)no tangle" "TANGLEOPTS=" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
+	cd lua && $(MK) "NWPATH=$(LIB3)$(P)first$(P)lua" "NOTANGLE=more" "TANGLEOPTS= | $(NOCOND) lua2 | $(LIB3)$(P)first$(P)c$(P)no tangle" "CPIF=>" "OUTPUT=$(LIB3)$(P)lua" && cd ..
 	-mkdir $(LIB3)$(P)tex 2>$(NUL)
 	cd tex && $(MK) "NWPATH=$(LIB3)$(P)first$(P)lua" "NOTANGLE=$(LIB3)$(P)first$(P)c$(P)no tangle" "TANGLEOPTS=" "CPIF=>" "OUTPUT=$(LIB3)$(P)tex" && cd ..
 	echo At this point we are attempting to build the literate version.
@@ -225,8 +229,8 @@ clean:
 	-$(RMDIR) $(LIB3)$(P)tools 2>$(NUL)
 	cd cii && $(MK) "OUTPUT=$(LIB3)$(P)cii" clobber && cd ..
 	-$(RMDIR) $(LIB3)$(P)cii 2>$(NUL)
-	cd lua-2.5+nw && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5+nw" clobber && cd ..
-	-$(RMDIR) $(LIB3)$(P)lua-2.5+nw 2>$(NUL)
+	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" clobber && cd ..
+	-$(RMDIR) $(LIB3)$(P)lua-2.5 2>$(NUL)
 	cd c && $(MK) "OUTPUT=$(LIB3)$(P)c" clean && cd ..
 	cd lua && $(MK) "OUTPUT=$(LIB3)$(P)lua" clean && cd ..
 	cd tex && $(MK) "OUTPUT=$(LIB3)$(P)tex" clean && cd ..
