@@ -80,11 +80,7 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   local newbuf = NWB.new()
   key, arg = NWB.read(r)
   while key do
-<<* ((luanw))>>=
-    case key of
-<<* ((lua2))>>=
     if key == nil then noweb_error("key was nil!")
-<<*>>=
     <<case for [[crc_prefix]]>>
     <<cases for pass 1>>
     end
@@ -97,11 +93,7 @@ function Stages.noidx(sourcebuf, sinkbuf, args)
   while key do
 --    NWB.put(sinkbuf, 'the_crc_prefix', Noidx.crc_prefix)
 --    NWB.put(sinkbuf, 'active_prefix', Noidx.active_crc_prefix)
-<<* ((luanw))>>=
-    case key of
-<<* ((lua2))>>=
     if key == nil then noweb_error("key was nil!")
-<<*>>=
     <<case for [[crc_prefix]]>>
     <<cases for pass 2>>
     end
@@ -115,31 +107,16 @@ end
 <<swallow [[args]]>>=
 while List.length(args) > 0 do
   local a = List.get(args) 
-<<swallow [[args]] ((luanw))>>=
-  case a of
-  | "-delay" => delay = 1
-  | "-docanchor" => anchordist = tonumber(List.get(args)) or anchordist
-  | "-dbout" => dboutfile = List.get(args);
-<<swallow [[args]] ((lua2))>>=
   if a == "-delay" then delay = 1
   elseif a == "-docanchor" then anchordist = tonumber(List.get(args)) or anchordist
   elseif a == "-dbout" then dboutfile = List.get(args);
-<<swallow [[args]]>>=
                 if not Noidx.prevdb then
                   Noidx.prevdb = Noidx.nextdb; Noidx.nextdb = nil
                 end
-<<swallow [[args]] ((luanw))>>=
-  | "-dbin" =>  Noidx.nextdb = Noidx.nextdb or { }
-<<swallow [[args]] ((lua2))>>=
   elseif a == "-dbin" then Noidx.nextdb = Noidx.nextdb or { }
-<<swallow [[args]]>>=
                 Noidx.usedb = Noidx.usedb or { }
                 dofile(List.get(args))
-<<swallow [[args]] ((luanw))>>=
-  else => noweb_error("unknown argument ", a)
-<<swallow [[args]] ((lua2))>>=
   else noweb_error("unknown argument ", a)
-<<swallow [[args]]>>=
   end
 end
 @
@@ -196,32 +173,17 @@ This trick lets me avoid planting anchors in empty documentation chunks.
  --  static lastdefnlabel, thisusecount, lastanchorlabel, nonblank, textnonblank
  --  initial nonblank = ~' \t'
 
-<<cases for pass 1 ((luanw))>>=
-| NW_FILE => curfile = Noidx.uniqueid(arg)
-| NW_BEGIN_DOCS, NW_BEGIN_CODE => 
-<<cases for pass 1 ((lua2))>>=
 elseif key == NW_FILE then curfile = Noidx.uniqueid(arg)
 elseif key == NW_BEGIN_DOCS or key == NW_BEGIN_CODE then
-<<cases for pass 1>>=
              lastbegin = key; lastbeginarg = arg; textnonblank = nil
-<<cases for pass 1 ((luanw))>>=
-| NW_END_DOCS => if anchordist and textnonblank then
-<<cases for pass 1 ((lua2))>>=
 elseif key == NW_END_DOCS then if anchordist and textnonblank then
-<<cases for pass 1>>=
                    <<insert and set [[lastanchorlabel]]>>
                  else
                    lastanchorlabel = nil
                  end
-<<cases for pass 1 ((luanw))>>=
-| NW_END_CODE => lastanchorlabel = nil
-| NW_TEXT => textnonblank = textnonblank or strfind(arg, '[%S]')
-| NW_DEFN => 
-<<cases for pass 1 ((lua2))>>=
 elseif key == NW_END_CODE then lastanchorlabel = nil
 elseif key == NW_TEXT then textnonblank = textnonblank or strfind(arg, '[%S]')
 elseif key == NW_DEFN then
-<<cases for pass 1>>=
         Set.insert(allchunks, arg)
         lastdefnlabel = Noidx.newdefnlabel(arg)
         NWB.put(newbuf, NW_XREF_LABEL, lastdefnlabel)
@@ -252,11 +214,8 @@ if dboutfile then
   end
   writeto(oldout)
 end
-<<cases for pass 1 ((luanw))>>=
-| NW_USE => 
-<<cases for pass 1 ((lua2))>>=
-elseif key == NW_USE then
 <<cases for pass 1>>=
+elseif key == NW_USE then
    if lastbegin == NW_BEGIN_CODE then
           Set.insert(allchunks, arg)
           thisusecount = thisusecount + 1
@@ -267,18 +226,10 @@ elseif key == NW_USE then
           textnonblank = textnonblank or strfind(arg, '[%S]')   
 	                                   -- could appear in quoted code
    end
-<<cases for pass 1 ((luanw))>>=
-| NW_INDEX_USE =>
-<<cases for pass 1 ((lua2))>>=
 elseif key == NW_INDEX_USE then
-<<cases for pass 1>>=
     Set.insert(allidents, arg)
     if lastanchorlabel then Noidx.addud(indexud, "use", arg, lastanchorlabel) end
-<<cases for pass 1 ((luanw))>>=
-| NW_INDEX_DEFN, NW_INDEX_LOCALDEFN =>
-<<cases for pass 1 ((lua2))>>=
 elseif key == NW_INDEX_DEFN or key ==  NW_INDEX_LOCALDEFN then
-<<cases for pass 1>>=
     Set.insert(allidents, arg)
     if lastanchorlabel then
       l = lastanchorlabel
@@ -331,39 +282,24 @@ end
 --  static defout		# number of definitions emitted for each chunk
 <<initialization>>=
 defout = { }   -- regrettably, can't set default to 0
-<<cases for pass 2 ((luanw))>>=
-| NW_BEGIN_DOCS, NW_BEGIN_CODE => 
-<<cases for pass 2 ((lua2))>>=
-elseif key == NW_BEGIN_DOCS or key == NW_BEGIN_CODE then
 <<cases for pass 2>>=
+elseif key == NW_BEGIN_DOCS or key == NW_BEGIN_CODE then
     if delay and lastbeginarg == arg then <<write trailers if not already written>> end
     NWB.put(sinkbuf, key, arg)
     thesedefns = Set.new ()
     theseuses  = Set.new ()
     thischunk = nil
-<<cases for pass 2 ((luanw))>>=
-| NW_DEFN =>
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_DEFN then
-<<cases for pass 2>>=
     thischunk = arg
     if anchorlabel[arg] then NWB.put(sinkbuf, NW_XREF_REF, anchorlabel[arg]) end
     NWB.put(sinkbuf, key, arg)
     <<write chunk cross-reference>>
-<<cases for pass 2 ((luanw))>>=
-| NW_END_CODE => 
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_END_CODE then
-<<cases for pass 2>>=
     -- must postpone index cross-reference to end of chunk because
     -- the info is accumulated in [[thesdefns]] and [[theseuses]] on this pass
     <<write index cross-reference>>
     NWB.put(sinkbuf, key, arg)
-<<cases for pass 2 ((luanw))>>=
-| NW_USE => 
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_USE then
-<<cases for pass 2>>=
     -- may not be right, but is something, anyway
     local l = anchorlabel[arg] or
               (prevdb[arg] and prevdb[arg].first) or 
@@ -371,56 +307,28 @@ elseif key == NW_USE then
               "nw@notdef"
     NWB.put(sinkbuf, NW_XREF_REF, l) -- was "???"
     NWB.put(sinkbuf, key, arg)
-<<cases for pass 2 ((luanw))>>=
-| NW_INDEX_DEFN, NW_INDEX_LOCALDEFN =>
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_INDEX_DEFN or key == NW_INDEX_LOCALDEFN then
-<<cases for pass 2>>=
     Set.insert(thesedefns, arg) -- no xref ref because of bug fix
     NWB.put(sinkbuf, key, arg)
-<<cases for pass 2 ((luanw))>>=
-| NW_INDEX_USE =>
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_INDEX_USE then
-<<cases for pass 2>>=
     Set.insert(theseuses, arg) -- no xref ref because of bug fix
     if indexanchorlabel[arg] then
       NWB.put(sinkbuf, NW_XREF_REF, indexanchorlabel[arg]) 
     end
     NWB.put(sinkbuf, key, arg)
-<<cases for pass 2 ((luanw))>>=
-| NW_TEXT => -- grotesque hack! for chunks and index in HTML
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_TEXT then -- grotesque hack! for chunks and index in HTML
-<<cases for pass 2>>=
    if not thischunk then -- docs mode
-<<cases for pass 2 ((luanw))>>=
-     case arg of
-     | "<nowebchunks>" => Noidx.lognowebchunks(sinkbuf)
-     | "<nowebindex>"  => Noidx.lognowebindex(sinkbuf)
-     else => NWB.put(sinkbuf, key, arg)
-<<cases for pass 2 ((lua2))>>=
      if arg == "<nowebchunks>" then Noidx.lognowebchunks(sinkbuf)
      elseif arg == "<nowebindex>"  then Noidx.lognowebindex(sinkbuf)
      else NWB.put(sinkbuf, key, arg)
-<<cases for pass 2>>=
      end
    else
     NWB.put(sinkbuf, key, arg)
    end
-<<cases for pass 2 ((luanw))>>=
-| NW_FATAL =>    NWB.put(sinkbuf, key, arg); exit(1)
-| NW_TRAILER =>  <<write trailers if not already written>>
-<<cases for pass 2 ((lua2))>>=
 elseif key == NW_FATAL then NWB.put(sinkbuf, key, arg); exit(1)
 elseif key == NW_TRAILER then <<write trailers if not already written>>
-<<cases for pass 2>>=
                  NWB.put(sinkbuf, key, arg)
-<<cases for pass 2 ((luanw))>>=
-else =>
-<<cases for pass 2 ((lua2))>>=
 else
-<<cases for pass 2>>=
   NWB.put(sinkbuf, key, arg)
 @ 
 %def thischunk thislabel thesedefns theseuses
@@ -589,9 +497,7 @@ Noidx.idtable = {}
 Noidx.keycounts = {} -- can't make 0 default
 Noidx.crc_prefix = Noidx.crc_prefix or ''
 Noidx.active_crc_prefix = ''
-<<case for [[crc_prefix]] ((luanw))>>=
-| "crc_prefix" => Noidx.active_crc_prefix = arg == "on" and Noidx.crc_prefix or ""
-<<case for [[crc_prefix]] ((lua2))>>=
+<<case for [[crc_prefix]]>>=
 elseif key == "crc_prefix" then Noidx.active_crc_prefix = arg == "on" and Noidx.crc_prefix or ""
 <<*>>=
 function Noidx.uniqueid(name)

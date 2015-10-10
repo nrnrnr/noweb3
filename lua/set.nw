@@ -99,12 +99,7 @@ end
 <<*>>=
 function Set.arithfallback(x, y, op)
   if type(x) == "table" and type(y) == "table" then
-<<* ((luanw))>>=
-    case op of
-    | "sub" => return Set.diff(x, y)
-<<* ((lua2))>>=
     if op == "sub" then return Set.diff(x, y)
-<<*>>=
     end
   end
   return Set.prevarithfallback(x, y, op)

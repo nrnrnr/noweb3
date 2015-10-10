@@ -168,22 +168,12 @@ end
 @ be generous here
 <<*>>=
 function List.concatfallback(x, y)
-<<* ((luanw))>>=
-  case type(x) .. "," .. type(y) of
-  | "table,table" => return List.concat(x, y)
-  | "table,nil" => return x
-  | "nil,table" => return y
-  | "table,string" => return List.concat(x, {y})
-  | "string,table" => return List.concat({x}, y)
-  else => return List.prevconcatfallback(x, y)
-<<* ((lua2))>>=
   if type(x) .. "," .. type(y) == "table,table" then return List.concat(x, y)
   elseif type(x) .. "," .. type(y) == "table,nil" then return x
   elseif type(x) .. "," .. type(y) == "nil,table" then return y
   elseif type(x) .. "," .. type(y) == "table,string" then return List.concat(x, {y})
   elseif type(x) .. "," .. type(y) == "string,table" then return List.concat({x}, y)
   else return List.prevconcatfallback(x, y)
-<<*>>=
   end
 end
 

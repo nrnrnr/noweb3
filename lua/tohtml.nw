@@ -49,22 +49,12 @@ function Stages.tohtml(sourcebuf, args)
   shortxref = 1   -- by default, use short form for cross-reference
   while List.length(args) > 0 do 
     a = List.get(args)
-<<* ((luanw))>>=
-    case a of
-    | "-delay" => delay = 1
-    | "-noindex" => noindex = 1
-    | "-longxref" => shortxref = nil
-    | "-localindex" => localindex = 1    -- produce local identifer cross-reference
-    | "-raw" => raw = 1  -- wrap HTML in rawhtml environment
-    | "-no-gen-comment" => no_gen_comment = 1
-<<* ((lua2))>>=
     if a == "-delay" then delay = 1
     elseif a == "-noindex" then noindex = 1
     elseif a == "-longxref" then shortxref = nil
     elseif a == "-localindex" then localindex = 1    -- produce local identifer cross-reference
     elseif a == "-raw" then raw = 1  -- wrap HTML in rawhtml environment
     elseif a == "-no-gen-comment" then no_gen_comment = 1
-<<*>>=
     end
   end
   localindex = localindex and not noindex
@@ -81,11 +71,7 @@ function Stages.tohtml(sourcebuf, args)
   r = NWB.reader(sourcebuf)
   key, value = NWB.read(r)
   while key do
-<<* ((luanw))>>=
-    case key of
-<<* ((lua2))>>=
     if key==nill then noweb_error("key was nil!")
-<<*>>=
     <<cases for conversion>>
     end
     key, value = NWB.read(r)
@@ -102,13 +88,9 @@ end
 <<@xref>>
 <<@index>>
 <<others>>
-<<cases for conversion ((luanw))>>=
-| NW_FATAL => return 1
-else =>
-<<cases for conversion ((lua2))>>=
+<<cases for conversion>>=
 elseif key == NW_FATAL then return 1
 else
-<<cases for conversion>>=
   if type(key) == "string" then
     warn_unknown(key, value)
   else
@@ -118,18 +100,11 @@ else
 [[ecode]] is the marker used at the end of the current code chunk.
 If there is no cross-reference stuff at the end, we just use [[</pre>]];
 otherwise we terminate whatever environment is used for the cross-reference stuff.
-<<code chunks ((luanw))>>=
-| NW_BEGIN_CODE => code = 1   ; thischunk = nil
-<<code chunks ((lua2))>>=
-elseif key == NW_BEGIN_CODE then code = 1   ; thischunk = nil
 <<code chunks>>=
+elseif key == NW_BEGIN_CODE then code = 1   ; thischunk = nil
                    <<reset cross-reference info>>
                    write(Tohtml.braw, "<pre>"); ecode = "</pre>"
-<<code chunks ((luanw))>>=
-| NW_END_CODE   => <<dump pending cross-reference info (long form)>>
-<<code chunks ((lua2))>>=
 elseif key == NW_END_CODE   then <<dump pending cross-reference info (long form)>>
-<<code chunks>>=
                    code = nil ; previscode = 1 
                    write(ecode, Tohtml.eraw)
 @ %def previscode
@@ -138,33 +113,24 @@ elseif key == NW_END_CODE   then <<dump pending cross-reference info (long form)
 We want to try to avoid emitting paragraph elements when the
 preceding chunk is a code chunk, as tracked by [[previscode]].
 Also, if we do slip in a paragraph, we may use the {\LaTeX} style.
-<<docs chunks ((luanw))>>=
-| NW_BEGIN_DOCS => if previscode then write((raw and "\\par") or "<p>") end
-<<docs chunks ((lua2))>>=
-elseif key == NW_BEGIN_DOCS then if previscode then write((raw and "\\par") or "<p>") end
 <<docs chunks>>=
+elseif key == NW_BEGIN_DOCS then if previscode then write((raw and "\\par") or "<p>") end
                    previscode = nil
                    text = 0 -- count of how many text chars seen
 @
 Sometimes it happens that a document-chunk anchor is put in a document chunk that
 contains no text.  In that case, we put in a phony anchor at the end of the chunk so 
 we won't lose the cross-reference.
-<<docs chunks ((luanw))>>=
-| NW_END_DOCS =>  if lastxreflabel then write(linklabel(lastxreflabel, "*")) end
-<<docs chunks ((lua2))>>=
-elseif key == NW_END_DOCS then  if lastxreflabel then write(linklabel(lastxreflabel, "*")) end
 <<docs chunks>>=
+elseif key == NW_END_DOCS then  if lastxreflabel then write(linklabel(lastxreflabel, "*")) end
                   lastxreflabel = nil
 @
 Normally, if there's a pending anchor, we put it on the first available text line.
 There's a bit of a fine point that crops up if the very first piece of text
 is quoted code.  In that case we have to attach both the label for the
 {\it docs} anchor and the ref for the {\it index} anchor.
-<<@text ((luanw))>>=
-| NW_TEXT =>      text = text + strlen (value)
-<<@text ((lua2))>>=
-elseif key == NW_TEXT then      text = text + strlen (value)
 <<@text>>=
+elseif key == NW_TEXT then      text = text + strlen (value)
                   if code then
                     if <<there should be an index anchor>> then
                       <<emit the index anchor>>
@@ -265,17 +231,11 @@ function Tohtml.untagged_chars_split(s)
   end
 end
 @ 
-<<@nl ((luanw))>>=
-| NW_NL   => <<show definitions and uses on definition line---once>>
-<<@nl ((lua2))>>=
-elseif key == NW_NL   then <<show definitions and uses on definition line---once>>
 <<@nl>>=
+elseif key == NW_NL   then <<show definitions and uses on definition line---once>>
              write('\n')
-<<@defn ((luanw))>>=
-| NW_DEFN => thischunk = value
-<<@defn ((lua2))>>=
-elseif key == NW_DEFN then thischunk = value
 <<@defn>>=
+elseif key == NW_DEFN then thischunk = value
              defns[thischunk] = defns[thischunk] or "="
              Tohtml.writechunk(lastxreflabel, lastxrefref, "dfn",
                                thischunk, defns[thischunk])
@@ -288,11 +248,8 @@ elseif key == NW_DEFN then thischunk = value
 useitemstab = { }
 defns = { }
 defns_above = Set.new()     -- keep track of defining chunks we've seen
-<<@use ((luanw))>>=
-| NW_USE  => Tohtml.writechunk(lastxreflabel, lastxrefref, "i", value) 
-<<@use ((lua2))>>=
-elseif key == NW_USE  then Tohtml.writechunk(lastxreflabel, lastxrefref, "i", value)
 <<@use>>=
+elseif key == NW_USE  then Tohtml.writechunk(lastxreflabel, lastxrefref, "i", value)
              <<clear [[lastxref*]]>>
 @
 Writing a chunk involves creating an anchor for it.
@@ -305,27 +262,15 @@ function Tohtml.writechunk(label, ref, tag, name, suffix)
                      "bare"))
 end
 @
-<<others ((luanw))>>=
-| NW_QUOTE    => quoting = 1   ; write(Tohtml.braw, "<code>")
-| NW_ENDQUOTE => quoting = nil ; write("</code>", Tohtml.eraw)
-<<others ((lua2))>>=
+<<others>>=
 elseif key == NW_QUOTE    then quoting = 1   ; write(Tohtml.braw, "<code>")
 elseif key == NW_ENDQUOTE then quoting = nil ; write("</code>", Tohtml.eraw)
-<<others ((luanw))>>=
-| NW_FILE     => filename = value; <<clear [[lastxref*]]>>
-| NW_LITERAL  => write(tab(0))
-| NW_HEADER   => if strfind(value, "^html ") then 
-<<others ((lua2))>>=
 elseif key == NW_FILE     then filename = value; <<clear [[lastxref*]]>>
 elseif key == NW_LITERAL  then write(tab(0))
 elseif key == NW_HEADER   then if strfind(value, "^html ") then
-<<others>>=
                    value = strsub(value, 6)
                    <<write HTML header>>
                  end
-<<others ((luanw))>>=
-| NW_TRAILER  => if value == "html" then <<write HTML trailer>> end
-<<others ((lua2))>>=
 elseif key == NW_TRAILER  then if value == "html" then <<write HTML trailer>> end
 @
 <<write HTML header>>=
@@ -337,16 +282,7 @@ write("</body></html>\n")
 uses for each chunk, even though the [[noidx]] filter only provides them once.
 I think it may prove better to provide use information for each instance
 of a chunk.
-<<@xref ((luanw))>>=
-| NW_XREF_LABEL     => <<warn if unused [[lastxreflabel]]>>; lastxreflabel = value
-| NW_XREF_REF       => <<warn if unused [[lastxrefref]]>>;   lastxrefref   = value
-| NW_XREF_PREVDEF   => pendingprev   = value
-| NW_XREF_NEXTDEF   => pendingnext   = value
-| NW_XREF_BEGINUSES => useitems = List.new()
-| NW_XREF_USEITEM   => List.put(useitems, value)
-| NW_XREF_ENDUSES   => if thischunk then useitemstab[thischunk] = useitems end
-| NW_XREF_NOTUSED   => notused = value
-<<@xref ((lua2))>>=
+<<@xref>>=
 elseif key == NW_XREF_LABEL     then <<warn if unused [[lastxreflabel]]>>; lastxreflabel = value
 elseif key == NW_XREF_REF       then <<warn if unused [[lastxrefref]]>>;   lastxrefref   = value
 elseif key == NW_XREF_PREVDEF   then pendingprev   = value
@@ -457,80 +393,41 @@ end
 @
 The HTML back end ignores [[@xref begindefs]], [[@xref defitem]], and
 [[@xref enddefs]]; it uses the [[nextdef]] and [[prevdef]] links instead.
-<<@xref ((luanw))>>=
-| NW_XREF_BEGINDEFS, NW_XREF_DEFITEM, NW_XREF_ENDDEFS => -- do nothing
-<<@xref ((lua2))>>=
+<<@xref>>=
 elseif key == NW_XREF_BEGINDEFS or key == NW_XREF_DEFITEM or key == NW_XREF_ENDDEFS then -- do nothing
 @
-<<@xref ((luanw))>>=
-| NW_XREF_BEGINCHUNKS => write(Tohtml.braw, "<ul>\n")
-| NW_XREF_CHUNKBEGIN  => write("<li>"); comma = ": "; count = 0
-<<@xref ((lua2))>>=
+<<@xref>>=
 elseif key == NW_XREF_BEGINCHUNKS then write(Tohtml.braw, "<ul>\n")
 elseif key == NW_XREF_CHUNKBEGIN  then write("<li>"); comma = ": "; count = 0
-<<@xref>>=
                          local ref, name = split_first_space(value)
 --errormsg("ref = ", image(ref), "; name = ", image(name), "; value = ", image(value))
                          Tohtml.writechunk(nil, ref, "i", name) 
-<<@xref ((luanw))>>=
-| NW_XREF_CHUNKUSE    => count = count + 1
-<<@xref ((lua2))>>=
 elseif key == NW_XREF_CHUNKUSE    then count = count + 1
-<<@xref>>=
                          write(comma, linkto(value, "U" .. count))
                          comma = ", "
-<<@xref ((luanw))>>=
-| NW_XREF_CHUNKDEFN   => count = count + 1
-<<@xref ((lua2))>>=
 elseif key == NW_XREF_CHUNKDEFN   then count = count + 1
-<<@xref>>=
                          write(comma, linkto(value, "D" .. count))
                          comma = ", "
-<<@xref ((luanw))>>=
-| NW_XREF_CHUNKEND    => write('\n')
-| NW_XREF_ENDCHUNKS   => write("</ul>", Tohtml.eraw, '\n')
-<<@xref ((lua2))>>=
 elseif key == NW_XREF_CHUNKEND    then write('\n')
 elseif key == NW_XREF_ENDCHUNKS   then write("</ul>", Tohtml.eraw, '\n')
-<<@index ((luanw))>>=
-| NW_INDEX_BEGININDEX => write(Tohtml.braw, "<ul>", '\n')
-| NW_INDEX_ENTRYBEGIN => write("<li>"); comma = ": "; count = 0
-<<@index ((lua2))>>=
+<<@index>>=
 elseif key == NW_INDEX_BEGININDEX then write(Tohtml.braw, "<ul>", '\n')
 elseif key == NW_INDEX_ENTRYBEGIN then write("<li>"); comma = ": "; count = 0
-<<@index>>=
                          local ref, name = split_first_space(value)
                          write(linklabelto("NWI-" .. Tohtml.escapeSpecials(name),
                                            ref, name, "b"))
-<<@index ((luanw))>>=
-| NW_INDEX_ENTRYUSE   => count = count + 1
-<<@index ((lua2))>>=
 elseif key == NW_INDEX_ENTRYUSE   then count = count + 1
-<<@index>>=
                          write(comma, linkto(value, "U" .. count))
                          comma = ", "
-<<@index ((luanw))>>=
-| NW_INDEX_ENTRYDEFN  => count = count + 1
-<<@index ((lua2))>>=
 elseif key == NW_INDEX_ENTRYDEFN  then count = count + 1
-<<@index>>=
                          write(comma, linkto(value, "D" .. count))
                          comma = ", "
-<<@index ((luanw))>>=
-| NW_INDEX_ENTRYEND   => write('\n')
-| NW_INDEX_ENDINDEX   => write("</ul>", Tohtml.eraw, '\n')
-<<@index ((lua2))>>=
 elseif key == NW_INDEX_ENTRYEND   then write('\n')
 elseif key == NW_INDEX_ENDINDEX   then write("</ul>", Tohtml.eraw, '\n')
 @
 The local identifier cross-reference doesn't show each use; it just shows
 the identifiers that are defined, with links to the full index.
-<<@index ((luanw))>>=
-| NW_INDEX_USE       => lastindexref = lastxrefref; lastxrefref = nil
-| NW_INDEX_DEFN      => <<clear [[lastxref*]]>>
-| NW_INDEX_LOCALDEFN => <<clear [[lastxref*]]>>
-| NW_INDEX_NL        => -- do nothing -- no hope of keeping line numbering
-<<@index ((lua2))>>=
+<<@index>>=
 elseif key == NW_INDEX_USE       then lastindexref = lastxrefref; lastxrefref = nil
 elseif key == NW_INDEX_DEFN      then <<clear [[lastxref*]]>>
 elseif key == NW_INDEX_LOCALDEFN then <<clear [[lastxref*]]>>
@@ -538,11 +435,8 @@ elseif key == NW_INDEX_NL        then -- do nothing -- no hope of keeping line n
 @
 I tried an abbreviated index format at the end of the chunk, but it looks
 so bad that I've punted on it (for now).  Hence the [[\uglyindex]].
-<<@index ((luanw))>>=
-| NW_INDEX_BEGINDEFS => if localindex then
-<<@index ((lua2))>>=
-elseif key == NW_INDEX_BEGINDEFS then if localindex then
 <<@index>>=
+elseif key == NW_INDEX_BEGINDEFS then if localindex then
                           <<dump pending cross-reference info (long form)>>
                           if not uglyindex or not shortxref then
                             <<code-to-blockquote>>
@@ -552,13 +446,8 @@ elseif key == NW_INDEX_BEGINDEFS then if localindex then
                           end
                           comma = "" 
                         end
-<<@index ((luanw))>>=
-| NW_INDEX_ISUSED  => -- do nothing
-| NW_INDEX_DEFITEM => if localindex then
-<<@index ((lua2))>>=
 elseif key == NW_INDEX_ISUSED  then -- do nothing
 elseif key == NW_INDEX_DEFITEM then if localindex then
-<<@index>>=
                         write(comma, linkto("NWI-" .. Tohtml.escapeSpecials(value), 
                                        sgmlwrap("code", Tohtml.escapeSpecials(value))))
                        if not uglyindex or not shortxref then
@@ -567,22 +456,14 @@ elseif key == NW_INDEX_DEFITEM then if localindex then
                          comma = "<b>,</b> "
                        end
                      end
-<<@index ((luanw))>>=
-| NW_INDEX_ENDDEFS => if localindex then 
-<<@index ((lua2))>>=
 elseif key == NW_INDEX_ENDDEFS then if localindex then
-<<@index>>=
                         if not uglyindex or not shortxref then
                           write(" (links are to index).<p>\n")
                         else
                           write("<b>]</b>\n")
                         end
                       end
-<<@index ((luanw))>>=
-| NW_INDEX_BEGINUSES, NW_INDEX_ISDEFINED, NW_INDEX_USEITEM, NW_INDEX_ENDUSES => 
-<<@index ((lua2))>>=
 elseif key == NW_INDEX_BEGINUSES or key == NW_INDEX_ISDEFINED or key ==  NW_INDEX_USEITEM or key == NW_INDEX_ENDUSES then
-<<@index>>=
     -- do nothing; use local links
 @
 \subsection{Support functions}
