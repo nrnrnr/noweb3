@@ -4,11 +4,11 @@
 
 VERSION= 2.5
 
-#INC= $(LUA)/include
-#LIB= $(LUA)/lib
-#BIN= $(LUA)/bin
+INC= $(LUA)/include
+LIB= $(LUA)/lib
+BIN= $(LUA)/bin
 
-INCS= -Ic:\users\dazitzel\lp\nwalphaXXYYZZ\lua-2.5\include $(EXTRA_INCS)
+INCS= -I$(INC) $(XINCLUDES)
 DEFS= $(EXTRA_DEFS)
 
 CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)

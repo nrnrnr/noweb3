@@ -2,7 +2,8 @@
 
 LUA= ..
 
-include $(LUA)/config
+include ../../nwconfig
+include ../config
 
 OBJS=	fallback.o\
 	func.o\
@@ -41,7 +42,7 @@ SRCS=	fallback.c\
 	undump.h\
 	lua.stx
 
-SLIB= $(LIB)/liblua.a
+SLIB= $(OUTPUT)/liblua.a
 
 all: $(SLIB)
 

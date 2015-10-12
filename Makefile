@@ -19,7 +19,7 @@ ciilib:
 
 lualib:
 	-mkdir $(LIB3)$(P)lua-2.5 2>$(NUL)
-	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" && cd .. && $(LuaCpCommand2)
+	cd lua-2.5 && $(MK) $(LuaMakefile) "OUTPUT=$(LIB3)$(P)lua-2.5" && cd ..
 
 code: bootstrap ciilib lualib
 	-mkdir $(LIB3)$(P)c 2>$(NUL)

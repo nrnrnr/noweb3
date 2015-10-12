@@ -2,14 +2,15 @@
 
 LUA= ../..
 
-include $(LUA)/config
+include ../../../nwconfig
+include ../../config
 
 EXTRA_DEFS= $(POPEN) $(NOSTRERROR)
 
 OBJS= iolib.o mathlib.o strlib.o
 SRCS= iolib.c mathlib.c strlib.c
 
-SLIB= $(LIB)/liblualib.a
+SLIB= $(OUTPUT)/liblualib.a
 
 # dynamic libraries only work for SunOs
 DLIB= $(LIB)/liblualib.so.$(VERSION)

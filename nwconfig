@@ -35,11 +35,7 @@ LIB3=/h/nr/machine/amd64-linux/lib/noweb3
 #
 # Lua kludges --- here because we know we are moving to Lua 5.
 LuaMakefile=
-LuaCpCommand=cp ./lua-2.5+nw/lib/* $(LIB3)/lua-2.5+nw
-LuaCpCommand2=cp ./lua-2.5/lib/* $(LIB3)/lua-2.5
 #LuaMakefile=-f Makefile.win
-#LuaCpCommand=echo Lua-2.5+nw in place
-#LuaCpCommand2=echo Lua-2.5 in place
 
 ################################################################
 #
@@ -59,7 +55,8 @@ MK=make
 #MK=nmake /nologo /s
 
 # nocond
-NOCOND=$(LIB3)\tools\nocond
+NOCOND=$(LIB3)/tools/nocond
+#NOCOND=$(LIB3)\tools\nocond
 
 # compile
 CC=gcc
