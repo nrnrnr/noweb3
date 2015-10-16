@@ -61,12 +61,21 @@ extern int fileno(FILE *);  /* needed on linux ?! */
 #define T XPipe_T
 typedef struct T* T;
 
+<<header ((lua2))>>=
 extern T    XPipe_function     (int (*f)(void *cl, FILE *in, FILE *out), void *cl,
                                 char *name);
+<<header ((lua3))>>=
+extern T    XPipe_function     (int (*f)(void *cl, char *inname, char *outname), void *cl,
+                                char *name);
+<<header>>=
 extern T    XPipe_program      (char* path, char** argv, char** envp);
 extern T    XPipe_connect      (T left, T right);
 extern void XPipe_print        (FILE* fp, T pipeline);
+<<header ((lua2))>>=
 extern int  XPipe_run      (T pipeline, FILE *in, FILE *out);
+<<header ((lua3))>>=
+extern int  XPipe_run      (T pipeline);
+<<header>>=
 extern void XPipe_free         (T* pipeline);
 
 #undef T
@@ -96,7 +105,11 @@ struct XPipe_Program {
   char** envp;
 };
 struct XPipe_Function {
+<<definition of [[struct XPipe_Stage]] ((lua2))>>=
   int (*f)(void *, FILE *in, FILE *out);
+<<definition of [[struct XPipe_Stage]] ((lua3))>>=
+  int (*f)(void *, char *inname, char *outname);
+<<definition of [[struct XPipe_Stage]]>>=
   void *arg;
   const char *name;
 };
@@ -163,8 +176,11 @@ T XPipe_program(char* path, char** argv, char** envp) {
   new_pipeline->stages = List_list(new_stage, NULL);
   return new_pipeline;
 }
-<<common functions>>=
+<<common functions ((lua2))>>=
 T XPipe_function(int (*f)(void *, FILE *in, FILE *out), void *arg, char *name) {
+<<common functions ((lua3))>>=
+T XPipe_function(int (*f)(void *, char *inname, char *outname), void *arg, char *name) {
+<<common functions>>=
   XPipe_Stage new_stage;
   T new_pipeline;
   assert(f);
@@ -581,18 +597,28 @@ Also useful for debugging!
 #endif
 @ 
 We walk a list of stages with input and output files given.
-<<private temporary-file prototypes>>=
+<<private temporary-file prototypes ((lua2))>>=
 static int do_stage (XPipe_Stage stage, FILE *in, FILE *out);
 static int do_stages(List_T stages, FILE *in, FILE *out);
-<<temporary-file functions>>=
+<<private temporary-file prototypes ((lua3))>>=
+static int do_stage (XPipe_Stage stage, char *inname, char *outname);
+static int do_stages(List_T stages, char *inname, char *outname);
+<<temporary-file functions ((lua2))>>=
 int XPipe_run(XPipe_T pipeline, FILE *in, FILE *out) {
 #if 0
   fprintf(stderr, "tmp running "); XPipe_print(stderr, pipeline); putc('\n', stderr); fflush(stderr);
 #endif
   return do_stages(pipeline->stages, in, out);
 }
+<<temporary-file functions ((lua3))>>=
+int XPipe_run(XPipe_T pipeline) {
+#if 0
+  fprintf(stderr, "tmp running "); XPipe_print(stderr, pipeline); putc('\n', stderr); fflush(stderr);
+#endif
+  return do_stages(pipeline->stages, NULL, NULL);
+}
 @
-<<temporary-file functions>>=
+<<temporary-file functions ((lua2))>>=
 static int do_stages(List_T l, FILE *in, FILE *out) {
   int n;
   assert(l);
@@ -611,10 +637,26 @@ static int do_stages(List_T l, FILE *in, FILE *out) {
     return do_stage(l->first, in, out);
   }
 }
+<<temporary-file functions ((lua3))>>=
+static int do_stages(List_T l, char *inname, char *outname) {
+  int n;
+  assert(l);
+  if (l->rest) {
+    char tmpname [L_tmpnam];
+    <<set [[tmpname]] to a suitable temporary file name>>
+    n = do_stage(l->first, inname, tmpname);   
+    if (n == 0) {
+      n = do_stages(l->rest, tmpname, outname);
+    }
+    return n;
+  } else {
+    return do_stage(l->first, inname, outname);
+  }
+}
 @ 
 The leaf nodes are the stages of the pipeline; processes to execute
 these stages are called from within [[forkStageTo]].
-<<temporary-file functions>>=
+<<temporary-file functions ((lua2))>>=
 static int do_stage(struct XPipe_Stage *stage, FILE *in, FILE *out) {
   switch (stage->tag) {
     case Fun:
@@ -628,6 +670,24 @@ fprintf(stderr, "running function %s in xpipe\n", stage->u.fun.name);
 fprintf(stderr, "running program %s in xpipe\n", stage->u.prog.path);
 #endif
       return run_program(&stage->u.prog, in, out);
+    default:
+      assert(0); return -1;
+  }
+}
+<<temporary-file functions ((lua3))>>=
+static int do_stage(struct XPipe_Stage *stage, char *inname, char *outname) {
+  switch (stage->tag) {
+    case Fun:
+      assert(stage->u.fun.f);
+#if 0
+fprintf(stderr, "running function %s in xpipe\n", stage->u.fun.name);
+#endif
+      return stage->u.fun.f(stage->u.fun.arg, inname, outname);
+    case Prog:
+#if 0
+fprintf(stderr, "running program %s in xpipe\n", stage->u.prog.path);
+#endif
+      return run_program(&stage->u.prog, inname, outname);
     default:
       assert(0); return -1;
   }
@@ -656,16 +716,26 @@ void PrintError(LPTSTR lpszPreface) {
   LocalFree(lpMsgBuf);
 }
 @
-<<private temporary-file prototypes>>=
+<<private temporary-file prototypes ((lua2))>>=
 static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out);
+<<private temporary-file prototypes ((lua3))>>=
+static int run_program(struct XPipe_Program *prog, char *inname, char *outname);
 <<Unix run-program functions>>=
 #include <unistd.h>
 #include <sys/types.h>
 #include "sys.h"
 
+<<Unix run-program functions ((lua2))>>=
 static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
+<<Unix run-program functions ((lua3))>>=
+static int run_program(struct XPipe_Program *prog, char *inname, char *outname) {
+<<Unix run-program functions>>=
   char** new_argv;
   int pid;
+<<Unix run-program functions ((lua3))>>=
+  FILE* in  =  inname==NULL?stdin :fopen( inname,"r");
+  FILE* out = outname==NULL?stdout:fopen(outname,"w");
+<<Unix run-program functions>>=
   if ((pid = fork()) == 0) {
     <<make [[new_argv]] be [[prog->path]] followed by [[argv]]>>
     makeInput (fileno(in ));
@@ -679,12 +749,22 @@ static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
     exit(EXIT_FAILURE);
     return -1; /* prevents warning */
   } else {
-    return waitfor(pid);
+    int result = waitfor(pid);
+<<Unix run-program functions ((lua3))>>=
+    if( inname!=NULL) fclose( in);
+    if(outname!=NULL) fclose(out);
+<<Unix run-program functions>>=
+    return result;
   }
 }
 @ 
-<<Windows run-program functions>>=
+<<Windows run-program functions ((lua2))>>=
 static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
+<<Windows run-program functions ((lua3))>>=
+static int run_program(struct XPipe_Program *prog, char *inname, char *outname) {
+  FILE* in  =  inname==NULL?stdin :fopen( inname,"r");
+  FILE* out = outname==NULL?stdout:fopen(outname,"w");
+<<Windows run-program functions>>=
   STARTUPINFO si;
   ZeroMemory(&si, sizeof(si));
   si.cb = sizeof(si);
@@ -718,6 +798,10 @@ static int run_program(struct XPipe_Program *prog, FILE *in, FILE *out) {
   _close(_fileno(in));
   _close(_fileno(out));
   _close(_fileno(stderr));
+<<Windows run-program functions ((lua3))>>=
+  if( inname!=NULL) fclose( in);
+  if(outname!=NULL) fclose(out);
+<<Windows run-program functions>>=
   if(result!=0)
     exit(EXIT_FAILURE);
   return result;
@@ -812,6 +896,7 @@ for(i = 0; i < m; i ++)
 }
 new_envp[n] = '\0';
 @ 
+For Lua 2:
 Temporary files are supported using [[tmpfile]], which is ISO~C.
 N.B.~The file is automatically deleted on closure.
 <<set [[tmp]] to a suitable temporary file>>=
@@ -819,6 +904,12 @@ tmp = tmpfile();
 assert(tmp);
 <<recover resources associated with [[tmp]]>>=
 (void) fclose(tmp);
+@
+For Lua 3:
+Temporary files are supported using [[tmpname]], which is ISO~C.
+<<set [[tmpname]] to a suitable temporary file name>>=
+tmpnam (tmpname);
+assert(tmpname[0]);
 @ 
 \subsection{Possible help for Windows}
 

@@ -2,7 +2,8 @@
 
 LUA= ..
 
-include $(LUA)/config
+include ../../nwconfig
+include ../config
 
 OBJS=	auxlib.o\
 	fallback.o\
@@ -47,7 +48,7 @@ SRCS=	auxlib.c\
 	zio.h\
 	lua.stx
 
-SLIB= $(LIB)/liblua.a
+SLIB= $(OUTPUT)/liblua.a
 
 all: $(SLIB)
 

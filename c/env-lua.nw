@@ -57,7 +57,7 @@ static void abort_lua(void) {
   abort();
 }
 
-<<functions>>=
+<<functions ((lua2))>>=
 static void fflush_lua(void) {
   lua_Object var;
   int rc;
@@ -65,6 +65,23 @@ static void fflush_lua(void) {
   lua_get_args("System.fflush", 1, LUA_USERDATA | LUA_NIL | OPTIONAL, &var);
   if (lua_isuserdata(var)) rc = fflush(lua_getuserdata(var));
   else if (lua_isnil(var)) rc = fflush(lua_outfile);
+  else assert(0);
+  lua_pushnumber((double)rc);
+}
+<<functions ((lua3))>>=
+static void fflush_lua(void) {
+  lua_Object var;
+  int rc;
+  lua_get_args("System.fflush", 1, LUA_USERDATA | LUA_NIL | OPTIONAL, &var);
+  if (lua_isuserdata(var)) rc = fflush(lua_getuserdata(var));
+  else if (lua_isnil(var)) {
+    /* following code stolen from lua iolib.c getfile() */
+    extern int lua_tagio;
+    lua_Object f = lua_getglobal("_INPUT");
+    if (!lua_isuserdata(f) || lua_tag(f) != lua_tagio)
+      luaL_verror("global variable _INPUT is not a file handle");
+    rc = fflush(lua_getuserdata(f));
+  }
   else assert(0);
   lua_pushnumber((double)rc);
 }

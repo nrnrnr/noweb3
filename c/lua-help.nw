@@ -90,7 +90,11 @@ extern struct Application* build_app_from_lua_args(char *funname);
   /* call to make an application from lua arguments f, arg, optional name
      funname is name of lua function (for errors) */
 #include <stdio.h>
+<<exports ((lua2))>>=
 extern int apply_application(void *app, FILE *in, FILE *out);
+<<exports ((lua3))>>=
+extern int apply_application(void *app, char *in, char *out);
+<<exports>>=
 void print_application(FILE *fp, void*env, void*app);
   /* if env is NULL, use the short version, o/w full */
 @ 
@@ -341,7 +345,7 @@ struct Application* build_app_from_lua_args(char *funname) {
   return app;
 }
 @
-<<functions>>=
+<<functions ((lua2))>>=
 extern FILE *lua_infile, *lua_outfile; /* from lua iolib.c */
 int apply_application(void *closure, FILE *in, FILE *out) {
   struct Application *a = closure;
@@ -354,6 +358,30 @@ int apply_application(void *closure, FILE *in, FILE *out) {
   lua_callfunction(f);
   lua_infile = oldin;
   lua_outfile = oldout;
+  return (int)lua_getnumber(lua_getresult(1));
+}
+<<functions ((lua3))>>=
+int apply_application(void *closure, char *inname, char *outname) {
+  struct Application *a = closure;
+  if(inname!=NULL) {
+    lua_pushstring(inname);
+    lua_callfunction(lua_getglobal("readfrom"));
+  }
+  if(outname!=NULL) {
+    lua_pushstring(outname);
+    lua_callfunction(lua_getglobal("writeto"));
+  }
+  lua_Object f = lua_getref(a->f);
+  lua_pushref(a->arg);
+  lua_callfunction(f);
+  if(inname!=NULL) {
+    lua_pushnil();
+    lua_callfunction(lua_getglobal("readfrom"));
+  }
+  if(outname!=NULL) {
+    lua_pushnil();
+    lua_callfunction(lua_getglobal("writeto"));
+  }
   return (int)lua_getnumber(lua_getresult(1));
 }
 <<functions>>=

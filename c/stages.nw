@@ -25,7 +25,12 @@ This is the Lua registration of the C internal pipeline stages.
 #define NULL 0
 #endif
 
+<<stages.c ((lua2))>>=
 extern FILE *lua_infile, *lua_outfile; /* from lua iolib.c */
+<<stages.c ((lua3))>>=
+#define lua_outfile NULL
+#define lua_infile NULL
+<<stages.c>>=
 <<stages>>
 <<Lua registration of functions>>
 @ 

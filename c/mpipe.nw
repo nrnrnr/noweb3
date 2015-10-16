@@ -154,10 +154,14 @@ $I$'s combine with each other to produce more~$I$'s, but when an~$I$
 combines with an~$X$, it has to be wrapped to turn it into an~$X$.
  The wrapping is different depending on whether the~$I$ is
 the left end, the middle, or the right of its pipeline.
-<<functions>>=
+<<functions ((lua2))>>=
 static int ipipe_run_left  (void *internal_pipe, FILE*, FILE*);
 static int ipipe_run_middle(void *internal_pipe, FILE*, FILE*);
 static int ipipe_run_right (void *internal_pipe, FILE*, FILE*);
+<<functions ((lua3))>>=
+static int ipipe_run_left  (void *internal_pipe, char*, char*);
+static int ipipe_run_middle(void *internal_pipe, char*, char*);
+static int ipipe_run_right (void *internal_pipe, char*, char*);
 @ 
 The most interesting operation is absorbing an~$I$ into the~$X$ to
 its left. 
@@ -170,7 +174,11 @@ externalizing it.
 static XPipe_T combine_XI(XPipe_T l, IPipe_T r, int r_is_last);
 static XPipe_T combine_XI(XPipe_T l, IPipe_T r, int r_is_last) {
   XPipe_T x;
+<<functions ((lua2))>>=
   int (*wrapper)(void *, FILE*, FILE*);
+<<functions ((lua3))>>=
+  int (*wrapper)(void *, char*, char*);
+<<functions>>=
 
   if (l) wrapper = r_is_last ? ipipe_run_right : ipipe_run_middle;
   else   wrapper = (assert(!r_is_last), ipipe_run_left);
@@ -235,15 +243,20 @@ would be better.
 if (!ext)
   return IPipe_run(ints, NULL, NULL);
 else if (!ints)
+<<run [[ext]] followed by [[ints]] ((lua2))>>=
   return XPipe_run(ext, stdin, stdout); 
 else
   return XPipe_run(combine_XI(ext, ints, 1), stdin, stdout);
+<<run [[ext]] followed by [[ints]] ((lua3))>>=
+  return XPipe_run(ext);
+else
+  return XPipe_run(combine_XI(ext, ints, 1));
 @ 
 An internal pipeline should be preceded by \texttt{fromascii},
 unless it's at the left end of the full pipeline.
 Similarly, it should be followed by \texttt{toascii}, unless it's at
 the right end of the full pipeline.
-<<functions>>=
+<<functions ((lua2))>>=
 static int ipipe_run (int left, int right, IPipe_T p, FILE *in, FILE *out) {
   if (!left)  p = IPipe_connect(IPipe_stage("fromascii", readascii, in), p);
   if (!right) p = IPipe_connect(p, IPipe_stage("toascii", NowebBuffer_toascii, out));
@@ -257,6 +270,22 @@ static int ipipe_run_middle(void *p, FILE *in, FILE *out) {
   return ipipe_run(0, 0, p, in, out);
 }
 static int ipipe_run_right(void *p, FILE *in, FILE *out) {
+  return ipipe_run(0, 1, p, in, out);
+}
+<<functions ((lua3))>>=
+static int ipipe_run (int left, int right, IPipe_T p, char *in, char *out) {
+  if (!left)  p = IPipe_connect(IPipe_stage("fromascii", readascii, in), p);
+  if (!right) p = IPipe_connect(p, IPipe_stage("toascii", NowebBuffer_toascii, out));
+  return IPipe_run(p, NULL, NULL);
+}
+
+static int ipipe_run_left  (void *p, char *in, char *out) {
+  return ipipe_run(1, 0, p, in, out);
+}
+static int ipipe_run_middle(void *p, char *in, char *out) {
+  return ipipe_run(0, 0, p, in, out);
+}
+static int ipipe_run_right(void *p, char *in, char *out) {
   return ipipe_run(0, 1, p, in, out);
 }
 @ 
