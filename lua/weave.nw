@@ -82,16 +82,15 @@ be given in a certain order.
 <<scan options and arguments>>=
 i = 1
 while i <= List.length(argv) do
-  globmatch argv[i] of
-  | "-externaldefaults" => externalDefaults()
-  | "-internaldefaults" => -- do nothing
-  | "-e" => i = i + 1; dostring(argv[i])
+  if argv[i] == "-externaldefaults" then externalDefaults()
+  elseif argv[i] == "-internaldefaults" then -- do nothing
+  elseif argv[i] == "-e" then i = i + 1; dostring(argv[i])
   <<first pass {\tt noweave} options>>
-  | "-"  => List.put(args, "-")
-  | "-*" => errormsg {"Unrecognized option ", argv[i]}
+  elseif argv[i] == "-"  then List.put(args, "-")
+  elseif matchpattern(argv[i], "-*") then errormsg {"Unrecognized option ", argv[i]}
             <<show usage>>
             exit(1)
-  | "*"  => List.put(args, argv[i])
+  elseif matchpattern(argv[i], "*")  then List.put(args, argv[i])
   end
   i = i + 1
 end
@@ -112,25 +111,25 @@ Possibly dangerous.
 if wrapper == nil then wrapper = "latex" end
 i = 1
 while i <= List.length(argv) do
-  globmatch argv[i] of
+  if argv[i] == nil then noweb_error("argv[i] was nil!")
     <<second pass {\tt noweave} options>>
   end
   i = i + 1
 end
 <<first pass {\tt noweave} options>>=
-| "-latex" =>      if wrapper ~= "none" then wrapper = "latex" end
-| "-tex" =>        wrapper="tex"
-| "-html" =>       if wrapper ~= "none" then wrapper = "html"  end
+elseif argv[i] == "-latex" then      if wrapper ~= "none" then wrapper = "latex" end
+elseif argv[i] == "-tex" then        wrapper="tex"
+elseif argv[i] == "-html" then       if wrapper ~= "none" then wrapper = "html"  end
                    backopts = List.new { "-localindex" }
-		   <<common HTML settings>>
-| "-latex+html" =>  if wrapper ~= "none" then wrapper = "latex" end
+                   <<common HTML settings>>
+elseif argv[i] == "-latex+html" then  if wrapper ~= "none" then wrapper = "latex" end
                    backopts = List.new { "-localindex", "-raw" }
-		   <<common HTML settings>>
-| "-ascii" =>      wrapper= "none"; backend = libFile("toascii")
-| "-troff" =>      wrapper="mm";    backend = libFile("toroff")
-| "-n" =>          wrapper="none"
-| "-backend" =>    backend=argv[i+1]; i = i+1
-| "-markup" =>     markup =argv[i+1]; i = i+1
+                   <<common HTML settings>>
+elseif argv[i] == "-ascii" then      wrapper= "none"; backend = libFile("toascii")
+elseif argv[i] == "-troff" then      wrapper="mm";    backend = libFile("toroff")
+elseif argv[i] == "-n" then          wrapper="none"
+elseif argv[i] == "-backend" then    backend=argv[i+1]; i = i+1
+elseif argv[i] == "-markup" then     markup =argv[i+1]; i = i+1
 
 <<common HTML settings>>=
 backend = Defaults.tohtml
@@ -242,25 +241,25 @@ end
 using_index=nil; using_xref=nil
 @
 <<first pass {\tt noweave} options>>=
-| "-filter", "-ifilter"  => i = i+1
-| "-x" =>                           using_xref=1
-| "-index" =>            noindex=nil ; using_index=1
-| "-indexfrom" => i=i+1; noindex=nil ; using_index=1
-| "-indexdb" =>   i = i + 1; indexdatabase = indexdatabase .. List.fromstring(argv[i])
+elseif argv[i] == "-filter" or argv[i] == "-ifilter"  then i = i+1
+elseif argv[i] == "-x" then                           using_xref=1
+elseif argv[i] == "-index" then            noindex=nil ; using_index=1
+elseif argv[i] == "-indexfrom" then i=i+1; noindex=nil ; using_index=1
+elseif argv[i] == "-indexdb" then   i = i + 1; indexdatabase = indexdatabase .. List.fromstring(argv[i])
 <<second pass {\tt noweave} options>>=
-| "-filter" =>
+elseif argv[i] == "-filter" then
     filters = filters .. MD.stringFilter(argv[i+1])
     i = i + 1
-| "-ifilter" =>
+elseif argv[i] == "-ifilter" then
     dostring("if 1 then local f, arg = " .. argv[i+1] ..
              "; filters = filters .. MPipe.filter(f, arg) end")
     i = i + 1
-| "-x" =>
+elseif argv[i] == "-x" then
     filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
-| "-index" =>
+elseif argv[i] == "-index" then
   filters = filters .. P.filter(Defaults.finduses, noquote)
   filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
-| "-indexfrom" =>
+elseif argv[i] == "-indexfrom" then
   filters = filters .. P.filter(Defaults.finduses, noquote .. {argv[i+1]})
   filters = filters .. P.filter(Defaults.noidx, docanchor .. delay .. indexdatabase)
   i = i + 1
@@ -377,7 +376,7 @@ There is no limit on the number of internal filters that may be used.
 <<description of -markup option>>
 @ \fi
 <<first pass {\tt noweave} options>>=
-| "-autodefs" =>
+elseif argv[i] == "-autodefs" then
     f = libFile("autodefs." .. argv[i+1])
     if MD.isExecutable(f) then
       filters = filters .. P.filter(f, {})
@@ -386,7 +385,7 @@ There is no limit on the number of internal filters that may be used.
       exit(1)
     end
     i = i + 1
-| "-showautodefs" => <<print all legal [[-autodefs]] or complain>>; exit (1)
+elseif argv[i] == "-showautodefs" then <<print all legal [[-autodefs]] or complain>>; exit (1)
 <<option printout for usage>>=
 errormsg("-autodefs lang	Source is in language 'lang'; find definitions automatically.")
 errormsg("-showautodefs		List languages that can be used with -autodefs.")
@@ -433,7 +432,7 @@ or \verb+-option longxref+ on the
 command line, we pass something suitable to the back end, in case we're doing
 HTML.
 <<first pass {\tt noweave} options>>=
-| "-option" => newopt=argv[i+1]; i = i + 1
+elseif argv[i] == "-option" then newopt=argv[i+1]; i = i + 1
          if newopt == "shortxref" then shortxref = List.new {"-shortxref"} end
          if newopt == "longxref"  then shortxref = List.new {"-longxref"} end
 	 if noweboptions then
@@ -464,7 +463,7 @@ works black magic with
 .BR \-html .
 @ \fi
 <<first pass {\tt noweave} options>>=
-| "-delay" =>   delay={"-delay"} ; wrapper="none"
+elseif argv[i] == "-delay" then   delay={"-delay"} ; wrapper="none"
 <<option printout for usage>>=
 errormsg("-delay		Delay markup until after first documentation chunk.")
 @ \iffalse
@@ -495,7 +494,7 @@ option implies the
 option.
 @ \fi
 <<first pass {\tt noweave} options>>=
-| "-t*" => List.put(markopts, argv[i])
+elseif matchpattern(argv[i], "-t*") then List.put(markopts, argv[i])
 <<option printout for usage>>=
 errormsg("-tk		Expand tab stops every k columns.")
 errormsg("-t		Copy tabs to the output.")
@@ -512,7 +511,8 @@ columns.
 Copy tabs to the output.
 @ \fi
 <<first pass {\tt noweave} options>>=
-| "-v" => errormsg("RCS version name $Name$")
+elseif argv[i] == "-v" then errormsg("RCS version name $Name:  $")
+<<first pass {\tt noweave} options)>>=
     errormsg("RCS id $Id$")
     verbose=1
 <<option printout for usage>>=
@@ -587,15 +587,13 @@ With an internal source, it's easy to supply headers and trailers.
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>=
 function internal_src (buf, t)
   local rc
-  case t.wrapper of
-  | "latex" => NWB.put(buf, NW_HEADER, wrapper .. " " .. noweboptions)
-  | "none"  =>
-  else => NWB.put(buf, NW_HEADER, wrapper .. " " .. List.tostring(args))
+  if t.wrapper == "latex" then NWB.put(buf, NW_HEADER, wrapper .. " " .. noweboptions)
+  elseif t.wrapper == "none"  then
+  else NWB.put(buf, NW_HEADER, wrapper .. " " .. List.tostring(args))
   end
   rc = t.fun(buf, t.arg)
-  case t.wrapper of
-  | "none"  =>
-  else => NWB.put(buf, NW_TRAILER, wrapper)
+  if t.wrapper == "none"  then
+  else NWB.put(buf, NW_TRAILER, wrapper)
   end
   return rc
 end
@@ -603,33 +601,29 @@ end
 With an external source, much harder --- I need an explicit [[fromascii]].
 <<using [[markup]] and [[wrapper]], make [[src]] the source>>=
 function external_src(t)
-  case t.wrapper of
-  | "latex" => write("@header ", wrapper .. " " .. noweboptions, '\n')
-  | "none"  =>
-  else => write("@header ", wrapper .. " " .. List.tostring(args), '\n')
+  if t.wrapper == "latex" then write("@header ", wrapper .. " " .. noweboptions, '\n')
+  elseif t.wrapper == "none" then
+  else write("@header ", wrapper .. " " .. List.tostring(args), '\n')
      --- where is args coming from?
   end
   System.fflush()
   rc = XPipe.run(XPipe.stage(t.fun, t.arg))  -- probably wrong
   System.fflush()
-  case t.wrapper of
-  | "none"  =>
-  else => write("@trailer ", wrapper, '\n')
+  if t.wrapper == "none"  then
+  else write("@trailer ", wrapper, '\n')
   end
   return rc
 end
 
 function external_src_wrap(t)
-  case t.wrapper of
-  | "latex" => NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. noweboptions)
-  | "none"  =>
-  else => NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. List.tostring(args))
+  if t.wrapper == "latex" then NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. noweboptions)
+  elseif  t.wrapper == "none"  then
+  else NWB.put(t.buf, NW_HEADER, t.wrapper .. " " .. List.tostring(args))
      --- where is args coming from?
   end
   local rc = Stages.fromascii(t.buf)
-  case t.wrapper of
-  | "none"  =>
-  else => NWB.put(t.buf, NW_TRAILER, t.wrapper)
+  if t.wrapper == "none"  then
+  else NWB.put(t.buf, NW_TRAILER, t.wrapper)
   end
   return rc
 end
@@ -648,10 +642,9 @@ src = s
 <<initialization>>=
 if not Noweave then Noweave = { } end
 function Noweave.concatfallback (x, y)
-  case type(x) .. "," .. type(y) of
-  | "string,nil" => return x
-  | "nil,string" => return y
-  else => return Noweave.oldconcatfallback(x, y)
+  if type(x) .. "," .. type(y) == "string,nil" then return x
+  elseif type(x) .. "," .. type(y) == "nil,string" then return y
+  else return Noweave.oldconcatfallback(x, y)
   end
 end
 Noweave.oldconcatfallback = setfallback("concat", Noweave.concatfallback)
