@@ -3,7 +3,7 @@
 LUA= ../..
 
 include ../../../nwconfig
-include ../../config
+include ../../config.win
 
 EXTRA_DEFS= $(POPEN) $(NOSTRERROR)
 
@@ -26,10 +26,10 @@ $(DLIB): $(OBJS)
 	ld -o $@ $(OBJS)
 
 clean:
-	-del /Q $(OBJS)
+	-del /Q $(OBJS) 2>nul:
 
 clobber:	clean
-	-del /Q $(SLIB)
+	-del /Q $(SLIB) 2>nul:
 
 co:
 	co -f -M $(SRCS)
@@ -38,8 +38,8 @@ klean:	clean
 	rm -f $(SRCS)
 
 $(OUTPUT)$(P)iolib$(O):		iolib.c
-	$(CC) $(CFLAGS) /c /Fo$@ iolib.c
+	$(CC) $(INCS) $(CFLAGS)$@ iolib.c
 $(OUTPUT)$(P)mathlib$(O):	mathlib.c
-	$(CC) $(CFLAGS) /c /Fo$@ mathlib.c
+	$(CC) $(INCS) $(CFLAGS)$@ mathlib.c
 $(OUTPUT)$(P)strlib$(O):	strlib.c
-	$(CC) $(CFLAGS) /c /Fo$@ strlib.c
+	$(CC) $(INCS) $(CFLAGS)$@ strlib.c

@@ -2,17 +2,10 @@
 
 include ../nwconfig
 
-A=.a
-O=.o
-E=
 I=include
 MAXALIGN=-DMAXALIGN=$(CIIMAXALIGN)
-CFLAGS=-g -I$I $(MAXALIGN) $(XCFLAGS)
-AR=ar ruv
-RANLIB=ranlib
-RM=rm -f
-BUILDDIR=.
-B=$(BUILDDIR)/
+CIIFLAGS=-I$I $(MAXALIGN)
+B=$(OUTPUT)$(P)
 
 # $Id$
 OBJS=	$Barena$O \
@@ -26,32 +19,28 @@ OBJS=	$Barena$O \
 	$Bseq$O \
 	$Bstr$O
 
-
 all::		$Blibcii$A $Bmemchk$O
 
 $Blibcii$A::	$(OBJS)
-		$(AR) $@ $(OBJS); $(RANLIB) $@ || true
+		$(AR)$@ $(OBJS) && $(RANLIB) $@
 
-$Barena$O:	src/arena.c;	$(CC) $(CFLAGS) -c -o $@ src/arena.c
-$Barray$O:	src/array.c;	$(CC) $(CFLAGS) -c -o $@ src/array.c
-$Bassert$O:	src/assert.c;	$(CC) $(CFLAGS) -c -o $@ src/assert.c
-$Batom$O:	src/atom.c;	$(CC) $(CFLAGS) -c -o $@ src/atom.c
-$Bexcept$O:	src/except.c;	$(CC) $(CFLAGS) -c -o $@ src/except.c
-$Bfmt$O:	src/fmt.c;	$(CC) $(CFLAGS) -c -o $@ src/fmt.c
-$Blist$O:	src/list.c;	$(CC) $(CFLAGS) -c -o $@ src/list.c
-$Bmem$O:	src/mem.c;	$(CC) $(CFLAGS) -c -o $@ src/mem.c
-$Bmemchk$O:	src/memchk.c;	$(CC) $(CFLAGS) -c -o $@ src/memchk.c
-$Bseq$O:	src/seq.c;	$(CC) $(CFLAGS) -c -o $@ src/seq.c
-$Bstr$O:	src/str.c;	$(CC) $(CFLAGS) -c -o $@ src/str.c
-
+$Barena$O:	src/arena.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/arena.c
+$Barray$O:	src/array.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/array.c
+$Bassert$O:	src/assert.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/assert.c
+$Batom$O:	src/atom.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/atom.c
+$Bexcept$O:	src/except.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/except.c
+$Bfmt$O:	src/fmt.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/fmt.c
+$Blist$O:	src/list.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/list.c
+$Bmem$O:	src/mem.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/mem.c
+$Bmemchk$O:	src/memchk.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/memchk.c
+$Bseq$O:	src/seq.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/seq.c
+$Bstr$O:	src/str.c;	$(CC) $(CIIFLAGS) $(CFLAGS)$@ src/str.c
 
 clean::
-		$(RM) $(OBJS)
+		-$(RM) $(OBJS) 2>$(NUL)
 
 clobber::	clean
-		$(RM) $Blibcii$A $B*$O
-
-
+		-$(RM) $Blibcii$A $B*$O 2>$(NUL)
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

@@ -17,61 +17,62 @@ MARKUPOBJS=$(OUTPUT)$(P)markmain$(O) \
 	$(OUTPUT)$(P)getline$(O) \
 	$(OUTPUT)$(P)columns$(O)
 
-OBJS=$(TANGLEOBJS) $(MARKUPOBJS) $(OUTPUT)$(P)nocond$(O) $(OUTPUT)$(P)tie$(O)
+OBJS=$(TANGLEOBJS) $(MARKUPOBJS) $(OUTPUT)$(P)l2htodo$(O) $(OUTPUT)$(P)nocond$(O) $(OUTPUT)$(P)tie$(O)
 
-#TARGETS=$(OUTPUT)$(P)lua2h.exe \
-TARGETS=$(OUTPUT)$(P)markup.exe \
-#	$(OUTPUT)$(P)markup.exe \
-	$(OUTPUT)$(P)nocond.exe \
-	$(OUTPUT)$(P)nt.exe \
-	$(OUTPUT)$(P)tie.exe
+TARGETS=$(OUTPUT)$(P)l2htodo$(E) \
+	$(OUTPUT)$(P)markup$(E) \
+	$(OUTPUT)$(P)nocond$(E) \
+	$(OUTPUT)$(P)nt$(E) \
+	$(OUTPUT)$(P)tie$(E)
 
 all: $(TARGETS)
 
-#$(OUTPUT)$(P)lua2h.exe: lua2h.c
-#	$(CC) /Fe:$@ lua2h.c
+$(OUTPUT)$(P)l2htodo$(E): $(OUTPUT)$(P)l2htodo$(O)
+	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)l2htodo$(O)
 
-$(OUTPUT)$(P)markup.exe: $(MARKUPOBJS)
-	$(CC) /Fe:$@ $(MARKUPOBJS)
+$(OUTPUT)$(P)markup$(E): $(MARKUPOBJS)
+	$(LD) $(LFLAGS)$@ $(MARKUPOBJS)
 
-$(OUTPUT)$(P)nocond.exe: $(OUTPUT)$(P)nocond$(O)
-	$(CC) /Fe:$@ $(OUTPUT)$(P)nocond$(O)
+$(OUTPUT)$(P)nocond$(E): $(OUTPUT)$(P)nocond$(O)
+	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)nocond$(O)
 
-$(OUTPUT)$(P)nt.exe: $(TANGLEOBJS)
-	$(CC) /Fe:$@ $(TANGLEOBJS)
+$(OUTPUT)$(P)nt$(E): $(TANGLEOBJS)
+	$(LD) $(LFLAGS)$@ $(TANGLEOBJS)
 
-$(OUTPUT)$(P)tie.exe: $(OUTPUT)$(P)tie$(O)
-	$(CC) /Fe:$@ $(OUTPUT)$(P)tie$(O)
+$(OUTPUT)$(P)tie$(E): $(OUTPUT)$(P)tie$(O)
+	$(LD) $(LFLAGS)$@ $(OUTPUT)$(P)tie$(O)
 
 clean:
-	-del /q $(OBJS)
+	-$(RM) $(OBJS) 2>$(NUL)
 
 clobber: clean
-	-del /q $(TARGETS)
+	-$(RM) $(TARGETS) 2>$(NUL)
 
 $(OUTPUT)$(P)columns$(O):	columns.c columns.h
-	$(CC) /c /Fo$@ columns.c
+	$(CC) $(CFLAGS)$@ columns.c
 $(OUTPUT)$(P)errors$(O):	errors.c errors.h
-	$(CC) /c /Fo$@ errors.c
+	$(CC) $(CFLAGS)$@ errors.c
 $(OUTPUT)$(P)getline$(O): getline.c columns.h errors.h getline.h
-	$(CC) /c /Fo$@ getline.c
+	$(CC) $(CFLAGS)$@ getline.c
+$(OUTPUT)$(P)l2htodo$(O):	l2htodo.c
+	$(CC) $(CFLAGS)$@ l2htodo.c
 $(OUTPUT)$(P)main$(O):	main.c columns.h errors.h modtrees.h modules.h notangle.h
-	$(CC) /c /Fo$@ main.c
+	$(CC) $(CFLAGS)$@ main.c
 $(OUTPUT)$(P)markmain$(O):	markmain.c columns.h errors.h getline.h markup.h
-	$(CC) /c /Fo$@ markmain.c
+	$(CC) $(CFLAGS)$@ markmain.c
 $(OUTPUT)$(P)markup$(O):	markup.c errors.h markup.h strsave.h
-	$(CC) /c /Fo$@ markup.c
+	$(CC) $(CFLAGS)$@ markup.c
 $(OUTPUT)$(P)match$(O):	match.c match.h
-	$(CC) /c /Fo$@ match.c
+	$(CC) $(CFLAGS)$@ match.c
 $(OUTPUT)$(P)modtrees$(O):	modtrees.c errors.h modtrees.h modules.h strsave.h
-	$(CC) /c /Fo$@ modtrees.c
+	$(CC) $(CFLAGS)$@ modtrees.c
 $(OUTPUT)$(P)modules$(O):	modules.c columns.h errors.h modtrees.h modules.h strsave.h
-	$(CC) /c /Fo$@ modules.c
+	$(CC) $(CFLAGS)$@ modules.c
 $(OUTPUT)$(P)nocond$(O):	nocond.c
-	$(CC) /c /Fo$@ nocond.c
+	$(CC) $(CFLAGS)$@ nocond.c
 $(OUTPUT)$(P)notangle$(O):	notangle.c errors.h getline.h modtrees.h modules.h notangle.h strsave.h
-	$(CC) /c /Fo$@ notangle.c
+	$(CC) $(CFLAGS)$@ notangle.c
 $(OUTPUT)$(P)strsave$(O):	strsave.c errors.h strsave.h
-	$(CC) /c /Fo$@ strsave.c
+	$(CC) $(CFLAGS)$@ strsave.c
 $(OUTPUT)$(P)tie$(O):	tie.c
-	$(CC) /c /Fo$@ tie.c
+	$(CC) $(CFLAGS)$@ tie.c

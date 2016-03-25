@@ -10,7 +10,7 @@ void putfile(FILE* file) {
 
 int main(int argc, char** argv) {
   putfile(stdin);
-  for(int i=1;i<=argc;i++) {
+  for(int i=1;i<argc;i++) {
     FILE* current = fopen(argv[i], "r");
     putfile(current);
     fclose(current);

@@ -1,51 +1,48 @@
-These are installation instructions for *alpha* versions of Noweb 3.
+These are build and installation notes for *alpha* versions of Noweb 3.
 
-Edit the nwconfig file in the root directory.
+Start by following the instruction in README to build and install Noweb 3.
+
+If the build or install isn't working, try the following:
 
   1) Set PLATFORM to show how to run pipelines.  Leave this alone for now.
 
-  2) Choose locations for the noweb files, and set the appropriate
-     variables:
-       BIN        on $PATH, will hold the no binary
-       LIB2       a directory to store external stages from Noweb 2
-       LIB3       a directory to store configuration and script files
-     All of these files are *output* files, where noweb will place
-     binaries and man pages that are customized for your installation.
-     Therefore you should:
-       - make sure you have write permission to these directories.
-       - refrain from making them point into the noweb source distribution.
+  2) The Lua kludges are (hopefully) temporary.  These are an acknowledgement
+     that Noweb 3 is still alpha.  If we ever get Noweb 3 to Lua 5, these
+     should be fixed. Leave these alone for now.
 
-     Your Noweb 2 installation should use Icon; in particular you will
-     need at least one Icon-only filter in order to create the woven
-     documentation. See http://www.cs.arizona.edu/icon/ for download
-     information.
+  3) There is a very hacky nocond executable that is built from the tools
+     directory for systems that don't have sed available.  There is also a
+     nocond script that uses sed which you can set NOCOND to instead.
 
-     Installing Icon is a good idea in any case, since Noweb 3 uses any
-     external filters that haven't been rewritten in Lua.
-
-  3) Now, set configuration for your system:
+  4) Now, set configuration for your system:
      First point a compiler to be used to build the tools and
      library by setting the CC variable in the Makefile:
        CC         the name of an ANSI C compiler
-       XCFLAGS    any extra flags for compilation
+       CFLAGS     general flags used througout the build
+       XCFLAGS    flags used in addition to CFLAGS when building no
+       O          the extension of object files produced by your compiler
        LD         what to call to build an executable binary
+       LDFLAGS    general flags used to build an executable
+       LIBPROLOG  anything you need to place before listing libraries
+       LIBEPILOG  anything you need to place after listing libraries
+       E          the extension of executable files produced by your linker
+       AR         what to call to build an object-code library
+       A          the extension of library files produced by your archiver
+       RMDIR      How to recursively and quietly remove directories
+       RM         How to quietly remove a set of files
+       CP         How to copy a file
+       CPR        How to recursively copy all files in a directory
        RANLIB     how to index an object-code library
+
      If your system provides tempnam(3), noweb's indexing will be more
      efficient if you add -DTEMPNAM to XCFLAGS given to the C compiler.
 
-
-  4) Noweb 3 is built using parts of Dave Hanson's CII and PUC-Rio's Lua.
+  5) Noweb 3 is built using parts of Dave Hanson's CII and PUC-Rio's Lua.
      There's an ugly wart on the installation of CII; you *must* set
      the CIIMAXALIGN variable as explained in cii/install.html, or you
      risk random memory errors, core dumps, or assertion failures.
 
      The rest of the nwconfig helps protect against a few oddities.
-
-  5) Fasten your seat belt and type `make all install'.  
-
-  6) You can clean up by typing `make clean'.  If you wish, you can
-     remove the pre-built sources by typing `make clobber', but then
-     you will be unable to build noweb unless you already have noweb.
 
 Instead of editing the nwconfig, you can create a shell script that
 invokes make with the proper variables.  `limake' is an example of

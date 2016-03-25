@@ -1,5 +1,3 @@
-To build a Windows version of Noweb3, please see README.win
-
 This is Noweb 3.  Noweb 3 is a reimplementation of Noweb using
 a customized version of Lua 2.5.  Noweb 3 was conceived and
 implemented in 1996 to solve two problems:
@@ -7,15 +5,16 @@ implemented in 1996 to solve two problems:
   - Noweb 2 was hard to install.
   - Without Icon, Noweb 2 can slow and hard to extend.
 
-Advances in software and hardware have made these problems irrelevant:
-Linux distributions and OSX ports have shifted installation costs from
-the end user to the distribution maintainers, and those same
-distributions have made it easy to build on fast Icon code instead of
-slow Awk code.  Noweb 3 retains some value; it is more flexible and
-easier to extend than Noweb 2, but in Fall 2015, as these words are
-being written, maintaining Noweb 3 makes no sense.  In a just world,
-Noweb 3 would be completely rewritten using Lua 5.  But that won't
-happen.
+For Windows systems, Noweb 2 has disappeared into the ether.  For all
+other systems, advances in software and hardware have made these
+problems irrelevant: Linux distributions and OSX ports have shifted
+installation costs from the end user to the distribution maintainers,
+and those same distributions have made it easy to build on fast Icon
+code instead of slow Awk code.  Noweb 3 retains some value; it is
+more flexible and easier to extend than Noweb 2, but in Fall 2015, as
+these words are being written, maintaining Noweb 3 makes no sense.  In
+a just world, Noweb 3 would be completely rewritten using Lua 5.  But
+that won't happen.
 
 I have used Noweb 3 in production for some years, but I continue to
 call this distribution "alpha quality."  Alpha versions are numbered
@@ -28,18 +27,17 @@ alpha980616.  This alpha version is made available from github
 To get some idea of what is going on with Noweb 3, look at the revised
 Hacker's Guide.
 
-To build Noweb 3, you need a working Noweb 2, plus a C compiler.  For
-Noweb 2 see http://www.cs.tufts.edu/~nr/noweb.
+To build Noweb 3, you need a C compiler.
 The distribution includes:
 
-  lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
-  cii	       CII, from Dave Hanson, stripped down to Noweb's needs only.
-  c            C source code for Noweb
-  lua          Lua source code for Noweb commands and pipeline stages
-  nocond       A filter to help build Noweb 3 from sources.
-  tools        Only used in the Windows build.
-  tex          La/TeX style/macros for weaved output. Not built (yet).
-  xdoc         Documentation, especially the revised Hacker's Guide
+  lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil).
+  cii          CII, from Dave Hanson, stripped down to Noweb's needs only.
+  c            C source code for Noweb.
+  lua          Lua source code for Noweb commands and pipeline stages.
+  nocond       A filter that can help build Noweb 3 from sources.
+  tex          La/TeX styles/macros.
+  tools        Code used to bootstrap the build process.
+  xdoc         Documentation, especially the revised Hacker's Guide.
 
 Lua-2.5+nw and CII are used by permission.
 
@@ -47,33 +45,40 @@ To build Noweb 3:
 
   1) Edit lua-2.5/config according to the directions.
 
-  2) Get nocond onto your path.
-
-  3) Set these variables in the Makefile:
-       CC         the name of an ANSI C compiler
-       MAXALIGN   as is for Linux (Slackware 3.3), otherwise
-		  see cii/install.html for more info (this is a wart)
-     And define the following directories:
-       BIN        on $PATH, will hold no
-       LIB2       where Noweb 2 put markup, nt, noxref, ...
+  2) In nwconfig, define the following directories:
+       BINDIR     on $PATH, will hold no
+       TEXINPUTS  TDS compliant place to put user styles and macros
        LIB3       where Noweb 3 Lua code will go
-     BIN and LIB3 are *outputs*, where noweb will place
+     All of these directories are *outputs*, where noweb will place
      binaries and scripts that are customized for your installation.
      Therefore you should:
        - make sure you have write permission to these directories.
        - refrain from making them point into the noweb source distribution.
-     LIB2 is an input, so version 3 can find the pieces from version 2
-     that it needs to bootstrap itself.
+     Set the rest of the values to items that make sense on your system.
 
-  3bis) If you know a full pathname for test, put it in lua/config.nw
+  2bis) If you know a full pathname for test, put it in lua/config.nw
 
-  4) Fasten your seat belt and type `make all install'.  
-     The system should build with only these warnings:
-       - whining about parser.c in the Lua sources
-       - whining about const in c/util.nw
-     It takes under two minutes on my 133MHz Linux box.
+  3) Fasten your seat belt and type `make all install'.
+     The system should build with only a couple of warnings:
+     It takes under two minutes on a 133MHz Linux box.
 
-  5) You can clean up by typing `make clean', or more likely, 
+  4) If everything installed correctly, you can get the literate
+     version by typing `make pdf'.
+
+     The pdf should generate with only these warnings:
+      - a warning about a missing `aho:efficent' citation.
+      - a complaint about missing doc.bbl.
+      - A few warnings about undefined references.
+     It takes a similar amount of time as step 3.
+
+  5) If that works, you can get a very basic sanity check by typing
+     `make careful'.  This will build Noweb 3 twice --- the first
+     time using the code found in tools and a second time using the
+     Noweb 3 built the first time.  It then generates the pdf.
+
+     This takes about twice as long as step 3.
+
+  6) You can clean up by typing `make clean', or more likely, 
      `make clobber'.
 
 Noweb 3 uses a new style of invocation

@@ -25,7 +25,7 @@ dynamic:
 	make
 
 clean:
-	rm -f $T $(OBJS)
+	rm -f $(OBJS)
 
 co:
 	co -f -M $(SRCS)

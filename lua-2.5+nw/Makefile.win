@@ -18,13 +18,6 @@ clean:
 	$(MK) -f Makefile.win clean
 	cd ../..
 
-install:
-	cd src/luac; make all
-	cd clients/lua; make all
-
-old:
-	cd clients/lib/old; make $@
-
 clobber: clean
 	cd src
 	$(MK) -f Makefile.win clobber
