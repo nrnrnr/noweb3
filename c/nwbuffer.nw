@@ -51,8 +51,9 @@ returns an abstraction that enables sequential reading of the pairs in
 the buffer.  [[NowebBuffer_read]] returns the elements one by one,
 returning [[NULL]] when the buffer is empty.
 
-[[NowebBuffer_toascii]] writes the contents of a buffer on an output
-file passed as an argument. 
+[[NowebBuffer_toascii]] in Lua-2.5 writes the contents of a buffer on an output
+file passed as an argument. But in Lua-3.0 it writes to a file named by the
+argument.
 <<header>>=
 #ifndef NWBUFFER_H
 #define NWBUFFER_H
@@ -76,8 +77,13 @@ extern NowebPair   NowebBuffer_read   (NowebReader);
 extern void NowebBuffer_free          (T* nwbuffer);
 
 extern int  NowebBuffer_is_index(NowebKey key);
+<<header ((lua2))>>=
 extern int NowebBuffer_toascii(void * /*output file*/, NowebBuffer buf,
 			       NowebBuffer ignored);
+<<header ((lua3))>>=
+extern int NowebBuffer_toascii(void * /*output file name*/, NowebBuffer buf,
+			       NowebBuffer ignored);
+<<header>>=
 extern char *NowebBuffer_pairstring(NowebPair pair);
          /* malloc and return string rep of pair -- likely to be expensive */
 #undef T
@@ -396,7 +402,7 @@ void NowebBuffer_free(T* nwbuffer) {
 @ %
 The old implementation didn't set [[*nwbuffer = NULL]] (--rsc).
 @
-<<nwbuffer functions>>=
+<<nwbuffer functions ((lua2))>>=
 int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignored) {
   FILE *fp = out;
   NowebReader rdr = NowebBuffer_reader(in);
@@ -416,6 +422,33 @@ int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignore
         assert(0);
     }
   }
+  return 0;
+}
+<<nwbuffer functions ((lua3))>>=
+int NowebBuffer_toascii(void *out /*output*/, NowebBuffer in, NowebBuffer ignored) {
+  FILE *fp = stdout;
+  char *outname = out;
+  if(outname != NULL)
+    fp = fopen(outname,"w");
+  NowebReader rdr = NowebBuffer_reader(in);
+  NowebPair pair;
+
+  for (pair = NowebBuffer_read(rdr); pair; pair = NowebBuffer_read(rdr)) {
+    switch(pair->key) {
+      case NW_XXX_STRINGKEY:
+	fprintf(fp, "@%s %s\n", pair->keystr, pair->value);
+	break;
+#define VAL (pair->value)
+#define xx(NAME, PRINTARGS) case NAME: fprintf PRINTARGS; break;
+<<key macros>>
+#undef xx
+#undef VAL
+      default:
+        assert(0);
+    }
+  }
+  if(outname != NULL)
+    fclose(fp);
   return 0;
 }
 @ 

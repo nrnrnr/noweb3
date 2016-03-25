@@ -1,0 +1,102 @@
+# makefile for lua distribution (main library)
+
+LUA= ..
+
+include ../../nwconfig
+include ../config
+
+OBJS=	$(OUTPUT)$(P)auxlib$(O)\
+	$(OUTPUT)$(P)fallback$(O)\
+	$(OUTPUT)$(P)func$(O)\
+	$(OUTPUT)$(P)hash$(O)\
+	$(OUTPUT)$(P)inout$(O)\
+	$(OUTPUT)$(P)lex$(O)\
+	$(OUTPUT)$(P)luamem$(O)\
+	$(OUTPUT)$(P)opcode$(O)\
+	$(OUTPUT)$(P)parser$(O)\
+	$(OUTPUT)$(P)table$(O)\
+	$(OUTPUT)$(P)tree$(O)\
+	$(OUTPUT)$(P)undump$(O)\
+	$(OUTPUT)$(P)zio$(O)
+
+SRCS=	auxlib.c\
+	auxlib.h\
+	fallback.c\
+	fallback.h\
+	func.c\
+	func.h\
+	hash.c\
+	hash.h\
+	inout.c\
+	inout.h\
+	lex.c\
+	lex.h\
+	luamem.c\
+	luamem.h\
+	opcode.c\
+	opcode.h\
+	parser.c\
+	parser.h\
+	table.c\
+	table.h\
+	tree.c\
+	tree.h\
+	types.h\
+	undump.c\
+	undump.h\
+	zio.c\
+	zio.h\
+	lua.stx
+
+SLIB= $(OUTPUT)$(P)liblua$(A)
+
+all: $(SLIB)
+
+$(SLIB): $(OBJS)
+	lib -nologo -out:$@ $(OBJS)
+
+clean:
+	-del /Q $(OBJS) 2>nul:
+
+clobber:	clean
+	-del /Q $(SLIB) 2>nul:
+
+co:
+	co -f -M $(SRCS)
+
+parser:
+	yacc -d lua.stx
+	rm -f parser.c parser.h
+	sed -e 's/yy/luaY_/g' y.tab.c > parser.c
+	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
+	rm y.tab.c y.tab.h
+
+klean:	clean
+	rm -f $(SRCS)
+
+$(OUTPUT)$(P)auxlib$(O):	auxlib.c auxlib.h
+	$(CC) $(INCS) $(CFLAGS)$@ auxlib.c
+$(OUTPUT)$(P)fallback$(O):	fallback.c fallback.h
+	$(CC) $(INCS) $(CFLAGS)$@ fallback.c
+$(OUTPUT)$(P)func$(O):		func.c func.h
+	$(CC) $(INCS) $(CFLAGS)$@ func.c
+$(OUTPUT)$(P)hash$(O):		hash.c hash.h
+	$(CC) $(INCS) $(CFLAGS)$@ hash.c
+$(OUTPUT)$(P)inout$(O):		inout.c inout.h
+	$(CC) $(INCS) $(CFLAGS)$@ inout.c
+$(OUTPUT)$(P)lex$(O):		lex.c lex.h
+	$(CC) $(INCS) $(CFLAGS)$@ lex.c
+$(OUTPUT)$(P)luamem$(O):	luamem.c luamem.h
+	$(CC) $(INCS) $(CFLAGS)$@ luamem.c
+$(OUTPUT)$(P)opcode$(O):	opcode.c opcode.h
+	$(CC) $(INCS) $(CFLAGS)$@ opcode.c
+$(OUTPUT)$(P)parser$(O):	parser.c parser.h
+	$(CC) $(INCS) $(CFLAGS)$@ parser.c
+$(OUTPUT)$(P)table$(O):		table.c table.h
+	$(CC) $(INCS) $(CFLAGS)$@ table.c
+$(OUTPUT)$(P)tree$(O):		tree.c tree.h
+	$(CC) $(INCS) $(CFLAGS)$@ tree.c
+$(OUTPUT)$(P)undump$(O):	undump.c undump.h
+	$(CC) $(INCS) $(CFLAGS)$@ undump.c
+$(OUTPUT)$(P)zio$(O):		zio.c zio.h
+	$(CC) $(INCS) $(CFLAGS)$@ zio.c
