@@ -95,3 +95,21 @@ void nwbuffer_open(void) {
   lua_pushnumber(NWBUFFER); lua_storeglobal("NWBUFFER");
   lua_pushnumber(NWREADER); lua_storeglobal("NWREADER");
 }
+@
+There is one more thing needed for this source file and that is
+the [[@<<key macros>>]]; but rather than repeat that here we will
+have the build system extract and append it for us.
+
+For that to work we have to be able to extract our own local
+noweb header and footer to bookend the [[@<<key macros>>]] that already
+exist.
+
+<<key macros header>>=
+@<<key macros>>=
+@
+
+<<key macros footer>>=
+@@
+@
+
+

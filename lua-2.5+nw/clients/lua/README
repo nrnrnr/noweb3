@@ -1,9 +1,0 @@
-This client is a simple lua interpreter.
-It either loads and executes the files named on the command line or reads
-and executes lines from stdin.
-Note that, in the second case, each line must contain a complete statement.
-For instance, functions cannot span several lines.
-
-The 'lbench' client executes argv[1] as a file, using the remaining
-arguments as an `arg' vector.  It is designed for benchmarking using
-the conventions of Doug Bagley's `Language Shootout'.

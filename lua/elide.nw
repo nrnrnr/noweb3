@@ -104,8 +104,7 @@ end
 local matches
 local i, n = 1, List.length(globs)
 while i <= n and not matches do
-  globmatch arg of 
-  | globs[i] => matches = 1
+  if matchpattern(arg, globs[i]) then matches = 1
   end
   i = i + 1
 end
@@ -124,22 +123,21 @@ function Stages.elideuse(sourcebuf, sinkbuf, globs)
   key, arg = NWB.read(r)
   local eliding = nil
   while key do 
-    case key of
-    | NW_USE =>
+    if key == NW_USE then
         <<set [[matches]] if [[arg]] matches a pattern in [[globs]]>>
         if matches then
           eliding = 1
         else
           NWB.put(sinkbuf, key, arg)
         end
-    | NW_TEXT =>
+    elseif key == NW_TEXT then
         if eliding and strfind(arg, "^%s*$") then
           -- do nothing
         else
  	  eliding = nil
           NWB.put(sinkbuf, key, arg)
         end
-    | NW_NL =>
+    elseif key == NW_NL then
         if eliding then
           local k, a = NWB.pull(sinkbuf)
           while k == NW_TEXT and strfind(a, "^%s*$") do
@@ -150,7 +148,7 @@ function Stages.elideuse(sourcebuf, sinkbuf, globs)
           eliding = nil
         end
         NWB.put(sinkbuf, key, arg)
-    else =>          
+    else
       NWB.put(sinkbuf, key, arg)
     end
     key, arg = NWB.read(r)

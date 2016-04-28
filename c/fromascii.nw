@@ -17,7 +17,7 @@ extern int readascii(void *infile, NowebBuffer ignored, NowebBuffer buf);
 [[ARG_AT(N)]] overwrites the trailing newline with a null character, then
 returns that portion of the input line starting at~[[N]].
 It is used to recover the argument from keywords that take arguments.
-<<fromascii.c>>=
+<<fromascii.c ((lua2))>>=
 int readascii(void *arg, NowebBuffer ignored, NowebBuffer buf) {
   FILE *in = arg;
   char *p;
@@ -32,6 +32,28 @@ int readascii(void *arg, NowebBuffer ignored, NowebBuffer buf) {
   string:
     <<scan to first blank (if any) and call [[NowebBuffer_put_str]]>>
   }
+  return errorrc;
+}
+<<fromascii.c ((lua3))>>=
+int readascii(void *arg, NowebBuffer ignored, NowebBuffer buf) {
+  FILE *in = stdin;
+  char *inname = arg;
+  if(inname != NULL)
+    in = fopen(inname,"r");
+  char *p;
+  int n;
+#define ARG_AT(N) ((p[n] = '\0'), Atom_string(p+N))
+  while ((p = getline(in))) {
+    if (p[0] != '@' || !isalpha(p[1]))
+      errormsg(Fatal, "Invalid line in noweb pipeline: %s", p);
+    n = strlen(p)-1;
+    <<automatically generated recognizer>>
+    continue;
+  string:
+    <<scan to first blank (if any) and call [[NowebBuffer_put_str]]>>
+  }
+  if(inname != NULL)
+    fclose(in);
   return errorrc;
 }
 @ 

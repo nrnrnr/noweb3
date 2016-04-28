@@ -1,26 +1,46 @@
 % -*- mode: Noweb; noweb-code-mode: c-mode; tab-width: 4; c-indent-level: 4 -*-
 
-\section{Time-of-day support for Posix}
+\section{Time-of-day support}
 
 \subsection{Interface}
+
 <<header>>=
 typedef struct NWTime *NWTime;
 
 NWTime NWTime_now(void);  /* allocates and returns the current time */
 double NWTime_usdiff(NWTime then);  /* difference in microseconds from now to then */
 void   NWTime_free(NWTime t);
+@
+
+\subsection{Shared Functionality}
 <<*>>=
 #include <assert.h>
 #include <stdlib.h>
 
 #include "nwtime.h"
 
+#if defined(POSIX)
+<<Posix Version>>
+#elif defined(WIN32)
+<<Windows Version>>
+#else
+<<Ansi C Version>>
+#endif
+
+<<*>>=
+void NWTime_free(NWTime t) {
+  free(t);
+}
+@
+
+\subsection{Posix Version}
+<<Posix Version>>=
 #include <sys/time.h>
 
 struct NWTime {
   struct timeval tv;
 };
-<<*>>=
+<<Posix Version>>=
 NWTime NWTime_now(void) {
   int rc;
   NWTime now = malloc(sizeof(*now));
@@ -33,11 +53,7 @@ NWTime NWTime_now(void) {
   }
   return now;
 }
-<<*>>=
-void NWTime_free(NWTime t) {
-  free(t);
-}
-<<*>>=
+<<Posix Version>>=
 double NWTime_usdiff(NWTime then) {
   struct timeval now;
   int rc = gettimeofday(&now, NULL);
@@ -47,4 +63,88 @@ double NWTime_usdiff(NWTime then) {
 }
 @
 
+\subsection{Windows Version}
 
+On a Windows system, using these functions to determine elapsed time is frowned upon.
+You are supposed to use GetTickCount(), which provides ``up time'', to determine elapsed time.
+
+I have opted to ignore that recomendation because the Posix and Ansi C versions use system time rather than ``up time''.
+Since \texttt{no} is a build tool rather than a long running process, it should be fine.
+
+There is an additional concern that \texttt{gettimeofday()} is accurate to the $\mu$second but \texttt{GetSystemTime()} is accurate to the millisecond.
+Shouldn't matter, but I do want to mention the difference.
+
+<<Windows Version>>=
+#include <Windows.h>
+
+struct NWTime {
+  FILETIME time;
+};
+<<Windows Version>>=
+NWTime NWTime_now(void) {
+  BOOL rc;
+  SYSTEMTIME st;
+  NWTime now = malloc(sizeof(*now));
+  assert(now);
+
+  GetSystemTime(&st);
+  rc = SystemTimeToFileTime(&st,&now->time);
+  if (rc == 0) {
+    perror("noweb 3 SystemTimeToFileTime()");
+    abort();
+  }
+  return now;
+}
+<<Windows Version>>=
+double NWTime_usdiff(NWTime then) {
+  ULARGE_INTEGER uliNow, uliThen, uliDiff;
+  BOOL rc;
+  SYSTEMTIME st;
+  FILETIME now;
+
+  GetSystemTime(&st);
+  rc = SystemTimeToFileTime(&st,&now);
+  assert(rc != 0);
+  uliNow.LowPart = now.dwLowDateTime;
+  uliNow.HighPart = now.dwHighDateTime;
+  uliThen.LowPart = then->time.dwLowDateTime;
+  uliThen.HighPart = then->time.dwHighDateTime;
+  uliDiff.QuadPart = uliNow.QuadPart - uliThen.QuadPart;
+
+  return uliDiff.QuadPart*1.0e3;
+}
+@
+
+\subsection{Ansi C Version}
+
+As a final fallback, if you are non-Posix and not Windows this may work.
+
+It has not been tested and there is the additional problem that the Ansi C time functions are only guaranteed to provide time differentiable to a second.
+
+@
+<<Ansi C Version>>=
+#include <time.h>
+
+struct NWTime {
+  time_t time;
+};
+<<Ansi C Version>>=
+NWTime NWTime_now(void) {
+  time_t rc;
+  NWTime now = malloc(sizeof(*now));
+  assert(now);
+
+  rc = time(&now->time);
+  if (rc == -1) {
+    perror("noweb 3 time()");
+    abort();
+  }
+  return now;
+}
+<<Ansi C Version>>=
+double NWTime_usdiff(NWTime then) {
+  time_t now;
+  time_t rc = time(&now);
+  assert(rc != -1);
+  return difftime(now, then)*1.0e6;
+}

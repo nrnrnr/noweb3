@@ -78,10 +78,9 @@ function Xchunks.readchunks(buf)
   local r = NWB.reader(buf)
   key, arg = NWB.read(r)
   while key do
-    case key of
-    | NW_FILE => file = arg; lnum = 1
-    | NW_LINE => lnum = tonumber(arg)
-    | NW_BEGIN_DOCS, NW_BEGIN_CODE =>
+    if key == NW_FILE then file = arg; lnum = 1
+    elseif key == NW_LINE then lnum = tonumber(arg)
+    elseif key == NW_BEGIN_DOCS or key == NW_BEGIN_CODE then
         local t = key == NW_BEGIN_DOCS and "docs" or "code"
         local lines = NWB.new()
         c = { lines = lines , type = t }
@@ -106,7 +105,7 @@ function Xchunks.readchunks(buf)
         NWB.put(lines, key, arg)
         nchunks = nchunks + 1
         chunks[nchunks] = c
-     else =>
+     else
         local lines = NWB.new()
         NWB.put(lines, key, arg)
         nchunks = nchunks + 1

@@ -60,7 +60,7 @@ The stuff in dist in v2 is
 
 What's in the v3 src dir is
 
-  lua-2.5+nw   Lua-2.5+nw, a modified Lua 2.5 (from PUC-Rio, Brasil)
+  lua-2.5      Lua-2.5 (from PUC-Rio, Brasil)
   cii	       CII, from Dave Hanson, stripped down to Noweb's needs only.
   c            C source code for Noweb
   lua          Lua source code for Noweb commands and pipeline stages
